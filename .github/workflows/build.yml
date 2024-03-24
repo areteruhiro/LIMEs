@@ -59,7 +59,7 @@ jobs:
       - name: Release check
         if: github.event.inputs.release == 'true'
         run: |
-          if [[ "${{ secrets.STORE_FILE }}" == "" ]]; then
+          if [[ "${{  }}" == "" ]]; then
             echo -e "\nERROR!\nリリースするには､ 署名鍵を設定する必要があります｡\n"
             echo "STORE_FILE: JKS形式の署名鍵をBase64でエンコードした文字列"
             echo "STORE_PASSWORD: キーストアのパスワード"
