@@ -78,7 +78,7 @@ jobs:
       - name: Build with Gradle
         run: |
           if [[ "${{ inputs.release }}" == "true" ]]; then
-            echo "${{ secrets.STORE_FILE }}" | base64 -d > app/release.jks
+            echo "${{ secrets.STORE_FILEA }}" | base64 -d > app/release.jks
             export STORE_PASSWORD="${{ secrets.STORE_PASSWORD }}"
             export KEY_ALIAS="${{ secrets.KEY_ALIAS }}"
             export KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
