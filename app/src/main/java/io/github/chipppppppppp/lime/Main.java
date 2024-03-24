@@ -116,7 +116,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                 }
             });
 
-            hookTarget = lparam.classLoader.loadClass("ak1.c$c");
+            hookTarget = lparam.classLoader.loadClass("cj1.b$c");
             XposedHelpers.findAndHookMethod(hookTarget, "b", new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -407,7 +407,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                 });
             }
 
-            hookTarget = lparam.classLoader.loadClass("k74.k");
+            hookTarget = lparam.classLoader.loadClass("h54.k");
             XposedHelpers.findAndHookMethod(hookTarget, "onPageFinished", WebView.class, String.class, new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -542,7 +542,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
 
 
         if (limeOptions.preventUnsendMessage.checked) {
-            hookTarget = lparam.classLoader.loadClass("rp5.id");
+            hookTarget = lparam.classLoader.loadClass("tn5.id");
             final Method valueOf = hookTarget.getMethod("valueOf", String.class);
             final Object dummy = valueOf.invoke(null, "DUMMY");
             final Object notifiedDestroyMessage = valueOf.invoke(null, "NOTIFIED_DESTROY_MESSAGE");
@@ -553,7 +553,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                 }
             });
 
-            hookTarget = lparam.classLoader.loadClass("mo5.c");
+            hookTarget = lparam.classLoader.loadClass("om5.c");
             XposedHelpers.findAndHookMethod(hookTarget, "u", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -563,7 +563,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
         }
 
         if (limeOptions.sendMuteMessage.checked) {
-            hookTarget = lparam.classLoader.loadClass("cl5.b");
+            hookTarget = lparam.classLoader.loadClass("dj5.b");
             XposedBridge.hookAllMethods(hookTarget, "H", new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -602,7 +602,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                 }
             });
 
-            hookTarget = lparam.classLoader.loadClass("wd1.e$d");
+            hookTarget = lparam.classLoader.loadClass("bd1.d$d");
             XposedHelpers.findAndHookMethod(hookTarget, "run", new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -636,13 +636,13 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             XposedBridge.hookAllMethods(hookTarget, "a", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    XposedBridge.log(param.args[0].toString() + ": " + param.args[1].toString());
+                    XposedBridge.log("A"+ param.args[0].toString() + ": " + param.args[1].toString());
                 }
             });
             XposedBridge.hookAllMethods(hookTarget, "b", new XC_MethodHook() {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    XposedBridge.log(param.args[0].toString() + ": " + param.args[1].toString());
+                    XposedBridge.log("B" + param.args[0].toString() + ": " + param.args[1].toString());
                 }
             });
         }
