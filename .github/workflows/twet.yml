@@ -1,2 +1,0 @@
-- name: test secrets
-  run: echo secret "${{secrets.STORE_FILE }}" | sed 's/./& /g'
