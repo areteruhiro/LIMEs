@@ -31,7 +31,7 @@ LINEアプリの <kbd>ホーム</kbd> > <kbd>⚙</kbd> から｢**設定**｣に
 ## インストール
 
 初めに、以下のサイトの中から、  
-**LINE 14.3.2** と **LIME 1.8.0** の APK をダウンロードしてください｡
+**LINE 14.2.0** と **LIME 1.8.0** の APK をダウンロードしてください｡
 
 > [!IMPORTANT]
 > 分割 APK は使用しないでください
@@ -41,8 +41,7 @@ LI**N**E
 - [APKPure](https://apkpure.net/jp/line-calls-messages/jp.naver.line.android/versions)
 - [APKCombo](https://apkcombo.com/ja/line/jp.naver.line.android/old-versions/)
 
-LI**M**E
-- [Release](https://github.com/Chipppppppppp/LIME/releases/latest)
+
 
 ### Root 端末 (Magisk)
 
