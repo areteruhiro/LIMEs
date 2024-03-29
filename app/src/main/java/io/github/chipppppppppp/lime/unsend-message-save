@@ -1,0 +1,222 @@
+if (limeOptions.preventUnsendMessage.checked) {
+
+        hookTarget = lparam.classLoader.loadClass("rp5.id");
+        final Method valueOf = hookTarget.getMethod("valueOf", String.class);
+        final Object dummy = valueOf.invoke(null, "DUMMY");
+        final Object notifiedDestroyMessage = valueOf.invoke(null, "NOTIFIED_DESTROY_MESSAGE");
+        XposedHelpers.findAndHookMethod(hookTarget, "a", int.class, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                if (param.getResult() == notifiedDestroyMessage) param.setResult(dummy);
+            }
+        });
+
+        hookTarget = lparam.classLoader.loadClass("mo5.c");
+        XposedHelpers.findAndHookMethod(hookTarget, "u", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                if (param.getResult().equals("UNSENT")) param.setResult("");
+            }
+        });
+
+
+        hookTarget = lparam.classLoader.loadClass("org.apache.thrift.n");
+        XposedBridge.hookAllMethods(hookTarget, "a", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                String paramValue = param.args[1].toString();
+                
+                if (paramValue.contains("type:DUMMY,")) {
+                    // param1 と param2 の値を取得
+                    String[] parts = paramValue.split(",");
+                    String serverId = null;
+                    String talkId = null;
+                    for (String part : parts) {
+                        if (part.trim().startsWith("param1:")) {
+                            talkId  = part.trim().substring("param1:".length());
+
+                        } else if (part.trim().startsWith("param2:")) {
+                            serverId = part.trim().substring("param2:".length());
+                        }
+                    }
+
+                        // 保存したserverIdとtalkIdを使用してcontentを取得して編集する
+                        String content = getContentFromServerId(serverId);
+                        String image_check = image_check(serverId);
+                        String gruop_name = get_group_name(talkId);
+                        String talk_name = talk_name(talkId);
+
+
+                            List<String> pastValues = new ArrayList<>();
+
+                            if (content != null && (gruop_name != null || talk_name != null)) {
+                                String A = (gruop_name != null ? gruop_name : "") + (talk_name != null ? talk_name : "") + ":" + content + image_check;
+                                XposedBridge.log("削除されたメッセージ: " + A);
+// ログに残すファイルを指定
+
+                                String filePath = "/storage/emulated/0/Download/Test.txt";
+
+// pastValues リストの内容を改行区切りでファイルに書き込むコマンド
+                                String command = "su -c echo \"" + String.join("\n", A) + "\" >> " + filePath;
+
+                                try {
+                                    // 外部コマンドを実行してファイルに書き込む
+                                    Process process = Runtime.getRuntime().exec(command);
+                                    process.waitFor();
+                                    XposedBridge.log("保存しました: " + A);
+                                } catch (IOException | InterruptedException e) {
+                                    e.printStackTrace();
+                                }
+
+
+                            }
+
+
+                    }
+                }
+
+        });
+
+
+}
+
+    }
+    int retryCount = 2;
+    int retryInterval = 100;
+    private String getContentFromServerId(String serverId) {
+        String content = null;
+
+        for (int i = 0; i < retryCount; i++) {
+            try {
+                String command = "su -c sqlite3 /data_mirror/data_ce/null/0/jp.naver.line.android/databases/naver_line " +
+                        "\"SELECT content FROM chat_history WHERE server_id='" + serverId + "';\"";
+                content = executeSQLite3Command(command);
+
+                if (content != null) {
+                    break;
+                }
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }try {Thread.sleep(retryInterval);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        return content;
+    }
+    private String get_group_name(String talkId) {
+        String gruop_name = null;
+
+
+        for (int i = 0; i < retryCount; i++) {
+            try {
+                String command = "su -c sqlite3 /data_mirror/data_ce/null/0/jp.naver.line.android/databases/naver_line " +
+                        "\"SELECT name FROM groups WHERE id='" + talkId + "';\"";
+                gruop_name = executeSQLite3Command(command);
+
+                if (gruop_name != null) {
+                    break;
+                }
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+
+
+            try {
+                Thread.sleep(retryInterval);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+
+            }}
+        return gruop_name;
+    }
+    private String talk_name(String talkId) {
+        String talk_name = null;
+
+
+        for (int i = 0; i < retryCount; i++) {
+            try {
+                String command = "su -c sqlite3 /data_mirror/data_ce/null/0/jp.naver.line.android/databases/naver_line " +
+                        "\"SELECT name FROM contacts WHERE m_id='" + talkId + "';\"";
+                talk_name = executeSQLite3Command(command);
+
+                if (talk_name != null) {
+                    break;
+                }
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+
+
+            try {
+                Thread.sleep(retryInterval);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        }
+        return talk_name;
+    }
+
+
+    private String image_check(String serverId) {
+        String image_check = null;
+
+        for (int i = 0; i < retryCount; i++) {
+            try {
+                String command = "su -c sqlite3 /data_mirror/data_ce/null/0/jp.naver.line.android/databases/naver_line " +
+                        "\"SELECT attachement_image FROM chat_history WHERE server_id='" + serverId + "';\"";
+                image_check = executeSQLite3Command(command);
+                if ("1".equals(image_check)) {
+                    image_check = "画像が削除されました";
+                    break;
+                }
+                if ("0".equals(image_check)) {
+                    image_check = " ";
+                    break;
+                }
+
+
+            } catch (IOException | InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            try {
+                Thread.sleep(retryInterval);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        return  image_check;
+    }
+
+
+    // SQLite3コマンドを実行する
+    private String executeSQLite3Command(String command) throws IOException, InterruptedException {
+        try {
+            java.lang.Process process = getRuntime().exec(command);
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            StringBuilder contentBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                contentBuilder.append(line);
+            }
+            process.waitFor();
+            return contentBuilder.toString();
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+
+
+
+}
+
+
+
+
+
+
