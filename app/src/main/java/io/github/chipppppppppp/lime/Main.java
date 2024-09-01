@@ -32,6 +32,7 @@ import io.github.chipppppppppp.lime.hooks.RemoveReplyMute;
 import io.github.chipppppppppp.lime.hooks.SendMuteMessage;
 import io.github.chipppppppppp.lime.hooks.SpoofAndroidId;
 import io.github.chipppppppppp.lime.hooks.SpoofUserAgent;
+import io.github.chipppppppppp.lime.hooks.Unsentrec;
 
 public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResources, IXposedHookZygoteInit {
     public static String modulePath;
