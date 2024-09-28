@@ -13,10 +13,10 @@ android {
         //noinspection OldTargetApi
         targetSdk 33
         versionCode 13
-        versionName "1.9.2"
+        versionName "14.16.0"
         multiDexEnabled false
         proguardFiles += 'proguard-rules.pro'
-        buildConfigField 'String', 'HOOK_TARGET_VERSION', '"140910392"'
+         buildConfigField 'String', 'HOOK_TARGET_VERSION', '"14.16.0"'
     }
 
     signingConfigs {
