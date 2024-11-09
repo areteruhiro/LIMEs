@@ -50,7 +50,11 @@ public class KeepUnread implements IHook {
 
                         keepUnread = readStateFromFile(appContext);
                         ImageView imageView = new ImageView(appContext);
-                        updateSwitchImage(imageView, keepUnread, moduleContext);
+                        try {
+                            updateSwitchImage(imageView, keepUnread, moduleContext);
+                        } catch (Exception e) {
+                            XposedBridge.log("LIME: Error updating switch image: " + e.getMessage());
+                        }
 
                         RelativeLayout.LayoutParams imageParams = new RelativeLayout.LayoutParams(
                                 RelativeLayout.LayoutParams.WRAP_CONTENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
@@ -59,9 +63,13 @@ public class KeepUnread implements IHook {
                         imageParams.setMargins(50, 0, 0, 0); // 水平に50ピクセル右に移動（必要に応じて調整）
                         
                         imageView.setOnClickListener(v -> {
-                            keepUnread = !keepUnread;
-                            updateSwitchImage(imageView, keepUnread, moduleContext);
-                            saveStateToFile(appContext, keepUnread);
+                            try {
+                                keepUnread = !keepUnread;
+                                updateSwitchImage(imageView, keepUnread, moduleContext);
+                                saveStateToFile(appContext, keepUnread);
+                            } catch (Exception e) {
+                                XposedBridge.log("LIME: Error toggling keep unread state: " + e.getMessage());
+                            }
                         });
                         
                         layout.addView(imageView, imageParams);
@@ -77,7 +85,7 @@ public class KeepUnread implements IHook {
                         }
                     }
 
-                    private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext) {
+                    private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext) throws Exception {
                         
                             String imageName = isOn ? "switch_on" : "switch_off";
                             int imageResource = moduleContext.getResources().getIdentifier(imageName, "drawable", "io.github.hiro.lime");
@@ -101,7 +109,7 @@ public class KeepUnread implements IHook {
                         try (FileOutputStream fos = context.openFileOutput(filename, Context.MODE_PRIVATE)) {
                             fos.write((state ? "1" : "0").getBytes());
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            XposedBridge.log("LIME: Error saving keep unread state: " + e.getMessage());
                         }
                     }
                     private boolean readStateFromFile(Context context) {
@@ -114,9 +122,10 @@ public class KeepUnread implements IHook {
                             }
                             return "1".equals(sb.toString());
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            XposedBridge.log("LIME: Error reading keep unread state: " + e.getMessage());
                             return false;
                         }
+                    }
                     }
                 }
         );
@@ -128,7 +137,11 @@ public class KeepUnread implements IHook {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
                         if (keepUnread) {
-                            param.setResult(null); 
+                            try {
+                                param.setResult(null);
+                            } catch (Exception e) {
+                                XposedBridge.log("LIME: Error preventing mark as read: " + e.getMessage());
+                            }
                         }
                     }
                 }
