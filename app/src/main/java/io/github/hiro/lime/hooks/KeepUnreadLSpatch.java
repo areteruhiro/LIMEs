@@ -50,7 +50,11 @@ public class KeepUnreadLSpatch implements IHook {
                         switchView.setChecked(false);
 
                         switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                            keepUnread = isChecked;
+                            try {
+                                keepUnread = isChecked;
+                            } catch (Exception e) {
+                                XposedBridge.log("LIME: Error toggling keep unread state: " + e.getMessage());
+                            }
                         });
 
                         layout.addView(switchView, switchParams);
@@ -75,7 +79,11 @@ public class KeepUnreadLSpatch implements IHook {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) {
                         if (keepUnread) {
-                            param.setResult(null);
+                            try {
+                                param.setResult(null);
+                            } catch (Exception e) {
+                                XposedBridge.log("LIME: Error preventing mark as read: " + e.getMessage());
+                            }
                         }
                     }
                 }
