@@ -86,7 +86,8 @@ jobs:
             ./gradlew assembleRelease --no-daemon --stacktrace
             cp app/build/outputs/apk/release/app-release.apk ${{ env.repo }}-${{ env.version }}.apk
           else
-            ./
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          fi
 
       - name: Rename Original LINE APK
         run: |
