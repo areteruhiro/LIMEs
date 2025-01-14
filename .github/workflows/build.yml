@@ -33,9 +33,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Download LINE APK
+      - name: Download LINE APKs
         run: |
-          curl -L -o Original.LINE.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.8/Original.arm64-v8a.+.armeabi-v7a.LINE_v14.19.1.apk
+          curl -L -o Original.LINE.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.arm64-v8a.+.armeabi-v7a.LINE_v14.19.1.apk
+          curl -L -o original.line.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/original.armeabi-v7a.line-14.19.1.apk
+          curl -L -o Original_v14.19.1arm64-v8a.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.LINE_v14.19.1arm64-v8a.apk
 
       - name: Set environments
         run: |
@@ -62,9 +64,16 @@ jobs:
         if: github.event.inputs.lspatch == 'true'
         run: |
           echo "Patching LIME..."
+          for apk in Original.LINE.apk original.line.apk Original_v14.19.1arm64-v8a.apk; do
+            java -jar lspatch.jar "$apk" -m "app/build/outputs/apk/debug/app-debug.apk" -l 2 -v
+            arch=$(echo "$apk" | grep -oP '(?<=\.)(arm64-v8a|armeabi-v7a)(?=\.apk)')
+            new_name="Patched Limes V${{ env.line_ver }}-${arch}-lspatched.apk"
+            mv "app/build/outputs/apk/debug/app-debug-lspatched.apk" "$new_name"
+          done
+
+          # arm64-v8a-armeabi-v7a.apkに対してもパッチを適用
           java -jar lspatch.jar "Original.LINE.apk" -m "app/build/outputs/apk/debug/app-debug.apk" -l 2 -v
-          # LSPatch後のAPKファイル名を指定
-          mv "app/build/outputs/apk/debug/app-debug-lspatched.apk" "LINE-${{ env.line_ver }}-lspatched.apk"
+          mv "app/build/outputs/apk/debug/app-debug-lspatched.apk" "Patched Limes V${{ env.line_ver }}-arm64-v8a-armeabi-v7a-lspatched.apk"
 
       - name: Build with Gradle
         run: |
@@ -73,11 +82,14 @@ jobs:
             export STORE_PASSWORD="${{ secrets.STORE_PASSWORD }}"
             export KEY_ALIAS="${{ secrets.KEY_ALIAS }}"
             export KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
-            ./gradlew assembleRelease --no-daemon --stacktrace
-            cp -f app/build/outputs/apk/release/app-release.apk ${{ env.repo }}-${{ env.version }}.apk
+            ./gradlew assembleRelease --no-daemon --stacktrace cp -f app/build/outputs/apk/release/app-release.apk ${{ env.repo }}-${{ env.version }}.apk
           else
             ./gradlew assembleDebug --no-daemon --stacktrace
           fi
+
+      - name: Rename Original LINE APK
+        run: |
+          mv Original.LINE.apk "Limes arm64-v8a-armeabi-v7a.apk"
 
       - name: Upload Module APK
         uses: actions/upload-artifact@v4
@@ -87,12 +99,22 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      - name: Upload Patched LINE APK
+      - name: Upload Patched LINE APKs
         uses: actions/upload-artifact@v4
         if: github.event.inputs.lspatch == 'true'
         with:
-          name: LINE-${{ env.line_ver }}@${{ env.commit }}
-          path: LINE-${{ env.line_ver }}-lspatched.apk
+          name: Patched LINE APKs
+          path: |
+            Patched Limes V${{ env.line_ver }}-arm64-v8a-lspatched.apk
+            Patched Limes V${{ env.line_ver }}-armeabi-v7a-lspatched.apk
+            Patched Limes V${{ env.line_ver }}-arm64-v8a-armeabi-v7a-lspatched.apk
+          if-no-files-found: error
+
+      - name: Upload Original LINE APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Limes arm64-v8a-armeabi-v7a APK
+          path: "Limes arm64-v8a-armeabi-v7a.apk"
           if-no-files-found: error
 
       - name: Release
@@ -104,7 +126,9 @@ jobs:
           prerelease: false
           files: |
             ${{ env.repo }}-${{ env.version }}.apk
-            LINE-${{ env.line_ver }}-lspatched.apk  # LSPatch適用後の APKを追加
+            Patched Limes V${{ env.line_ver }}-arm64-v8a-lspatched.apk
+            Patched Limes V${{ env.line_ver }}-armeabi-v7a-lspatched.apk
+            Patched Limes V${{ env.line_ver }}-arm64-v8a-armeabi-v7a-lspatched.apk
           body: |
             # 更新内容
             
