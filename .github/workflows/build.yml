@@ -35,18 +35,23 @@ jobs:
 
       - name: Download LINE APKs
         run: |
-          curl -L -o Original.LINE.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.arm64-v8a.+.armeabi-v7a.LINE_v14.19.1.apk
-          curl -L -o original.line.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/original.armeabi-v7a.line-14.19.1.apk
-          curl -L -o Original_v14.19.1arm64-v8a.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.LINE_v14.19.1arm64-v8a.apk
+          download_apk() {
+            curl -L -o "$1" "$2"
+          }
+          download_apk "Original.LINE.apk" "https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.arm64-v8a.+.armeabi-v7a.LINE_v14.19.1.apk"
+          download_apk "original.line.apk" "https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/original.armeabi-v7a.line-14.19.1.apk"
+          download_apk "Original_v14.19.1arm64-v8a.apk" "https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.LINE_v14.19.1arm64-v8a.apk"
 
       - name: Set environments
         run: |
-          {
-            echo "version=v$(grep versionName app/build.gradle | awk '{print $2}' | tr -d \")"
-            echo "line_ver_code=$(grep HOOK_TARGET_VERSION app/build.gradle | awk '{print $4}' | tr -d \'\")"
-            echo "commit=$(echo ${{ github.sha }} | cut -c-7)"
-            echo "repo=$(echo ${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/})"
-          } >> $GITHUB_ENV
+          version=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d \")
+          line_ver_code=$(grep HOOK_TARGET_VERSION app/build.gradle | awk '{print $4}' | tr -d \'\")
+          commit=$(echo ${{ github.sha }} | cut -c-7)
+          repo=$(echo ${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/})
+          echo "version=v$version" >> $GITHUB_ENV
+          echo "line_ver_code=$line_ver_code" >> $GITHUB_ENV
+          echo "commit=$commit" >> $GITHUB_ENV
+          echo "repo=$repo" >> $GITHUB_ENV
 
       - name: Set LINE Original Version Name
         run: echo "line_ver=$(echo '${{ env.line_ver_code }}' | awk '{print substr($0,1,2)"."substr($0,3,2)"."int(substr($0,5,1))}')" >> $GITHUB_ENV
@@ -70,10 +75,6 @@ jobs:
             new_name="Patched Limes V${{ env.line_ver }}-${arch}-lspatched.apk"
             mv "app/build/outputs/apk/debug/app-debug-lspatched.apk" "$new_name"
           done
-
-          # arm64-v8a-armeabi-v7a.apkに対してもパッチを適用
-          java -jar lspatch.jar "Original.LINE.apk" -m "app/build/outputs/apk/debug/app-debug.apk" -l 2 -v
-          mv "app/build/outputs/apk/debug/app-debug-lspatched.apk" "Patched Limes V${{ env.line_ver }}-arm64-v8a-armeabi-v7a-lspatched.apk"
 
       - name: Build with Gradle
         run: |
