@@ -92,7 +92,7 @@ jobs:
       - name: Rename Original LINE APK
         run: |
           if [ -f "Original.LINE.apk" ]; then
-            mv "Original.LINE.apk" "Limes arm64-v8a-armeabi-v7a.apk"
+            mv "Original .LINE.apk" "Limes arm64-v8a-armeabi-v7a.apk"
           else
             echo "Original.LINE.apk not found!"
             exit 1
