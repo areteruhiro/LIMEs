@@ -38,9 +38,10 @@ jobs:
           download_apk() {
             curl -L -o "$1" "$2"
           }
-          download_apk "Original.LINE.apk" "https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.arm64-v8a.+.armeabi-v7a.LINE_v14.19.1.apk"
-          download_apk "original.line.apk" "https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/original.armeabi-v7a.line-14.19.1.apk"
-          download_apk "Original_v14.19.1arm64-v8a.apk" "https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.LINE_v14.19.1arm64-v8a.apk"
+          # ここでは指定された3つのAPKはダウンロードしない
+          download_apk "arm64-v8a.+.armeabi-v7a.LINE_v14.19.1.apk" "https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.arm64-v8a.+.armeabi-v7a.LINE_v14.19.1.apk"
+          download_apk "armeabi-v7a.line-14.19.1.apk" "https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/original.armeabi-v7a.line-14.19.1.apk"
+          download_apk "LINE_v14.19.1arm64-v8a.apk" "https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.LINE_v14.19.1arm64-v8a.apk"
 
       - name: Set environments
         run: |
@@ -69,42 +70,12 @@ jobs:
         if: github.event.inputs.lspatch == 'true'
         run: |
           echo "Patching LIME..."
-          for apk in Original.LINE.apk original.line.apk Original_v14.19.1arm64-v8a.apk; do
+          for apk in arm64-v8a.+.armeabi-v7a.LINE_v14.19.1.apk armeabi-v7a.line-14.19.1.apk LINE_v14.19.1arm64-v8a.apk; do
             java -jar lspatch.jar "$apk" -m "app/build/outputs/apk/debug/app-debug.apk" -l 2 -v
             arch=$(echo "$apk" | grep -oP '(?<=\.)(arm64-v8a|armeabi-v7a)(?=\.apk)')
             new_name="Patched Limes V${{ env.line_ver }}-${arch}-lspatched.apk"
             mv "app/build/outputs/apk/debug/app-debug-lspatched.apk" "$new_name"
           done
-
-      - name: Build with Gradle
-        run: |
-          if [ "${{ inputs.release }}" == "true" ]; then
-            echo "${{ secrets.STORE_FILE }}" | base64 -d > app/release.jks
-            export STORE_PASSWORD="${{ secrets.STORE_PASSWORD }}"
-            export KEY_ALIAS="${{ secrets.KEY_ALIAS }}"
-            export KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
-            ./gradlew assembleRelease --no-daemon --stacktrace
-            cp app/build/outputs/apk/release/app-release.apk ${{ env.repo }}-${{ env.version }}.apk
-          else
-            ./gradlew assembleDebug --no-daemon --stacktrace
-          fi
-
-      - name: Rename Original LINE APK
-        run: |
-          if [ -f "Original.LINE.apk" ]; then
-            mv "Original .LINE.apk" "Limes arm64-v8a-armeabi-v7a.apk"
-          else
-            echo "Original.LINE.apk not found!"
-            exit 1
-          fi
-
-      - name: Upload Module APK
-        uses: actions/upload-artifact@v4
-        if: github.event.inputs.release != 'true'
-        with:
-          name: ${{ env.repo }}-${{ env.version }}@${{ env.commit }}
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
 
       - name: Upload Patched LINE APKs
         uses: actions/upload-artifact@v4
@@ -113,9 +84,7 @@ jobs:
           name: Patched LINE APKs
           path: |
             Patched Limes V${{ env.line_ver }}-arm64-v8a-lspatched.apk
-            Patched Limes V${{ env.line_ver }}-armeabi-v7a-lspatched.apk
-            Patched Limes V${{ env.line_ver }}-arm64-v8a-armeabi-v7a-lspatched.apk
-          if-no-files-found: error
+            Patched Limes V${{ env.line_ver }}-armeabi-v7a-lsp atched.apk
 
       - name: Release
         uses: softprops/action-gh-release@v2
@@ -125,10 +94,8 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            ${{ env.repo }}-${{ env.version }}.apk
             Patched Limes V${{ env.line_ver }}-arm64-v8a-lspatched.apk
             Patched Limes V${{ env.line_ver }}-armeabi-v7a-lspatched.apk
-            Patched Limes V${{ env.line_ver }}-arm64-v8a-armeabi-v7a-lspatched.apk
           body: |
             # 更新内容
             
