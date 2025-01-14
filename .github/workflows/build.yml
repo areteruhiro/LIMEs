@@ -86,12 +86,16 @@ jobs:
             ./gradlew assembleRelease --no-daemon --stacktrace
             cp app/build/outputs/apk/release/app-release.apk ${{ env.repo }}-${{ env.version }}.apk
           else
-            ./gradlew assembleDebug --no-daemon --stacktrace
-          fi
+            ./
 
       - name: Rename Original LINE APK
         run: |
-          mv Original .LINE.apk "Limes arm64-v8a-armeabi-v7a.apk"
+          if [ -f "Original.LINE.apk" ]; then
+            mv "Original.LINE.apk" "Limes arm64-v8a-armeabi-v7a.apk"
+          else
+            echo "Original.LINE.apk not found!"
+            exit 1
+          fi
 
       - name: Upload Module APK
         uses: actions/upload-artifact@v4
