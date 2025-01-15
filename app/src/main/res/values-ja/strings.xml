@@ -141,8 +141,9 @@
     <string name="Read_checker_horizontalMarginFactor">既読者確認ボタン(横マージン)</string>
     <string name="Read_checker_verticalMarginDp">既読者確認ボタン(縦マージン)</string>
     <string name="Read_buttom_Chat_verticalMarginDp">チャット内の既読ボタン(縦マージン)</string>
+    <string name="keep_unread_size">KeepUnreadボタンの大きさ</string>
     <string name="chat_unread_size">常に既読をつけないボタンの大きさ</string>
-    <string name="chat_read_check_sizeLabel">既読ボタンのサイズ</string>
+    <string name="chat_read_check_size">既読確認ボタンのサイズ</string>
 
 
 </resources>

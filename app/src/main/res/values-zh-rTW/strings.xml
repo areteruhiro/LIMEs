@@ -135,5 +135,8 @@
     <string name="Read_checker_horizontalMarginFactor">讀取確認按鈕（水平邊距）</string>
     <string name="Read_checker_verticalMarginDp">閱讀確認按鈕（垂直邊距）</string>
     <string name="Read_buttom_Chat_verticalMarginDp">聊天中的閱讀按鈕（垂直邊距）</string>
+    <string name="keep_unread_size">保留未讀按鈕大小</string>
+    <string name="chat_unread_size">永遠不會標記為已讀的按鈕的大小</string>
+    <string name="chat_read_check_size">讀取確認按鈕的大小</string>
 
 </resources>

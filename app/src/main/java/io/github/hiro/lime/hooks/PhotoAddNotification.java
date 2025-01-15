@@ -93,7 +93,7 @@ public class PhotoAddNotification implements IHook {
                         Notification notification = (Notification) param.args[2];
                         String tag = (String) param.args[0];
                         int ids = (int) param.args[1];
-                        logAllNotificationDetails("notify", ids, notification, tag);
+                       // logAllNotificationDetails("notify", ids, notification, tag);
                         if (Objects.equals(notification.category, "call")) {
                             return;
                         }
@@ -389,8 +389,9 @@ public class PhotoAddNotification implements IHook {
         }
         return null;
     }
+}
 
-
+/*
 
     private void logAllNotificationDetails(String method, int ids, Notification notification, String tag) {
        XposedBridge.log(method + " called. ID: " + ids + (tag != null ? ", Tag: " + tag : ""));
@@ -430,7 +431,5 @@ public class PhotoAddNotification implements IHook {
        XposedBridge.log("Notification Sound: " + notification.sound);
        XposedBridge.log("Notification Vibrate: " + (notification.vibrate != null ? "Yes" : "No"));
     }
+*/
 
-
-
-}

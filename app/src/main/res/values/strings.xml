@@ -147,6 +147,7 @@
     <string name="Read_checker_horizontalMarginFactor">Read button (horizontal margin)</string>
     <string name="MySendMessage">(Read function) Do not display messages other than your own</string>
 
-    <string name="keep_unread_size">keep unread button size</string>
-    <string name="chat_read_check_size">既読ボタンのサイズ</string>
+    <string name="keep_unread_size">KeepUnread button size</string>
+    <string name="chat_unread_size">Size of button that never marks as read</string>
+    <string name="chat_read_check_size">Size of read confirmation button</string>
 </resources>
