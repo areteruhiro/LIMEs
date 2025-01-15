@@ -214,7 +214,7 @@ public class ReadChecker implements IHook {
                             readCheckerHorizontalMarginFactor = Float.parseFloat(parts[1].trim());
                         } else if (parts[0].trim().equals("Read_checker_verticalMarginDp")) {
                             readCheckerVerticalMarginDp = Integer.parseInt(parts[1].trim());
-                        } else if (parts[0].trim().equals("Chat_read_check_size")) {
+                        } else if (parts[0].trim().equals("chat_read_check_size")) {
                             readCheckerSizeDp = Float.parseFloat(parts[1].trim());
                         }
                     }

@@ -1,6 +1,7 @@
 package io.github.hiro.lime.hooks;
 
 
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AndroidAppHelper;
 import android.content.ClipData;
@@ -18,6 +19,7 @@ import android.os.Process;
 import android.text.InputType;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Base64;
+import android.util.Log;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -469,6 +471,7 @@ public class EmbedOptions implements IHook {
         float keep_unread_size = 60.0f;
         float chat_unread_size = 60.0f;
         float chat_read_check_size = 80.0f;
+
         // ファイルの内容を読み込む
         if (file.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -500,14 +503,15 @@ public class EmbedOptions implements IHook {
                                 break;
                             case "Chat_Unread_Size":
                                 chat_unread_size = Float.parseFloat(parts[1].trim());
+                                break; // 追加
                             case "chat_read_check_size":
                                 chat_read_check_size = Float.parseFloat(parts[1].trim());
-
-                                break;
+                                break; // 追加
                         }
                     }
                 }
-            } catch (IOException | NumberFormatException ignored) {
+            } catch (IOException | NumberFormatException e) {
+                Log.e("KeepUnread_Button", "Error reading settings", e);
             }
         } else {
             // ファイルが存在しない場合は初期値で作成
@@ -518,13 +522,13 @@ public class EmbedOptions implements IHook {
                         "Read_buttom_Chat_verticalMarginDp=60\n" +
                         "Read_checker_horizontalMarginFactor=0.5\n" +
                         "Read_checker_verticalMarginDp=60\n" +
-                        "keep_unread_size=60\n"+
-                        "Chat_Unread_Size=60\n"+
-                        "chat_read_check_size=60\n"
-                        ;
-
+                        "keep_unread_size=60\n" +
+                        "Chat_Unread_Size=60\n" +
+                        "chat_read_check_size=60\n";
                 writer.write(defaultSettings);
-            } catch (IOException ignored) {
+                writer.flush(); // 追加
+            } catch (IOException e) {
+                Log.e("KeepUnread_Button", "Error creating default settings file", e);
                 return;
             }
         }
@@ -534,9 +538,7 @@ public class EmbedOptions implements IHook {
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         layoutParams.setMargins(16, 16, 16, 16);
 
-
-
-        // "keep_unread_size" 入力フィールド
+        // 各入力フィールドの作成
         TextView keepUnreadSizeLabel = new TextView(context);
         keepUnreadSizeLabel.setText(moduleContext.getResources().getString(R.string.keep_unread_size));
         keepUnreadSizeLabel.setLayoutParams(layoutParams);
@@ -555,7 +557,6 @@ public class EmbedOptions implements IHook {
         horizontalInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         horizontalInput.setLayoutParams(layoutParams);
 
-        // 縦マージンの入力フィールド
         TextView verticalLabel = new TextView(context);
         verticalLabel.setText(moduleContext.getResources().getString(R.string.keep_unread_vertical));
         verticalLabel.setLayoutParams(layoutParams);
@@ -565,7 +566,6 @@ public class EmbedOptions implements IHook {
         verticalInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         verticalInput.setLayoutParams(layoutParams);
 
-        // "keep_unread_size" 入力フィールド
         TextView ChatUnreadLabel = new TextView(context);
         ChatUnreadLabel.setText(moduleContext.getResources().getString(R.string.chat_unread_size));
         ChatUnreadLabel.setLayoutParams(layoutParams);
@@ -575,7 +575,6 @@ public class EmbedOptions implements IHook {
         ChatUnreadSizeInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         ChatUnreadSizeInput.setLayoutParams(layoutParams);
 
-        // Read_buttom_Chat_size の入力フィールド
         TextView ChatReadCheckSizeLabel = new TextView(context);
         ChatReadCheckSizeLabel.setText(moduleContext.getResources().getString(R.string.chat_read_check_size));
         ChatReadCheckSizeLabel.setLayoutParams(layoutParams);
@@ -585,7 +584,6 @@ public class EmbedOptions implements IHook {
         ChatReadCheckSizeInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         ChatReadCheckSizeInput.setLayoutParams(layoutParams);
 
-        // Read_buttom_Chat_horizontalMarginFactor の入力フィールド
         TextView readButtonHorizontalLabel = new TextView(context);
         readButtonHorizontalLabel.setText(moduleContext.getResources().getString(R.string.Read_buttom_Chat_horizontalMarginFactor));
         readButtonHorizontalLabel.setLayoutParams(layoutParams);
@@ -595,7 +593,6 @@ public class EmbedOptions implements IHook {
         readButtonHorizontalInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         readButtonHorizontalInput.setLayoutParams(layoutParams);
 
-        // Read_buttom_Chat_verticalMarginDp の入力フィールド
         TextView readButtonVerticalLabel = new TextView(context);
         readButtonVerticalLabel.setText(moduleContext.getResources().getString(R.string.Read_buttom_Chat_verticalMarginDp));
         readButtonVerticalLabel.setLayoutParams(layoutParams);
@@ -605,7 +602,6 @@ public class EmbedOptions implements IHook {
         readButtonVerticalInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         readButtonVerticalInput.setLayoutParams(layoutParams);
 
-        // Read_checker_horizontalMarginFactor の入力フィールド
         TextView readCheckerHorizontalLabel = new TextView(context);
         readCheckerHorizontalLabel.setText(moduleContext.getResources().getString(R.string.Read_checker_horizontalMarginFactor));
         readCheckerHorizontalLabel.setLayoutParams(layoutParams);
@@ -615,7 +611,6 @@ public class EmbedOptions implements IHook {
         readCheckerHorizontalInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         readCheckerHorizontalInput.setLayoutParams(layoutParams);
 
-        // Read_checker_verticalMarginDp の入力フィールド
         TextView readCheckerVerticalLabel = new TextView(context);
         readCheckerVerticalLabel.setText(moduleContext.getResources().getString(R.string.Read_checker_verticalMarginDp));
         readCheckerVerticalLabel.setLayoutParams(layoutParams);
@@ -625,40 +620,59 @@ public class EmbedOptions implements IHook {
         readCheckerVerticalInput.setInputType(InputType.TYPE_CLASS_NUMBER);
         readCheckerVerticalInput.setLayoutParams(layoutParams);
 
-        // Save ボタン
         Button saveButton = new Button(context);
         saveButton.setText("Save");
         saveButton.setLayoutParams(layoutParams);
         saveButton.setOnClickListener(v -> {
             try {
-                // 追加: keep_unread_size の取得
-                int newKeepUnreadSize = Integer.parseInt(keepUnreadSizeInput.getText().toString().trim());
-                float newKeepUnreadHorizontalMarginFactor = Float.parseFloat(horizontalInput.getText().toString().trim());
-                int newKeepUnreadVerticalMarginDp = Integer.parseInt(verticalInput.getText().toString().trim());
-                int newChatUnreadSize = Integer.parseInt(ChatUnreadSizeInput.getText().toString().trim());
-                int new_chat_read_check_sizeInput = Integer.parseInt(ChatReadCheckSizeInput.getText().toString().trim());
-                float newReadButtonHorizontalMarginFactor = Float.parseFloat(readButtonHorizontalInput.getText().toString().trim());
-                int newReadButtonVerticalMarginDp = Integer.parseInt(readButtonVerticalInput.getText().toString().trim());
+                // 各入力フィールドの値を取得
+                String keepUnreadSizeStr = keepUnreadSizeInput.getText().toString().trim();
+                String horizontalMarginStr = horizontalInput.getText().toString().trim();
+                String verticalMarginStr = verticalInput.getText().toString().trim();
+                String chatUnreadSizeStr = ChatUnreadSizeInput.getText().toString().trim();
+                String chatReadCheckSizeStr = ChatReadCheckSizeInput.getText().toString().trim();
+                String readButtonHorizontalMarginStr = readButtonHorizontalInput.getText().toString().trim();
+                String readButtonVerticalMarginStr = readButtonVerticalInput.getText().toString().trim();
+                String readCheckerHorizontalMarginStr = readCheckerHorizontalInput.getText().toString().trim();
+                String readCheckerVerticalMarginStr = readCheckerVerticalInput.getText().toString().trim();
 
-                float newReadCheckerHorizontalMarginFactor = Float.parseFloat(readCheckerHorizontalInput.getText().toString().trim());
-                int newReadCheckerVerticalMarginDp = Integer.parseInt(readCheckerVerticalInput.getText().toString().trim());
+                // 入力値の検証
+                if (keepUnreadSizeStr.isEmpty() || horizontalMarginStr.isEmpty() || verticalMarginStr.isEmpty() ||
+                        chatUnreadSizeStr.isEmpty() || chatReadCheckSizeStr.isEmpty() ||
+                        readButtonHorizontalMarginStr.isEmpty() || readButtonVerticalMarginStr.isEmpty() ||
+                        readCheckerHorizontalMarginStr.isEmpty() || readCheckerVerticalMarginStr.isEmpty()) {
+                    Toast.makeText(context, "All fields must be filled!", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
+                // 数値に変換
+                float newKeepUnreadSize = Float.parseFloat(keepUnreadSizeStr); // 修正
+                float newKeepUnreadHorizontalMarginFactor = Float.parseFloat(horizontalMarginStr);
+                int newKeepUnreadVerticalMarginDp = Integer.parseInt(verticalMarginStr);
+                float newChatUnreadSize = Float.parseFloat(chatUnreadSizeStr); // 修正
+                float newChatReadCheckSize = Float.parseFloat(chatReadCheckSizeStr); // 修正
+                float newReadButtonHorizontalMarginFactor = Float.parseFloat(readButtonHorizontalMarginStr);
+                int newReadButtonVerticalMarginDp = Integer.parseInt(readButtonVerticalMarginStr);
+                float newReadCheckerHorizontalMarginFactor = Float.parseFloat(readCheckerHorizontalMarginStr);
+                int newReadCheckerVerticalMarginDp = Integer.parseInt(readCheckerVerticalMarginStr);
                 // ファイルに保存
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-                    // 追加: keep_unread_size の書き込み
                     writer.write("keep_unread_size=" + newKeepUnreadSize + "\n");
                     writer.write("keep_unread_horizontalMarginFactor=" + newKeepUnreadHorizontalMarginFactor + "\n");
                     writer.write("keep_unread_verticalMarginDp=" + newKeepUnreadVerticalMarginDp + "\n");
                     writer.write("Chat_Unread_Size=" + newChatUnreadSize + "\n");
-                    writer.write("chat_read_check_size=" + new_chat_read_check_sizeInput + "\n");
+                    writer.write("chat_read_check_size=" + newChatReadCheckSize + "\n");
                     writer.write("Read_buttom_Chat_horizontalMarginFactor=" + newReadButtonHorizontalMarginFactor + "\n");
                     writer.write("Read_buttom_Chat_verticalMarginDp=" + newReadButtonVerticalMarginDp + "\n");
                     writer.write("Read_checker_horizontalMarginFactor=" + newReadCheckerHorizontalMarginFactor + "\n");
-                    writer.write("Read_checker_verticalMarginDp=" + newReadCheckerVerticalMarginDp);
+                    writer.write("Read_checker_verticalMarginDp=" + newReadCheckerVerticalMarginDp + "\n");
+                    writer.flush();
                     Toast.makeText(context, "Settings saved!", Toast.LENGTH_SHORT).show();
                 }
             } catch (NumberFormatException e) {
-                Toast.makeText(context, "Invalid input format!", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Invalid input format! Please check your inputs.", Toast.LENGTH_SHORT).show();
+                Log.e("KeepUnread_Button", "Error save", e);
+
             } catch (IOException e) {
                 Toast.makeText(context, "Failed to save settings.", Toast.LENGTH_SHORT).show();
             }
@@ -667,38 +681,30 @@ public class EmbedOptions implements IHook {
             context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
         });
 
-// レイアウトを構築
+        // レイアウトを構築
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.addView(keepUnreadSizeLabel);
         layout.addView(keepUnreadSizeInput);
-
         layout.addView(horizontalLabel);
         layout.addView(horizontalInput);
-
         layout.addView(verticalLabel);
         layout.addView(verticalInput);
-
         layout.addView(ChatUnreadLabel);
         layout.addView(ChatUnreadSizeInput);
         layout.addView(readButtonHorizontalLabel);
         layout.addView(readButtonHorizontalInput);
-
         layout.addView(readButtonVerticalLabel);
         layout.addView(readButtonVerticalInput);
-
-       layout.addView(ChatReadCheckSizeLabel);
+        layout.addView(ChatReadCheckSizeLabel);
         layout.addView(ChatReadCheckSizeInput);
-
- layout.addView(readCheckerHorizontalLabel);
+        layout.addView(readCheckerHorizontalLabel);
         layout.addView(readCheckerHorizontalInput);
-
         layout.addView(readCheckerVerticalLabel);
         layout.addView(readCheckerVerticalInput);
-
         layout.addView(saveButton);
 
-// ScrollView を作成
+        // ScrollView を作成
         ScrollView scrollView = new ScrollView(context);
         scrollView.addView(layout);
 
@@ -707,7 +713,11 @@ public class EmbedOptions implements IHook {
         builder.setTitle(moduleContext.getResources().getString(R.string.edit_margin_settings));
         builder.setView(scrollView); // ScrollView をダイアログのビューとして設定
         builder.setNegativeButton(moduleContext.getResources().getString(R.string.cancel), null);
-        builder.show();
+
+// アクティビティがまだ有効であるか確認
+        if (context instanceof Activity && !((Activity) context).isFinishing()) {
+            builder.show();
+        }
     }
 
     private void MuteGroups_Button(Context context,Context moduleContext) {
