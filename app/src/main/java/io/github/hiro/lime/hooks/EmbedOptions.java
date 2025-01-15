@@ -468,7 +468,7 @@ public class EmbedOptions implements IHook {
         int read_checker_verticalMarginDp = 60;
         float keep_unread_size = 60.0f;
         float chat_unread_size = 60.0f;
-        float chat_read_check_size = 60.0f;
+        float chat_read_check_size = 80.0f;
         // ファイルの内容を読み込む
         if (file.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -500,8 +500,8 @@ public class EmbedOptions implements IHook {
                                 break;
                             case "Chat_Unread_Size":
                                 chat_unread_size = Float.parseFloat(parts[1].trim());
-                            case "Chat_read_check_size":
-                                chat_unread_size = Float.parseFloat(parts[1].trim());
+                            case "chat_read_check_size":
+                                chat_read_check_size = Float.parseFloat(parts[1].trim());
 
                                 break;
                         }
@@ -520,7 +520,7 @@ public class EmbedOptions implements IHook {
                         "Read_checker_verticalMarginDp=60\n" +
                         "keep_unread_size=60\n"+
                         "Chat_Unread_Size=60\n"+
-                        "Chat_read_check_size=60\n"
+                        "chat_read_check_size=60\n"
                         ;
 
                 writer.write(defaultSettings);
@@ -639,6 +639,7 @@ public class EmbedOptions implements IHook {
                 int new_chat_read_check_sizeInput = Integer.parseInt(ChatReadCheckSizeInput.getText().toString().trim());
                 float newReadButtonHorizontalMarginFactor = Float.parseFloat(readButtonHorizontalInput.getText().toString().trim());
                 int newReadButtonVerticalMarginDp = Integer.parseInt(readButtonVerticalInput.getText().toString().trim());
+
                 float newReadCheckerHorizontalMarginFactor = Float.parseFloat(readCheckerHorizontalInput.getText().toString().trim());
                 int newReadCheckerVerticalMarginDp = Integer.parseInt(readCheckerVerticalInput.getText().toString().trim());
 
@@ -649,7 +650,7 @@ public class EmbedOptions implements IHook {
                     writer.write("keep_unread_horizontalMarginFactor=" + newKeepUnreadHorizontalMarginFactor + "\n");
                     writer.write("keep_unread_verticalMarginDp=" + newKeepUnreadVerticalMarginDp + "\n");
                     writer.write("Chat_Unread_Size=" + newChatUnreadSize + "\n");
-                    writer.write("Chat_read_check_size=" + new_chat_read_check_sizeInput + "\n");
+                    writer.write("chat_read_check_size=" + new_chat_read_check_sizeInput + "\n");
                     writer.write("Read_buttom_Chat_horizontalMarginFactor=" + newReadButtonHorizontalMarginFactor + "\n");
                     writer.write("Read_buttom_Chat_verticalMarginDp=" + newReadButtonVerticalMarginDp + "\n");
                     writer.write("Read_checker_horizontalMarginFactor=" + newReadCheckerHorizontalMarginFactor + "\n");
