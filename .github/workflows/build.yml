@@ -4,10 +4,10 @@ on:
   push:
     paths:
       - '.github/workflows/build.yml'
-      - 'app/**'
-      - 'gradle/**'
-      - '*.gradle'
-      - '*.properties'
+      - 'app/'
+      - 'gradle/'
+      - '.gradle'
+      - '.properties'
   pull_request:
   workflow_dispatch:
     inputs:
@@ -29,13 +29,8 @@ jobs:
     permissions:
       contents: write
     steps:
-
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Download LINE APK
-        run: |
-          curl -L -o Original.LINE.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.8/Original.arm64-v8a.+.armeabi-v7a.LINE_v14.19.1.apk
 
       - name: Set environments
         run: |
@@ -46,9 +41,6 @@ jobs:
             echo "repo=$(echo ${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/})"
           } >> $GITHUB_ENV
 
-      - name: Set LINE Original Version Name
-        run: echo "line_ver=$(echo '${{ env.line_ver_code }}' | awk '{print substr($0,1,2)"."substr($0,3,2)"."int(substr($0,5,1))}')" >> $GITHUB_ENV
-
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
@@ -58,41 +50,29 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Download Required APKs
+        if: github.event.inputs.release == 'true'
+        run: |
+          curl -L -o Original_ARM.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.arm64-v8a.+.armeabi-v7a.LINE_v14.19.1.apk
+          curl -L -o Original_ARMv7.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/original.armeabi-v7a.line-14.19.1.apk
+          curl -L -o Original_ARM64.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.LINE_v14.19.1arm64-v8a.apk
+
       - name: LSPatch
-        if: github.event.inputs.lspatch == 'true'
+      - name: LSPatch
+        if: github.event.inputs.release == 'true'
         run: |
-          echo "Patching LIME..."
-          java -jar lspatch.jar "Original.LINE.apk" -m "app/build/outputs/apk/debug/app-debug.apk" -l 2 -v
-          # LSPatch後のAPKファイル名を指定
-          mv "app/build/outputs/apk/debug/app-debug-lspatched.apk" "LINE-${{ env.line_ver }}-lspatched.apk"
+          for file in Original_ARM.apk Original_ARMv7.apk Original_ARM64.apk; do
+            echo "Patching $file..."
+            java -jar lspatch.jar "$file" -m "app/build/outputs/apk/debug/app-debug.apk" -l 2 -v
+            mv "${file%.apk}-lspatched.apk" "Patched_${{ env.version }}_$file"
+          done
 
-      - name: Build with Gradle
-        run: |
-          if [ "${{ inputs.release }}" == "true" ]; then
-            echo "${{ secrets.STORE_FILE }}" | base64 -d > app/release.jks
-            export STORE_PASSWORD="${{ secrets.STORE_PASSWORD }}"
-            export KEY_ALIAS="${{ secrets.KEY_ALIAS }}"
-            export KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
-            ./gradlew assembleRelease --no-daemon --stacktrace
-            cp -f app/build/outputs/apk/release/app-release.apk ${{ env.repo }}-${{ env.version }}.apk
-          else
-            ./gradlew assembleDebug --no-daemon --stacktrace
-          fi
-
-      - name: Upload Module APK
+      - name: Upload Patched APKs
         uses: actions/upload-artifact@v4
-        if: github.event.inputs.release != 'true'
+        if: github.event.inputs.release == 'true'
         with:
-          name: ${{ env.repo }}-${{ env.version }}@${{ env.commit }}
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-
-      - name: Upload Patched LINE APK
-        uses: actions/upload-artifact@v4
-        if: github.event.inputs.lspatch == 'true'
-        with:
-          name: LINE-${{ env.line_ver }}@${{ env.commit }}
-          path: LINE-${{ env.line_ver }}-lspatched.apk
+          name: Patched_APKs
+          path: Patched_${{ env.version }}_*.apk
           if-no-files-found: error
 
       - name: Release
@@ -104,7 +84,9 @@ jobs:
           prerelease: false
           files: |
             ${{ env.repo }}-${{ env.version }}.apk
-            LINE-${{ env.line_ver }}-lspatched.apk  # LSPatch適用後の APKを追加
+            Patched_${{ env.version }}_Original_ARM.apk
+            Patched_${{ env.version }}_Original_ARMv7.apk
+            Patched_${{ env.version }}_Original_ARM64.apk
           body: |
             # 更新内容
             
