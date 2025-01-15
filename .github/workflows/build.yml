@@ -80,10 +80,10 @@ jobs:
         run: |
           for file in Original_ARM.apk Original_ARMv7.apk Original_ARM64.apk; do
             echo "Patching $file..."
-            java -jar lspatch.jar "$file" -m "app/build/outputs/apk/debug/app-debug.apk" -l 2 -v
+            # Use the correct path for the release APK
+            java -jar lspatch.jar "$file" -m "${{ env.repo }}-${{ env.version }}.apk" -l 2 -v
             mv "${file%.apk}-lspatched.apk" "Patched_${{ env.version }}_$file"
           done
-
       - name: Upload Patched APKs
         uses: actions/upload-artifact@v4
         if: github.event.inputs.release == 'true'
