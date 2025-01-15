@@ -25,6 +25,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.util.HashMap;
 import java.util.Map;
@@ -130,32 +132,46 @@ public class PreventMarkAsRead implements IHook {
                     return settings;
                 }
 
-                private Map<String, String> readSettingsFromFile(File file) {
-                    Map<String, String> settings = new HashMap<>();
-                    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            String[] parts = line.split("=", 2);
-                            if (parts.length == 2) {
-                                settings.put(parts[0].trim(), parts[1].trim());
-                            }
-                        }
-                    } catch (IOException e) {
-                        Log.e("FileError", "Error reading file: " + e.getMessage());
-                    }
-                    return settings;
-                }
                 private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext) {
-                    String imageName = isOn ? "switch_off" : "switch_on";
-                    int imageResource = moduleContext.getResources().getIdentifier(imageName, "drawable", "io.github.hiro.lime");
+                    String imageName = isOn ? "read_switch_on.png" : "read_switch_off.png"; // 拡張子を追加
+                    File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
 
-                    if (imageResource != 0) {
-                        Drawable drawable = moduleContext.getResources().getDrawable(imageResource, null);
+                    if (!dir.exists()) {
+                        dir.mkdirs();
+                    }
+
+                    File imageFile = new File(dir, imageName);
+
+
+                    if (!imageFile.exists()) {
+                        try (InputStream in = moduleContext.getResources().openRawResource(
+                                moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));
+                             OutputStream out = new FileOutputStream(imageFile)) {
+                            byte[] buffer = new byte[1024];
+                            int length;
+                            while ((length = in.read(buffer)) > 0) {
+                                out.write(buffer, 0, length);
+                            }
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+
+                    if (imageFile.exists()) {
+                        Drawable drawable = Drawable.createFromPath(imageFile.getAbsolutePath());
                         if (drawable != null) {
-                            drawable = scaleDrawable(drawable, 86, 86); // サイズを調整
+                            Map<String, String> settings = readSettingsFromExternalFile(moduleContext);
+                            float sizeInDp = Float.parseFloat(settings.getOrDefault("chat_unread_size", "60"));
+                            int sizeInPx = dpToPx(moduleContext, sizeInDp);
+                            drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
                             imageView.setImageDrawable(drawable);
                         }
                     }
+                }
+
+                private int dpToPx(Context context, float dp) {
+                    float density = context.getResources().getDisplayMetrics().density;
+                    return Math.round(dp * density);
                 }
                 private Drawable scaleDrawable(Drawable drawable, int width, int height) {
                     Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();

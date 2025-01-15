@@ -175,7 +175,7 @@ public class KeepUnread implements IHook {
                     }
 
                     private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext) {
-                        String imageName = isOn ? "switch_on.png" : "switch_off.png"; // 拡張子を追加
+                        String imageName = isOn ? "keep_switch_on.png" : "keep_switch_off.png"; // 拡張子を追加
                         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
 
                         // ディレクトリが存在しない場合は作成
@@ -205,8 +205,8 @@ public class KeepUnread implements IHook {
                             Drawable drawable = Drawable.createFromPath(imageFile.getAbsolutePath());
                             if (drawable != null) {
                                 Map<String, String> settings = readSettingsFromExternalFile(moduleContext);
-                                float sizeInDp = Float.parseFloat(settings.getOrDefault("keep_unread_size", "60")); // 既定値 38dp
-                                int sizeInPx = dpToPx(moduleContext, sizeInDp); // dp を px に変換
+                                float sizeInDp = Float.parseFloat(settings.getOrDefault("keep_unread_size", "60"));
+                                int sizeInPx = dpToPx(moduleContext, sizeInDp);
                                 drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
                                 imageView.setImageDrawable(drawable);
                             }

@@ -148,4 +148,5 @@
     <string name="MySendMessage">(Read function) Do not display messages other than your own</string>
 
     <string name="keep_unread_size">keep unread button size</string>
+    <string name="chat_read_check_size">既読ボタンのサイズ</string>
 </resources>

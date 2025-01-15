@@ -12,7 +12,10 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -21,15 +24,19 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -194,6 +201,7 @@ public class ReadChecker implements IHook {
         // デフォルト値
         float readCheckerHorizontalMarginFactor = 0.5f; // デフォルト値
         int readCheckerVerticalMarginDp = 100; // デフォルト値
+        float readCheckerSizeDp = 60; // デフォルト値
 
         // ファイルの内容を読み込む
         if (file.exists()) {
@@ -206,6 +214,8 @@ public class ReadChecker implements IHook {
                             readCheckerHorizontalMarginFactor = Float.parseFloat(parts[1].trim());
                         } else if (parts[0].trim().equals("Read_checker_verticalMarginDp")) {
                             readCheckerVerticalMarginDp = Integer.parseInt(parts[1].trim());
+                        } else if (parts[0].trim().equals("Chat_read_check_size")) {
+                            readCheckerSizeDp = Float.parseFloat(parts[1].trim());
                         }
                     }
                 }
@@ -213,26 +223,45 @@ public class ReadChecker implements IHook {
             }
         }
 
-        // ボタンを作成
-        Button button = new Button(activity);
-        button.setText("R");
-        button.setBackgroundColor(Color.BLACK);
-        button.setTextColor(Color.WHITE);
+        ImageView imageButton = new ImageView(activity);
+        String imageName = "read_checker.png";
+        File imageFile = new File(dir, imageName);
 
-        // ボタンのレイアウトパラメータを設定
+        if (!imageFile.exists()) {
+            try (InputStream in = moduleContext.getResources().openRawResource(
+                    moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));
+                 OutputStream out = new FileOutputStream(imageFile)) {
+                byte[] buffer = new byte[1024];
+                int length;
+                while ((length = in.read(buffer)) > 0) {
+                    out.write(buffer, 0, length);
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
+        if (imageFile.exists()) {
+            Drawable drawable = Drawable.createFromPath(imageFile.getAbsolutePath());
+            if (drawable != null) {
+                int sizeInPx = dpToPx(moduleContext, readCheckerSizeDp);
+                drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
+                imageButton.setImageDrawable(drawable);
+            }
+        }
+
         FrameLayout.LayoutParams frameParams = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
         );
 
-        // マージンを設定
         int horizontalMarginPx = (int) (readCheckerHorizontalMarginFactor * activity.getResources().getDisplayMetrics().widthPixels);
         int verticalMarginPx = (int) (readCheckerVerticalMarginDp * activity.getResources().getDisplayMetrics().density);
         frameParams.setMargins(horizontalMarginPx, verticalMarginPx, 0, 0);
 
-        button.setLayoutParams(frameParams);
+        imageButton.setLayoutParams(frameParams);
 
-        button.setOnClickListener(new View.OnClickListener() {
+        imageButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 if (currentGroupId != null) {
@@ -242,7 +271,18 @@ public class ReadChecker implements IHook {
         });
 
         ViewGroup layout = activity.findViewById(android.R.id.content);
-        layout.addView(button);
+        layout.addView(imageButton);
+    }
+
+    private int dpToPx(Context context, float dp) {
+        float density = context.getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
+    }
+
+    private Drawable scaleDrawable(Drawable drawable, int width, int height) {
+        Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
+        Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
+        return new BitmapDrawable(scaledBitmap);
     }
 
 
@@ -394,7 +434,6 @@ public class ReadChecker implements IHook {
         }
     }
 
-
     private void catchNotification(XC_LoadPackage.LoadPackageParam loadPackageParam, SQLiteDatabase db3, SQLiteDatabase db4, Context appContext, Context moduleContext) {
         try {
             XposedBridge.hookAllMethods(
@@ -453,6 +492,7 @@ public class ReadChecker implements IHook {
     private void fetchDataAndSave(SQLiteDatabase db3, SQLiteDatabase db4, String paramValue, Context context, Context moduleContext) {
         File dbFile = new File(context.getFilesDir(), "data_log.txt");
 
+
         try {
             String serverId = extractServerId(paramValue, context);
             String SentUser = extractSentUser(paramValue);
@@ -463,12 +503,6 @@ public class ReadChecker implements IHook {
             String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
             String groupId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
             String groupName = queryDatabase(db3, "SELECT name FROM groups WHERE id=?", groupId);
-
-            // groupNameがnullまたは空の場合、SentUserのプロファイル名を取得
-            if (groupName == null || groupName.isEmpty()) {
-                groupName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
-            }
-
             String content = queryDatabase(db3, "SELECT content FROM chat_history WHERE server_id=?", serverId);
             String user_name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
             String timeEpochStr = queryDatabase(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
@@ -492,13 +526,11 @@ public class ReadChecker implements IHook {
                 }
             }
             String finalContent = (content != null && !content.isEmpty()) ? content : (!mediaDescription.isEmpty() ? mediaDescription : "No content:" + serverId);
-
-            // groupNameがnullまたは空の場合user_nameを使用
-            String finalGroupName = (groupName != null && !groupName.isEmpty()) ? groupName : user_name;
-            saveData(SendUser, groupId, serverId, SentUser, finalGroupName, finalContent, user_name, timeFormatted, context);
+            saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, user_name, timeFormatted, context);
         } catch (Exception e) {
         }
     }
+
 
 
     private void writeToFile(File file, String text) {
@@ -605,113 +637,95 @@ public class ReadChecker implements IHook {
         limeDatabase.execSQL(createGroupTable);
         //XposedBridge.log("Database initialized and read_message table created.");
     }
-    private void saveData(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime, Context context) {
+
+
+    private void saveData( String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime, Context context) {
+        if (groupName == null) {
+
+
+            return;
+        }
         Cursor cursor = null;
         try {
-            String checkQuery = "SELECT COUNT(*), user_name FROM read_message WHERE server_id=?";
+            String checkQuery = "SELECT COUNT(*), user_name FROM group_messages WHERE server_id=? AND Sent_User=?";
             cursor = limeDatabase.rawQuery(checkQuery, new String[]{serverId});
             if (cursor.moveToFirst()) {
                 int count = cursor.getInt(0);
                 String existingUserName = cursor.getString(1);
                 String currentTime = getCurrentTime();
 
+
                 if (count > 0) {
                     if (!existingUserName.contains(user_name)) {
                         String updatedUserName = existingUserName + (existingUserName.isEmpty() ? "" : "\n") + "-" + user_name + " [" + currentTime + "]";
                         ContentValues values = new ContentValues();
                         values.put("user_name", updatedUserName);
-                        limeDatabase.update("read_message", values, "server_id=?", new String[]{serverId});
-                        //XposedBridge.log("User  name updated for server_id: " + serverId + ", Sent_User: " + SentUser );
+                        limeDatabase.update("group_messages", values, "server_id=? AND Sent_User=?", new String[]{serverId});
+                        //XposedBridge.log("User name updated for server_id: " + serverId + ", Sent_User: " + SentUser);
                     }
                 } else {
                     insertNewRecord(SendUser, groupId, serverId, SentUser, groupName, content, "-" + user_name + " [" + currentTime + "]", createdTime);
                 }
+                updateOtherRecordsUserNames(groupId, user_name, currentTime);
             }
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
 
+
+        } catch (Exception e) {
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
         }
     }
+    private void updateOtherRecordsUserNames(String groupId, String user_name, String currentTime) {
+        Cursor cursor = null;
+        try {
+            String selectOtherQuery = "SELECT server_id, user_name FROM group_messages WHERE group_id=? AND user_name NOT LIKE ?";
+            cursor = limeDatabase.rawQuery(selectOtherQuery, new String[]{groupId, "%-" + user_name + "%"});
+
+
+            while (cursor.moveToNext()) {
+                String serverId = cursor.getString(cursor.getColumnIndexOrThrow("server_id"));
+                String existingUserName = cursor.getString(cursor.getColumnIndexOrThrow("user_name"));
+
+
+                if (!existingUserName.contains(user_name)) {
+                    String updatedUserName = existingUserName + (existingUserName.isEmpty() ? "" : "\n") + "-" + user_name + " [" + currentTime + "]";
+                    ContentValues values = new ContentValues();
+                    values.put("user_name", updatedUserName);
+                    limeDatabase.update("group_messages", values, "group_id=? AND server_id=?", new String[]{groupId, serverId});
+                    //XposedBridge.log("Updated user_name for other records in group_id: " + groupId + ", server_id: " + serverId);
+                }
+            }
+        } catch (Exception e) {
+            Log.e("updateOtherRecordsUserNames", "Error updating other records' user names:", e);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+    }
+
 
     private String getCurrentTime() {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         return sdf.format(new Date());
     }
 
-    private void insertNewRecord(String sendUser, String groupId, String serverId, String sentUser, String groupName, String content, String userName, String createdTime) {
-        String selectQuery = "SELECT COUNT(*) FROM read_message WHERE group_id=? AND server_id=?";
-        String insertQuery = "INSERT INTO read_message(group_id, server_id, Sent_User, group_name, content, user_name, created_time, Send_User) " +
-                "VALUES(?, ?, ?, ?, ?, ?, ?, ?);";
-        String updateQuery = "UPDATE read_message SET user_name = ? WHERE group_id = ? AND user_name NOT LIKE ?";
 
-        Cursor cursor = null;
-        try {
-            // 新しいレコードを挿入
-            cursor = limeDatabase.rawQuery(selectQuery, new String[]{groupId, serverId});
-            if (cursor.moveToFirst()) {
-                int count = cursor.getInt(0);
-                if (count == 0) {
-                    // 新しいレコードを挿入
-                    limeDatabase.execSQL(insertQuery, new Object[]{groupId, serverId, sentUser, groupName, content, userName, createdTime, sendUser});
-                    XposedBridge.log("Inserted new record for groupId: " + groupId + ", serverId: " + serverId);
-                } else {
-                    XposedBridge.log("Record already exists for groupId: " + groupId + ", serverId: " + serverId);
-                }
+    private void insertNewRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime) {
+        String insertQuery = "INSERT INTO group_messages(group_id, server_id, Sent_User,Send_User, group_name, content, user_name, created_time)" +
+                " VALUES(?, ?, ?, ?, ?, ?, ?);";
+
+
+            try {
+                limeDatabase.execSQL(insertQuery, new Object[]{groupId, serverId, SentUser,SendUser, groupName, content, user_name, createdTime});
+            } catch (Exception e) {
+                e.printStackTrace();
+            } finally {
+                limeDatabase.endTransaction();
             }
 
-            // 同じ groupId の過去のレコードを更新
-            String existingUserNameQuery = "SELECT user_name FROM read_message WHERE group_id=? AND user_name NOT LIKE ?";
-            Cursor existingCursor = limeDatabase.rawQuery(existingUserNameQuery, new String[]{groupId, "%-" + userName + "%"});
-
-            if (existingCursor.moveToFirst()) {
-                do {
-                    String existingUserName = existingCursor.getString(existingCursor.getColumnIndexOrThrow("user_name"));
-                    // "-" を除いた名前を比較
-                    String cleanedUserName = userName.replace("-", "").trim();
-                    // 時間部分を正規表現で削除
-                    cleanedUserName = cleanedUserName.replaceAll("\\[.*?\\]", "").trim();
-
-                    // user_name を改行で分割して、すべての名前をチェック
-                    String[] existingNames = existingUserName.split("\n");
-                    boolean alreadyContains = false;
-
-                    XposedBridge.log("Checking user_name for groupId: " + groupId);
-                    XposedBridge.log("Existing user_names: " + existingUserName);
-                    XposedBridge.log("Checking for userName: " + userName);
-
-                    for (String existingName : existingNames) {
-                        // "-" を除いた名前を比較し、時間部分を削除
-                        String cleanedExistingName = existingName.replace("-", "").trim();
-                        cleanedExistingName = cleanedExistingName.replaceAll("\\[.*?\\]", "").trim();
-                        XposedBridge.log("Comparing cleanedExistingName: " + cleanedExistingName + " with cleanedUserName: " + cleanedUserName);
-                        if (cleanedExistingName.equals(cleanedUserName)) {
-                            alreadyContains = true;
-                            XposedBridge.log("user_name already contains: " + cleanedUserName + " for groupId: " + groupId);
-                            break;
-                        }
-                    }
-
-                    // すべての改行で名前を確認して、含まれていない場合のみ更新する
-                    if (!alreadyContains) {
-                        String updatedUserName = existingUserName + (existingUserName.isEmpty() ? "" : "\n")  + userName;
-                        limeDatabase.execSQL(updateQuery, new Object[]{updatedUserName, groupId, "%-" + userName + "%"});
-                        XposedBridge.log("Updated user_name for groupId: " + groupId + " to include: " + userName);
-                    } else {
-                        XposedBridge.log("Skipping update, user_name already contains: " + userName + " for groupId: " + groupId);
-                    }
-                } while (existingCursor.moveToNext());
-            }
-            existingCursor.close();
-        } catch (Exception e) {
-            Log.e("insertNewRecord", "Error inserting or updating record:", e);
-            XposedBridge.log("Error inserting or updating record: " + e.getMessage());
-        }
     }
 
-
 }
-
-
-
-
