@@ -61,7 +61,7 @@ jobs:
       - name: Download LSPatch
         if: github.event.inputs.release == 'true'
         run: |
-          curl -L -o lspatch.jar https://github.com/JingMatrix/LSPatch/releases/latest/download/lspatch.jar
+          curl -L -o lspatch.jar https://github.com/JingMatrix/LSPatch/releases/download/v0.7/lspatch.jar
           
       - name: Build with Gradle
         run: |
