@@ -12,16 +12,10 @@ https://www.apkmirror.com/apk/line-corporation/line/line-14-3-2-release/
 6、Googleアカウントでログイン<br>
 7,ログイン後にLINE （14.19.1パッチ）をインストールし**更新**するようにしてください。<br>
 
-（LINEapk配布先）
-https://t.me/LsPosedLIMEs/36/83
-
 # チャット復元を行わない場合
 
 パッチ済みの14.3.2でログインをし、パッチ済みの14.19.1に更新
 
-
-（LINEapk配布先）
-https://t.me/LsPosedLIMEs/36/83
 
 ## 自分で導入する方法
 
