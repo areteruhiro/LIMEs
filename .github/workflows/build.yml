@@ -58,7 +58,6 @@ jobs:
           curl -L -o Original_ARM64.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.LINE_v14.19.1arm64-v8a.apk
 
       - name: LSPatch
-      - name: LSPatch
         if: github.event.inputs.release == 'true'
         run: |
           for file in Original_ARM.apk Original_ARMv7.apk Original_ARM64.apk; do
