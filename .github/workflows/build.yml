@@ -57,6 +57,11 @@ jobs:
           curl -L -o Original_ARMv7.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/original.armeabi-v7a.line-14.19.1.apk
           curl -L -o Original_ARM64.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.LINE_v14.19.1arm64-v8a.apk
 
+      - name: Download LSPatch
+        if: github.event.inputs.release == 'true'
+        run: |
+          curl -L -o lspatch.jar https://github.com/JingMatrix/LSPatch/releases/latest/download/lspatch.jar
+
       - name: LSPatch
         if: github.event.inputs.release == 'true'
         run: |
