@@ -680,17 +680,16 @@ public class EmbedOptions implements IHook {
 
         layout.addView(ChatUnreadLabel);
         layout.addView(ChatUnreadSizeInput);
-
-        layout.addView(ChatReadCheckSizeLabel);
-        layout.addView(ChatReadCheckSizeInput);
-
         layout.addView(readButtonHorizontalLabel);
         layout.addView(readButtonHorizontalInput);
 
         layout.addView(readButtonVerticalLabel);
         layout.addView(readButtonVerticalInput);
 
-        layout.addView(readCheckerHorizontalLabel);
+       layout.addView(ChatReadCheckSizeLabel);
+        layout.addView(ChatReadCheckSizeInput);
+
+ layout.addView(readCheckerHorizontalLabel);
         layout.addView(readCheckerHorizontalInput);
 
         layout.addView(readCheckerVerticalLabel);
