@@ -33,6 +33,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Download LINE APK
+        run: |
+          curl -L -o Original.LINE.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.8/Original.arm64-v8a.+.armeabi-v7a.LINE_v14.19.1.apk
+
       - name: Set environments
         run: |
           {
@@ -49,37 +53,18 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '21'
+          java-version: 21
 
       - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+        uses: gradle/actions/setup-gradle@v4
 
-      - name: Get previous version name
-        uses: oprypin/find-latest-tag@v1.1.2
-        if: github.event.inputs.release == 'true'
-        id: previous
-        with:
-          repository: ${{ github.repository }}
-          releases-only: true
-
-      - name: Release check
-        if: github.event.inputs.release == 'true'
+      - name: LSPatch
+        if: github.event.inputs.lspatch == 'true'
         run: |
-          if [ "${{ secrets.STORE_FILE }}" == "" ]; then
-            echo -e "\nERROR!\nTo release, you need to set up a signing key!\n"
-            echo "STORE_FILE: A Base64 encoded string of the signing key in JKS format"
-            echo "STORE_PASSWORD: Key store password"
-            echo "KEY_ALIAS: Key alias"
-            echo "KEY_PASSWORD: Key password"
-            echo ""
-            exit 1
-          fi
-          if [ "${{ steps.previous.outputs.tag }}" == "${{ env.version }}" ]; then
-            echo -e "\nERROR!\nThe same tag already exists!\n"
-            echo "Please change versionName in build.gradle"
-            echo ""
-            exit 1
-          fi
+          echo "Patching LIME..."
+          java -jar lspatch.jar "Original.LINE.apk" -m "app/build/outputs/apk/debug/app-debug.apk" -l 2 -v
+          # LSPatch後のAPKファイル名を指定
+          mv "app/build/outputs/apk/debug/app-debug-lspatched.apk" "LINE-${{ env.line_ver }}-lspatched.apk"
 
       - name: Build with Gradle
         run: |
@@ -94,21 +79,6 @@ jobs:
             ./gradlew assembleDebug --no-daemon --stacktrace
           fi
 
-      - name: LSPatch
-        if: github.event.inputs.lspatch == 'true'
-        run: |
-          cat << EOF > conf
-          https://github.com/JingMatrix/LSPatch/releases/latest/download/lspatch.jar
-            out=lspatch.jar
-          https://d.apkpure.net/b/APK/jp.naver.line.android?versionCode=${{ env.line_ver_code }}&nc=arm64-v8a%2Carmeabi-v7a&sv=28
-            out=line-${{ env.line_ver }}.apk
-          EOF
-          echo "Downloading APK..."
-          aria2c --no-conf -x16 -s16 -R -m0 -V --async-dns=false -iconf
-          echo "Patching LIME..."
-          java -jar lspatch.jar "line-${{ env.line_ver }}.apk" -m "app/build/outputs/apk/debug/app-debug.apk" -l 2 -v
-          mv "line-${{ env.line_ver }}-*-lspatched.apk" "line-${{ env.line_ver }}-lspatched.apk"
-
       - name: Upload Module APK
         uses: actions/upload-artifact@v4
         if: github.event.inputs.release != 'true'
@@ -122,7 +92,7 @@ jobs:
         if: github.event.inputs.lspatch == 'true'
         with:
           name: LINE-${{ env.line_ver }}@${{ env.commit }}
-          path: line-${{ env.line_ver }}-lspatched.apk
+          path: LINE-${{ env.line_ver }}-lspatched.apk
           if-no-files-found: error
 
       - name: Release
@@ -134,7 +104,7 @@ jobs:
           prerelease: false
           files: |
             ${{ env.repo }}-${{ env.version }}.apk
-            line-${{ env.line_ver }}-lspatched.apk
+            LINE-${{ env.line_ver }}-lspatched.apk  # LSPatch適用後の APKを追加
           body: |
             # 更新内容
             
