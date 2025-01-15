@@ -61,7 +61,11 @@ jobs:
         if: github.event.inputs.release == 'true'
         run: |
           curl -L -o lspatch.jar https://github.com/JingMatrix/LSPatch/releases/latest/download/lspatch.jar
-
+      - name: Build APK
+        if: github.event.inputs.release == 'true'
+        run: |
+          ./gradlew assembleDebug --no-daemon --stacktrace
+          
       - name: LSPatch
         if: github.event.inputs.release == 'true'
         run: |
