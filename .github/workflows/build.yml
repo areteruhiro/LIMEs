@@ -49,6 +49,7 @@ jobs:
 
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
+        
 
       - name: Download Required APKs
         if: github.event.inputs.release == 'true'
@@ -61,7 +62,19 @@ jobs:
         if: github.event.inputs.release == 'true'
         run: |
           curl -L -o lspatch.jar https://github.com/JingMatrix/LSPatch/releases/latest/download/lspatch.jar
-
+          
+      - name: Build with Gradle
+        run: |
+          if [ "${{ inputs.release }}" == "true" ]; then
+            echo "${{ secrets.STORE_FILE }}" | base64 -d > app/release.jks
+            export STORE_PASSWORD="${{ secrets.STORE_PASSWORD }}"
+            export KEY_ALIAS="${{ secrets.KEY_ALIAS }}"
+            export KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
+            ./gradlew assembleRelease --no-daemon --stacktrace
+            cp -f app/build/outputs/apk/release/app-release.apk ${{ env.repo }}-${{ env.version }}.apk
+          else
+            ./gradlew assembleDebug --no-daemon --stacktrace
+          fi
 
       - name: LSPatch
         if: github.event.inputs.release == 'true'
