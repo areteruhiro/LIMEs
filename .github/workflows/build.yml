@@ -57,31 +57,22 @@ jobs:
           curl -L -o Original_ARMv7.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/original.armeabi-v7a.line-14.19.1.apk
           curl -L -o Original_ARM64.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.14.7.7.3/Original.LINE_v14.19.1arm64-v8a.apk
 
-      - name: Download LSPatch
-        if: github.event.inputs.release == 'true'
-        run: |
-          curl -L -o lspatch.jar https://github.com/JingMatrix/LSPatch/releases/latest/download/lspatch.jar
-
-      - name: Build with Gradle
-        run: |
-          if [ "${{ inputs.release }}" == "true" ]; then
-            echo "${{ secrets.STORE_FILE }}" | base64 -d > app/release.jks
-            export STORE_PASSWORD="${{ secrets.STORE_PASSWORD }}"
-            export KEY_ALIAS="${{ secrets.KEY_ALIAS }}"
-            export KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
-            ./gradlew assembleRelease --no-daemon --stacktrace
-            cp -f app/build/outputs/apk/release/app-release.apk ${{ env.repo }}-${{ env.version }}.apk
-          else
-            ./gradlew assembleDebug --no-daemon --stacktrace
-          fi
-
       - name: LSPatch
         if: github.event.inputs.release == 'true'
         run: |
           for file in Original_ARM.apk Original_ARMv7.apk Original_ARM64.apk; do
             echo "Patching $file..."
             java -jar lspatch.jar "$file" -m "${{ env.repo }}-${{ env.version }}.apk" -l 2 -v
-            mv "${file%.apk}-lspatched.apk" "Patched_${{ env.version }}_$file" || echo "Patched file not found for $file"
+            
+            # Determine the expected output file name
+            output_file="${file%.apk}-430-lspatched.apk"
+            
+            # List the current directory to see what files are present
+            echo "Current directory contents after patching:"
+            ls -l
+            
+            # Move the patched file using the correct naming convention
+            mv "$output_file" "Patched_${{ env.version }}_$file" || echo "Patched file not found for $file"
           done
 
       - name: Release
@@ -93,7 +84,9 @@ jobs:
           prerelease: false
           files: |
             ${{ env.repo }}-${{ env.version }}.apk
-            Patched_${{ env.version }}_*.apk  # Ensure this matches the actual names of the patched files
+            Patched_${{ env.version }}_Original_ARM.apk
+            Patched_${{ env.version }}_Original_ARMv7.apk
+            Patched_${{ env.version }}_Original_ARM64.apk
           body: |
             # 更新内容
             
@@ -101,4 +94,4 @@ jobs:
             ${{ env.line_ver }}
             
             ### 差分
-            https://github .com/${{ github.repository }}/compare/${{ steps.previous.outputs.tag }}...${{ env.version }}
+            https://github.com/${{ github.repository }}/compare/${{ steps.previous.outputs.tag }}...${ { env.version }}
