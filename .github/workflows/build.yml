@@ -112,5 +112,5 @@ jobs:
             ## 対応するLINEのバージョン
             ${{ env.line_ver }}
             
-            ### 差分
-            https://github.com/${{ github.repository }}/compare/${{ steps.previous.outputs.tag }}...${ { env.version }}
+             ### 差分
+            https://github.com/${{ github.repository }}/compare/${{ steps.previous.outputs.tag }}...${{ env.version }}
