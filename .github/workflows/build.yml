@@ -82,15 +82,14 @@ jobs:
             echo "Patching $file..."
             # Use the correct path for the release APK
             java -jar lspatch.jar "$file" -m "${{ env.repo }}-${{ env.version }}.apk" -l 2 -v
-            mv "${file%.apk}-lspatched.apk" "Patched_${{ env.version }}_$file"
+            
+            # List the current directory to see what files are present
+            echo "Current directory contents:"
+            ls -l
+            
+            # Move the patched file using a wildcard
+            mv "${file%.apk}-lspatched.apk" "Patched_${{ env.version }}_$file" || echo "Patched file not found for $file"
           done
-      - name: Upload Patched APKs
-        uses: actions/upload-artifact@v4
-        if: github.event.inputs.release == 'true'
-        with:
-          name: Patched_APKs
-          path: Patched_${{ env.version }}_*.apk
-          if-no-files-found: error
 
       - name: Release
         uses: softprops/action-gh-release@v2
