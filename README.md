@@ -1,4 +1,4 @@
-# <img src="app/src/main/ic_launcher-playstore.png" width="60px"> LIME: Adkiller for Beta LINEs
+# <img src="app/src/main/ic_launcher-playstore.png" width="60px"> LIMEs: Adkiller for Beta LINE
 
  # 導入方法
  
