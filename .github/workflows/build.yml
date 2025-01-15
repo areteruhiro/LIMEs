@@ -40,6 +40,8 @@ jobs:
             echo "commit=$(echo ${{ github.sha }} | cut -c-7)"
             echo "repo=$(echo ${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/})"
           } >> $GITHUB_ENV
+      - name: Set LINE Original Version Name
+        run: echo "line_ver=$(echo '${{ env.line_ver_code }}' | awk '{print substr($0,1,2)"."substr($0,3,2)"."int(substr($0,5,1))}')" >> $GITHUB_ENV
 
       - name: Setup Java
         uses: actions/setup-java@v4
