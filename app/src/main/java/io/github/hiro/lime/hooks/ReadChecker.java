@@ -652,9 +652,7 @@ public class ReadChecker implements IHook {
 
                     insertNewRecord(SendUser, groupId, serverId, SentUser, groupName, content, "-" + user_name + " [" + currentTime + "]", createdTime);
                 }
-                XposedBridge.log("updateOtherRecordsUserNames");
 
-                updateOtherRecordsUserNames(groupId, user_name, currentTime);
             }
 
 
@@ -665,34 +663,7 @@ public class ReadChecker implements IHook {
             }
         }
     }
-    private void updateOtherRecordsUserNames(String groupId, String user_name, String currentTime) {
-        Cursor cursor = null;
-        try {
-            String selectOtherQuery = "SELECT server_id, user_name FROM read_message WHERE group_id=? AND user_name NOT LIKE ?";
-            cursor = limeDatabase.rawQuery(selectOtherQuery, new String[]{groupId, "%-" + user_name + "%"});
 
-
-            while (cursor.moveToNext()) {
-                String serverId = cursor.getString(cursor.getColumnIndexOrThrow("server_id"));
-                String existingUserName = cursor.getString(cursor.getColumnIndexOrThrow("user_name"));
-
-
-                if (!existingUserName.contains(user_name)) {
-                    String updatedUserName = existingUserName + (existingUserName.isEmpty() ? "" : "\n") + "-" + user_name + " [" + currentTime + "]";
-                    ContentValues values = new ContentValues();
-                    values.put("user_name", updatedUserName);
-                    limeDatabase.update("read_message", values, "group_id=? AND server_id=?", new String[]{groupId, serverId});
-                    //XposedBridge.log("Updated user_name for other records in group_id: " + groupId + ", server_id: " + serverId);
-                }
-            }
-        } catch (Exception e) {
-            Log.e("updateOtherRecordsUserNames", "Error updating other records' user names:", e);
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
-        }
-    }
 
 
     private String getCurrentTime() {
@@ -700,34 +671,70 @@ public class ReadChecker implements IHook {
         return sdf.format(new Date());
     }
 
-
     private void insertNewRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime) {
-    XposedBridge.log("Attempting to insert new record: server_id=" + serverId + ", Sent_User=" + SentUser);
-    XposedBridge.log("Inserting values: groupId=" + groupId + ", serverId=" + serverId + ", SentUser=" + SentUser + ", SendUser=" + SendUser + ", groupName=" + groupName + ", content=" + content + ", user_name=" + user_name + ", createdTime=" + createdTime);
+        XposedBridge.log("Attempting to insert new record: server_id=" + serverId + ", Sent_User=" + SentUser);
+        XposedBridge.log("Inserting values: groupId=" + groupId + ", serverId=" + serverId + ", SentUser=" + SentUser + ", SendUser=" + SendUser + ", groupName=" + groupName + ", content=" + content + ", user_name=" + user_name + ", createdTime=" + createdTime);
 
+        // 新しいレコードを挿入
+        insertRecord(SendUser, groupId, serverId, SentUser, groupName, content, user_name, createdTime);
 
-    String insertQuery = "INSERT INTO read_message(group_id, server_id, Sent_User, Send_User, group_name, content, user_name, created_time)" +
-            " VALUES(?, ?, ?, ?, ?, ?, ?, ?);";
+        // 同じ group_id を持つ他の server_id を検索
+        String selectQuery = "SELECT server_id, Sent_User, Send_User, group_name, content, created_time FROM read_message WHERE group_id = ? AND server_id != ?";
+        Cursor cursor = null;
 
-    try {
-        // トランザクションを開始
-        limeDatabase.beginTransaction();
+        try {
+            cursor = limeDatabase.rawQuery(selectQuery, new String[]{groupId, serverId});
 
-        // SQLクエリを実行
-        limeDatabase.execSQL(insertQuery, new Object[]{groupId, serverId, SentUser, SendUser, groupName, content, user_name, createdTime});
+            // 検索結果をループ処理
+            while (cursor.moveToNext()) {
+                String otherServerId = cursor.getString(0);
+                String otherSentUser = cursor.getString(1);
+                String otherSendUser = cursor.getString(2);
+                String otherGroupName = cursor.getString(3);
+                String otherContent = cursor.getString(4);
+                String otherCreatedTime = cursor.getString(5);
 
-        // トランザクションを成功としてマーク
-      limeDatabase.setTransactionSuccessful();
-
-        // ログ出力
-        XposedBridge.log("New record inserted successfully: server_id=" + serverId + ", Sent_User=" + SentUser);
-    } catch (Exception e) {
-        // エラーログ出力
-        XposedBridge.log("Error inserting new record: " + e.getMessage());
-        e.printStackTrace();
-    } finally {
-        limeDatabase.endTransaction();
+                // Sent_User が存在しない場合のみ処理
+                if (!otherSentUser.equals(SentUser)) {
+                    // user_name のみ変更して新しいレコードを挿入
+                    insertRecord(otherSendUser, groupId, otherServerId, SentUser, otherGroupName, otherContent, user_name, otherCreatedTime);
+                    XposedBridge.log("Copied record inserted: server_id=" + otherServerId + ", Sent_User=" + SentUser);
+                }
+            }
+        } catch (Exception e) {
+            XposedBridge.log("Error during copying records: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
     }
-}
+
+    // レコードを挿入する共通メソッド
+    private void insertRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime) {
+        String insertQuery = "INSERT INTO read_message(group_id, server_id, Sent_User, Send_User, group_name, content, user_name, created_time)" +
+                " VALUES(?, ?, ?, ?, ?, ?, ?, ?);";
+
+        try {
+            // トランザクションを開始
+            limeDatabase.beginTransaction();
+
+            // SQLクエリを実行
+            limeDatabase.execSQL(insertQuery, new Object[]{groupId, serverId, SentUser, SendUser, groupName, content, user_name, createdTime});
+
+            // トランザクションを成功としてマーク
+            limeDatabase.setTransactionSuccessful();
+
+            // ログ出力
+            XposedBridge.log("New record inserted successfully: server_id=" + serverId + ", Sent_User=" + SentUser);
+        } catch (Exception e) {
+            // エラーログ出力
+            XposedBridge.log("Error inserting new record: " + e.getMessage());
+            e.printStackTrace();
+        } finally {
+            limeDatabase.endTransaction();
+        }
+    }
 
 }
