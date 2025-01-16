@@ -7,7 +7,10 @@ import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -18,6 +21,8 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ToggleButton;
+
+import androidx.annotation.NonNull;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -73,7 +78,6 @@ public class PreventMarkAsRead implements IHook {
                     addButton(activity, moduleContext);
                 }
                 private void addButton(Activity activity, Context moduleContext) {
-
                     Map<String, String> settings = readSettingsFromExternalFile(moduleContext);
 
                     float horizontalMarginFactor = 0.5f;
@@ -89,16 +93,22 @@ public class PreventMarkAsRead implements IHook {
                     ImageView imageView = new ImageView(activity);
                     updateSwitchImage(imageView, isSendChatCheckedEnabled, moduleContext);
 
-                    int width = 150;
-                    int height = 100;
-                    FrameLayout.LayoutParams frameParams = new FrameLayout.LayoutParams(width, height);
+                    // chat_unread_size の値を取得
+                    float chatUnreadSizeDp = 30; // デフォルト値
+                    if (settings.containsKey("chat_unread_size")) {
+                        chatUnreadSizeDp = Float.parseFloat(settings.get("chat_unread_size"));
+                    }
 
+                    // DP値をピクセル値に変換
+                    int sizeInPx = dpToPx(moduleContext, chatUnreadSizeDp);
+
+                    // FrameLayout.LayoutParams の幅と高さを動的に設定
+                    FrameLayout.LayoutParams frameParams = new FrameLayout.LayoutParams(sizeInPx, sizeInPx);
 
                     int horizontalMarginPx = (int) (horizontalMarginFactor * activity.getResources().getDisplayMetrics().widthPixels);
                     int verticalMarginPx = (int) (verticalMarginDp * activity.getResources().getDisplayMetrics().density);
                     frameParams.setMargins(horizontalMarginPx, verticalMarginPx, 0, 0);
                     imageView.setLayoutParams(frameParams);
-
 
                     imageView.setOnClickListener(v -> {
                         isSendChatCheckedEnabled = !isSendChatCheckedEnabled;
@@ -133,16 +143,37 @@ public class PreventMarkAsRead implements IHook {
                 }
 
                 private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext) {
-                    String imageName = isOn ? "read_switch_on.png" : "read_switch_off.png"; // 拡張子を追加
+                    // ファイルパスを取得
                     File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+                    File file = new File(dir, "margin_settings.txt");
 
-                    if (!dir.exists()) {
-                        dir.mkdirs();
+                    // デフォルト値
+                    float chatUnreadSizeDp = 30; // デフォルト値
+
+                    // ファイルの内容を読み込む
+                    if (file.exists()) {
+                        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                String[] parts = line.split("=", 2);
+                                if (parts.length == 2) {
+                                    if (parts[0].trim().equals("chat_unread_size")) {
+                                        chatUnreadSizeDp = Float.parseFloat(parts[1].trim());
+                                    }
+                                }
+                            }
+                        } catch (IOException | NumberFormatException ignored) {
+                            // エラーが発生した場合はデフォルト値を使用
+                        }
                     }
 
+                    // 画像のファイル名を決定（ON/OFF状態に応じて）
+                    String imageName = isOn ? "read_switch_on.png" : "read_switch_off.png";
+
+                    // 画像ファイルのパスを指定
                     File imageFile = new File(dir, imageName);
 
-
+                    // 画像ファイルが存在しない場合、リソースからコピーして保存
                     if (!imageFile.exists()) {
                         try (InputStream in = moduleContext.getResources().openRawResource(
                                 moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));
@@ -157,22 +188,25 @@ public class PreventMarkAsRead implements IHook {
                         }
                     }
 
+                    // 画像ファイルが存在する場合、ImageViewに設定
                     if (imageFile.exists()) {
                         Drawable drawable = Drawable.createFromPath(imageFile.getAbsolutePath());
                         if (drawable != null) {
-                            Map<String, String> settings = readSettingsFromExternalFile(moduleContext);
-                            float sizeInDp = Float.parseFloat(settings.getOrDefault("chat_unread_size", "60"));
-                            int sizeInPx = dpToPx(moduleContext, sizeInDp);
+                            // DP値をピクセル値に変換
+                            int sizeInPx = dpToPx(moduleContext, chatUnreadSizeDp);
+                            // 画像を指定したサイズにスケーリング
                             drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
+                            // ImageViewにスケーリングされた画像を設定
                             imageView.setImageDrawable(drawable);
                         }
                     }
                 }
-
-                private int dpToPx(Context context, float dp) {
+                // DP値をピクセル値に変換するメソッド
+                private int dpToPx(@NonNull Context context, float dp) {
                     float density = context.getResources().getDisplayMetrics().density;
                     return Math.round(dp * density);
                 }
+
                 private Drawable scaleDrawable(Drawable drawable, int width, int height) {
                     Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
                     Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
@@ -187,19 +221,7 @@ public class PreventMarkAsRead implements IHook {
 
                     }
                 }
-                private boolean readStateFromFile(Context context) {
-                    String filename = "send_chat_checked_state.txt";
-                    try (FileInputStream fis = context.openFileInput(filename)) {
-                        int c;
-                        StringBuilder sb = new StringBuilder();
-                        while ((c = fis.read()) != -1) {
-                            sb.append((char) c);
-                        }
-                        return "1".equals(sb.toString());
-                    } catch (IOException ignored) {
-                        return true;
-                    }
-                }
+
 
             });
             XposedHelpers.findAndHookMethod(

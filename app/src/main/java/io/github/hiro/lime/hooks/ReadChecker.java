@@ -29,6 +29,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -274,7 +276,7 @@ public class ReadChecker implements IHook {
         layout.addView(imageButton);
     }
 
-    private int dpToPx(Context context, float dp) {
+    private int dpToPx(@NonNull Context context, float dp) {
         float density = context.getResources().getDisplayMetrics().density;
         return Math.round(dp * density);
     }
@@ -287,7 +289,6 @@ public class ReadChecker implements IHook {
 
 
     private void showDataForGroupId(Activity activity, String groupId, Context moduleContext) {
-
         if (limeDatabase == null) {
             return;
         }
@@ -490,14 +491,13 @@ public class ReadChecker implements IHook {
 
 
     private void fetchDataAndSave(SQLiteDatabase db3, SQLiteDatabase db4, String paramValue, Context context, Context moduleContext) {
-        File dbFile = new File(context.getFilesDir(), "data_log.txt");
+
 
 
         try {
             String serverId = extractServerId(paramValue, context);
             String SentUser = extractSentUser(paramValue);
             if (serverId == null || SentUser == null) {
-                writeToFile(dbFile, "Missing parameters: serverId=" + serverId + ", SentUser=" + SentUser);
                 return;
             }
             String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
@@ -568,30 +568,11 @@ public class ReadChecker implements IHook {
             return matcher.group(1);
 
 
-        } else {
-            saveParamToFile(paramValue, context);
+        } else {;
             return null;
         }
     }
 
-
-    private void saveParamToFile(String paramValue, Context context) {
-        try {
-            File logFile = new File(context.getFilesDir(), "missing_param_values.txt");
-
-
-            if (!logFile.exists()) {
-                logFile.createNewFile();
-            }
-
-
-            FileWriter writer = new FileWriter(logFile, true);
-            writer.append("Missing serverId in paramValue:").append(paramValue).append("\n");
-            writer.close();
-        } catch (IOException ignored) {
-            //XposedBridge.log("Error writing paramValue to file: " );
-        }
-    }
 
 
     private String queryDatabase(SQLiteDatabase db, String query, String... selectionArgs) {
@@ -612,7 +593,7 @@ public class ReadChecker implements IHook {
     private void initializeLimeDatabase(Context context) {
 
 
-        File oldDbFile = new File(context.getFilesDir(), "checked_data.db");
+        File oldDbFile = new File(context.getFilesDir(), "limes_checked_data.db");
         if (oldDbFile.exists()) {
             boolean deleted = oldDbFile.delete();
             if (deleted) {
@@ -621,7 +602,7 @@ public class ReadChecker implements IHook {
                 //XposedBridge.log("Failed to delete old database file lime_data.db.");
             }
         }
-        File dbFile = new File(context.getFilesDir(), "limes_checked_data.db");
+        File dbFile = new File(context.getFilesDir(), "checked_data.db");
         limeDatabase = SQLiteDatabase.openOrCreateDatabase(dbFile, null);
         String createGroupTable = "CREATE TABLE IF NOT EXISTS read_message (" +
                 "group_id TEXT NOT NULL, " +
@@ -717,19 +698,19 @@ public class ReadChecker implements IHook {
     XposedBridge.log("Attempting to insert new record: server_id=" + serverId + ", Sent_User=" + SentUser);
     XposedBridge.log("Inserting values: groupId=" + groupId + ", serverId=" + serverId + ", SentUser=" + SentUser + ", SendUser=" + SendUser + ", groupName=" + groupName + ", content=" + content + ", user_name=" + user_name + ", createdTime=" + createdTime);
 
-    // SQLクエリのプレースホルダーを8つに修正
+
     String insertQuery = "INSERT INTO read_message(group_id, server_id, Sent_User, Send_User, group_name, content, user_name, created_time)" +
             " VALUES(?, ?, ?, ?, ?, ?, ?, ?);";
 
     try {
         // トランザクションを開始
-       // limeDatabase.beginTransaction();
+        limeDatabase.beginTransaction();
 
         // SQLクエリを実行
         limeDatabase.execSQL(insertQuery, new Object[]{groupId, serverId, SentUser, SendUser, groupName, content, user_name, createdTime});
 
         // トランザクションを成功としてマーク
-        // limeDatabase.setTransactionSuccessful();
+      limeDatabase.setTransactionSuccessful();
 
         // ログ出力
         XposedBridge.log("New record inserted successfully: server_id=" + serverId + ", Sent_User=" + SentUser);
@@ -738,7 +719,6 @@ public class ReadChecker implements IHook {
         XposedBridge.log("Error inserting new record: " + e.getMessage());
         e.printStackTrace();
     } finally {
-        // トランザクションを終了
         limeDatabase.endTransaction();
     }
 }

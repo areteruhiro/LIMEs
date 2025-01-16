@@ -233,7 +233,7 @@ public class EmbedOptions implements IHook {
                                 });
                                 layout.addView(MuteGroups_Button);
                             }
-                            if (!limeOptions.removeKeepUnread.checked) {
+
                                 Button KeepUnread_Button = new Button(context);
                                 KeepUnread_Button.setLayoutParams(buttonParams);
                                 KeepUnread_Button.setText(moduleContext.getResources().getString(R.string.edit_margin_settings));
@@ -244,7 +244,7 @@ public class EmbedOptions implements IHook {
                                     }
                                 });
                                 layout.addView(KeepUnread_Button);
-                            }
+                            
 
 
                             builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
@@ -469,7 +469,7 @@ public class EmbedOptions implements IHook {
         float read_checker_horizontalMarginFactor = 0.5f;
         int read_checker_verticalMarginDp = 60;
         float keep_unread_size = 60.0f;
-        float chat_unread_size = 60.0f;
+        float chat_unread_size = 30.0f;
         float chat_read_check_size = 80.0f;
 
         // ファイルの内容を読み込む
@@ -501,7 +501,7 @@ public class EmbedOptions implements IHook {
                             case "keep_unread_size":
                                 keep_unread_size = Float.parseFloat(parts[1].trim());
                                 break;
-                            case "Chat_Unread_Size":
+                            case "chat_unread_size":
                                 chat_unread_size = Float.parseFloat(parts[1].trim());
                                 break; // 追加
                             case "chat_read_check_size":
@@ -510,8 +510,8 @@ public class EmbedOptions implements IHook {
                         }
                     }
                 }
-            } catch (IOException | NumberFormatException e) {
-                Log.e("KeepUnread_Button", "Error reading settings", e);
+            } catch (IOException | NumberFormatException ignored) {
+
             }
         } else {
             // ファイルが存在しない場合は初期値で作成
@@ -523,12 +523,12 @@ public class EmbedOptions implements IHook {
                         "Read_checker_horizontalMarginFactor=0.5\n" +
                         "Read_checker_verticalMarginDp=60\n" +
                         "keep_unread_size=60\n" +
-                        "Chat_Unread_Size=60\n" +
+                        "chat_unread_size=30\n" +
                         "chat_read_check_size=60\n";
                 writer.write(defaultSettings);
                 writer.flush(); // 追加
-            } catch (IOException e) {
-                Log.e("KeepUnread_Button", "Error creating default settings file", e);
+            } catch (IOException ignored) {
+
                 return;
             }
         }
@@ -660,7 +660,7 @@ public class EmbedOptions implements IHook {
                     writer.write("keep_unread_size=" + newKeepUnreadSize + "\n");
                     writer.write("keep_unread_horizontalMarginFactor=" + newKeepUnreadHorizontalMarginFactor + "\n");
                     writer.write("keep_unread_verticalMarginDp=" + newKeepUnreadVerticalMarginDp + "\n");
-                    writer.write("Chat_Unread_Size=" + newChatUnreadSize + "\n");
+                    writer.write("chat_unread_size=" + newChatUnreadSize + "\n");
                     writer.write("chat_read_check_size=" + newChatReadCheckSize + "\n");
                     writer.write("Read_buttom_Chat_horizontalMarginFactor=" + newReadButtonHorizontalMarginFactor + "\n");
                     writer.write("Read_buttom_Chat_verticalMarginDp=" + newReadButtonVerticalMarginDp + "\n");
@@ -669,17 +669,47 @@ public class EmbedOptions implements IHook {
                     writer.flush();
                     Toast.makeText(context, "Settings saved!", Toast.LENGTH_SHORT).show();
                 }
-            } catch (NumberFormatException e) {
+            } catch (NumberFormatException ignored) {
                 Toast.makeText(context, "Invalid input format! Please check your inputs.", Toast.LENGTH_SHORT).show();
-                Log.e("KeepUnread_Button", "Error save", e);
 
-            } catch (IOException e) {
+            } catch (IOException ignored) {
                 Toast.makeText(context, "Failed to save settings.", Toast.LENGTH_SHORT).show();
             }
-            Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-            Process.killProcess(Process.myPid());
-            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+
         });
+
+        Button resetButton = new Button(context);
+        resetButton.setText("Reset");
+        resetButton.setLayoutParams(layoutParams);
+        resetButton.setOnClickListener(v -> {
+            // 確認ダイアログを表示
+            new AlertDialog.Builder(context)
+                    .setMessage(moduleContext.getResources().getString(R.string.really_delete))
+                    .setPositiveButton(moduleContext.getResources().getString(R.string.yes), (dialog, which) -> {
+                        try {
+
+
+                            // ファイルが存在する場合、削除する
+                            if (file.exists()) {
+                                if (file.delete()) {
+                                    Toast.makeText(context.getApplicationContext(), moduleContext.getResources().getString(R.string.file_content_deleted), Toast.LENGTH_SHORT).show();
+                                } else {
+                                    Toast.makeText(context.getApplicationContext(),moduleContext.getResources().getString(R.string.file_delete_failed), Toast.LENGTH_SHORT).show();
+                                }
+                            } else {
+                                Toast.makeText(context.getApplicationContext(), moduleContext.getResources().getString(R.string.file_not_found), Toast.LENGTH_SHORT).show();
+                            }
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            Toast.makeText(context.getApplicationContext(), moduleContext.getResources().getString(R.string.file_not_found), Toast.LENGTH_SHORT).show();
+                        }
+                    })
+                    .setNegativeButton(moduleContext.getResources().getString(R.string.no), null)
+                    .show();
+        });
+
+
 
         // レイアウトを構築
         LinearLayout layout = new LinearLayout(context);
@@ -703,7 +733,7 @@ public class EmbedOptions implements IHook {
         layout.addView(readCheckerVerticalLabel);
         layout.addView(readCheckerVerticalInput);
         layout.addView(saveButton);
-
+        layout.addView(resetButton);
         // ScrollView を作成
         ScrollView scrollView = new ScrollView(context);
         scrollView.addView(layout);
