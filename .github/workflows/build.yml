@@ -75,14 +75,17 @@ jobs:
             export KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
             ./gradlew assembleRelease --no-daemon --stacktrace
             cp -f app/build/outputs/apk/release/app-release.apk ${{ env.repo }}-${{ env.version }}.apk
-            with:
-            name: ${{ env.repo }}-${{ env.versionName }}@${{ env.commit }}
-            path: app/build/outputs/apk/debug/app-debug.apk
-            if-no-files-found: error
+          
             else
             ./gradlew assembleDebug --no-daemon --stacktrace
             fi
-
+      - name: Upload module
+      
+        uses: actions/upload-artifact@v2
+        if: github.event.inputs.release != 'true'
+        with:
+         name: ${{ env.repo }}-${{ env.versionName }}@${{ env.commit }}
+         path: app/build/outputs/apk/debug/app-debug.apk
       - name: LSPatch
         if: github.event.inputs.release == 'true'
         run: |
