@@ -647,7 +647,7 @@ public class ReadChecker implements IHook {
         }
         Cursor cursor = null;
         try {
-            String checkQuery = "SELECT COUNT(*), user_name FROM group_messages WHERE server_id=? AND Sent_User=?";
+            String checkQuery = "SELECT COUNT(*), user_name FROM read_messages WHERE server_id=? AND Sent_User=?";
             cursor = limeDatabase.rawQuery(checkQuery, new String[]{serverId});
             if (cursor.moveToFirst()) {
                 int count = cursor.getInt(0);
@@ -660,7 +660,7 @@ public class ReadChecker implements IHook {
                         String updatedUserName = existingUserName + (existingUserName.isEmpty() ? "" : "\n") + "-" + user_name + " [" + currentTime + "]";
                         ContentValues values = new ContentValues();
                         values.put("user_name", updatedUserName);
-                        limeDatabase.update("group_messages", values, "server_id=? AND Sent_User=?", new String[]{serverId});
+                        limeDatabase.update("read_messages", values, "server_id=? AND Sent_User=?", new String[]{serverId});
                         XposedBridge.log("User name updated for server_id: " + serverId + ", Sent_User: " + SentUser);
                     }
                 } else {
@@ -680,7 +680,7 @@ public class ReadChecker implements IHook {
     private void updateOtherRecordsUserNames(String groupId, String user_name, String currentTime) {
         Cursor cursor = null;
         try {
-            String selectOtherQuery = "SELECT server_id, user_name FROM group_messages WHERE group_id=? AND user_name NOT LIKE ?";
+            String selectOtherQuery = "SELECT server_id, user_name FROM read_messages WHERE group_id=? AND user_name NOT LIKE ?";
             cursor = limeDatabase.rawQuery(selectOtherQuery, new String[]{groupId, "%-" + user_name + "%"});
 
 
@@ -693,7 +693,7 @@ public class ReadChecker implements IHook {
                     String updatedUserName = existingUserName + (existingUserName.isEmpty() ? "" : "\n") + "-" + user_name + " [" + currentTime + "]";
                     ContentValues values = new ContentValues();
                     values.put("user_name", updatedUserName);
-                    limeDatabase.update("group_messages", values, "group_id=? AND server_id=?", new String[]{groupId, serverId});
+                    limeDatabase.update("read_messages", values, "group_id=? AND server_id=?", new String[]{groupId, serverId});
                     //XposedBridge.log("Updated user_name for other records in group_id: " + groupId + ", server_id: " + serverId);
                 }
             }
@@ -716,7 +716,7 @@ public class ReadChecker implements IHook {
     private void insertNewRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime) {
 XposedBridge.log("create server_id: " + serverId + ", Sent_User: " + SentUser);
 
-        String insertQuery = "INSERT INTO group_messages(group_id, server_id, Sent_User,Send_User, group_name, content, user_name, created_time)" +
+        String insertQuery = "INSERT INTO read_messages(group_id, server_id, Sent_User,Send_User, group_name, content, user_name, created_time)" +
                 " VALUES(?, ?, ?, ?, ?, ?, ?);";
 
 
