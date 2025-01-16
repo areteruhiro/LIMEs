@@ -149,14 +149,14 @@ public class ReadChecker implements IHook {
 
 
                 if (shouldHookOnCreate && currentGroupId != null) {
-                    if (!isNoGroup(currentGroupId)) {
+                    
                         Activity activity = (Activity) param.thisObject;
 
 
                         addButton(activity, moduleContext);
                     }
                 }
-            }
+            
         });
 
 
