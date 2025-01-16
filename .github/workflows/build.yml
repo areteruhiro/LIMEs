@@ -99,11 +99,11 @@ jobs:
             # Move the patched file using the correct naming convention
             mv "$output_file" "Patched_${{ env.version }}_$file" || echo "Patched file not found for $file"
           done
-
-     - name: Upload module
-        uses: actions/upload-artifact@v4
-        if: github.event.inputs.release != 'true'
-        with:
+          
+          - name: Upload module
+          uses: actions/upload-artifact@v4
+          if: github.event.inputs.release != 'true'
+          with:
           name: ${{ env.repo }}-${{ env.versionName }}@${{ env.commit }}
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
