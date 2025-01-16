@@ -714,6 +714,8 @@ public class ReadChecker implements IHook {
 
 
     private void insertNewRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime) {
+XposedBridge.log("create server_id: " + serverId + ", Sent_User: " + SentUser);
+
         String insertQuery = "INSERT INTO group_messages(group_id, server_id, Sent_User,Send_User, group_name, content, user_name, created_time)" +
                 " VALUES(?, ?, ?, ?, ?, ?, ?);";
 
