@@ -714,20 +714,33 @@ public class ReadChecker implements IHook {
 
 
     private void insertNewRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime) {
-XposedBridge.log("create server_id: " + serverId + ", Sent_User: " + SentUser);
+    XposedBridge.log("Attempting to insert new record: server_id=" + serverId + ", Sent_User=" + SentUser);
+    XposedBridge.log("Inserting values: groupId=" + groupId + ", serverId=" + serverId + ", SentUser=" + SentUser + ", SendUser=" + SendUser + ", groupName=" + groupName + ", content=" + content + ", user_name=" + user_name + ", createdTime=" + createdTime);
 
-        String insertQuery = "INSERT INTO read_message(group_id, server_id, Sent_User,Send_User, group_name, content, user_name, created_time)" +
-                " VALUES(?, ?, ?, ?, ?, ?, ?);";
+    // SQLクエリのプレースホルダーを8つに修正
+    String insertQuery = "INSERT INTO read_message(group_id, server_id, Sent_User, Send_User, group_name, content, user_name, created_time)" +
+            " VALUES(?, ?, ?, ?, ?, ?, ?, ?);";
 
+    try {
+        // トランザクションを開始
+       // limeDatabase.beginTransaction();
 
-            try {
-                limeDatabase.execSQL(insertQuery, new Object[]{groupId, serverId, SentUser,SendUser, groupName, content, user_name, createdTime});
-            } catch (Exception e) {
-                e.printStackTrace();
-            } finally {
-                limeDatabase.endTransaction();
-            }
+        // SQLクエリを実行
+        limeDatabase.execSQL(insertQuery, new Object[]{groupId, serverId, SentUser, SendUser, groupName, content, user_name, createdTime});
 
+        // トランザクションを成功としてマーク
+        // limeDatabase.setTransactionSuccessful();
+
+        // ログ出力
+        XposedBridge.log("New record inserted successfully: server_id=" + serverId + ", Sent_User=" + SentUser);
+    } catch (Exception e) {
+        // エラーログ出力
+        XposedBridge.log("Error inserting new record: " + e.getMessage());
+        e.printStackTrace();
+    } finally {
+        // トランザクションを終了
+        limeDatabase.endTransaction();
     }
+}
 
 }
