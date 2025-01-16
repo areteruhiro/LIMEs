@@ -454,7 +454,7 @@ public class ReadChecker implements IHook {
                                 moduleContext = appContext.createPackageContext(
                                         "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
                             } catch (PackageManager.NameNotFoundException e) {
-                                //XposedBridge.log("Failed to create package context: " + e.getMessage());
+                                XposedBridge.log("Failed to create package context: " + e.getMessage());
                                 return;
                             }
 
@@ -563,7 +563,7 @@ public class ReadChecker implements IHook {
     private String extractServerId(String paramValue, Context context) {
         Pattern pattern = Pattern.compile("param3:([0-9]+)");
         Matcher matcher = pattern.matcher(paramValue);
-        //XposedBridge.log(paramValue);
+        XposedBridge.log(paramValue);
         if (matcher.find()) {
             return matcher.group(1);
 
@@ -596,7 +596,7 @@ public class ReadChecker implements IHook {
 
     private String queryDatabase(SQLiteDatabase db, String query, String... selectionArgs) {
         if (db == null) {
-            //XposedBridge.log("Database is not initialized.");
+           XposedBridge.log("Database is not initialized.");
             return null;
         }
         Cursor cursor = db.rawQuery(query, selectionArgs);
@@ -635,7 +635,7 @@ public class ReadChecker implements IHook {
                 "PRIMARY KEY(group_id, server_id, Sent_User, Send_User)" +
                 ");";
         limeDatabase.execSQL(createGroupTable);
-        //XposedBridge.log("Database initialized and read_message table created.");
+        XposedBridge.log("Database initialized and read_message table created.");
     }
 
 
@@ -661,7 +661,7 @@ public class ReadChecker implements IHook {
                         ContentValues values = new ContentValues();
                         values.put("user_name", updatedUserName);
                         limeDatabase.update("group_messages", values, "server_id=? AND Sent_User=?", new String[]{serverId});
-                        //XposedBridge.log("User name updated for server_id: " + serverId + ", Sent_User: " + SentUser);
+                        XposedBridge.log("User name updated for server_id: " + serverId + ", Sent_User: " + SentUser);
                     }
                 } else {
                     insertNewRecord(SendUser, groupId, serverId, SentUser, groupName, content, "-" + user_name + " [" + currentTime + "]", createdTime);
