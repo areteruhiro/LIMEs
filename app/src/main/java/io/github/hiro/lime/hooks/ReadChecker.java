@@ -492,7 +492,7 @@ public class ReadChecker implements IHook {
 
     private void fetchDataAndSave(SQLiteDatabase db3, SQLiteDatabase db4, String paramValue, Context context, Context moduleContext) {
 
-
+        XposedBridge.log("fetchDataAndSave");
 
         try {
             String serverId = extractServerId(paramValue, context);
@@ -526,8 +526,10 @@ public class ReadChecker implements IHook {
                 }
             }
             String finalContent = (content != null && !content.isEmpty()) ? content : (!mediaDescription.isEmpty() ? mediaDescription : "No content:" + serverId);
+            XposedBridge.log("セーブメゾットに渡したよ" + serverId + ", Sent_User: " + SentUser);
             saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, user_name, timeFormatted, context);
         } catch (Exception e) {
+            XposedBridge.log("データが正しく取得できなかったみたいsqliteの中身を見てみよう");
         }
     }
 
@@ -621,8 +623,9 @@ public class ReadChecker implements IHook {
 
 
     private void saveData( String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime, Context context) {
+        XposedBridge.log("セーブメゾットまで処理されたよ" + serverId + ", Sent_User: " + SentUser);
         if (groupName == null) {
-
+            XposedBridge.log("group名が取得できなかったみたい");
 
             return;
         }
@@ -645,8 +648,12 @@ public class ReadChecker implements IHook {
                         XposedBridge.log("User name updated for server_id: " + serverId + ", Sent_User: " + SentUser);
                     }
                 } else {
+                    XposedBridge.log("insertNewRecordにデータを渡したよ");
+
                     insertNewRecord(SendUser, groupId, serverId, SentUser, groupName, content, "-" + user_name + " [" + currentTime + "]", createdTime);
                 }
+                XposedBridge.log("updateOtherRecordsUserNames");
+
                 updateOtherRecordsUserNames(groupId, user_name, currentTime);
             }
 
