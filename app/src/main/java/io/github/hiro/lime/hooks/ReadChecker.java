@@ -152,14 +152,14 @@ public class ReadChecker implements IHook {
 
 
                 if (shouldHookOnCreate && currentGroupId != null) {
-                    if (!isNoGroup(currentGroupId)) {
+                    
                         Activity activity = (Activity) param.thisObject;
 
 
                         addButton(activity, moduleContext);
                     }
                 }
-            }
+            
         });
 
 
@@ -760,11 +760,7 @@ public class ReadChecker implements IHook {
 
     private void saveData( String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime, Context context) {
         XposedBridge.log("セーブメゾットまで処理されたよ" + serverId + ", Sent_User: " + SentUser);
-        if (groupName == null) {
-            XposedBridge.log("group名が取得できなかったみたい");
-
-            return;
-        }
+  
         Cursor cursor = null;
         try {
             String checkQuery = "SELECT COUNT(*), user_name FROM read_message WHERE server_id=? AND Sent_User=?";
