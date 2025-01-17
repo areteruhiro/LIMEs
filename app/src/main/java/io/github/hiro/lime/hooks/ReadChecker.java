@@ -49,6 +49,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -66,7 +67,7 @@ public class ReadChecker implements IHook {
     private boolean shouldHookOnCreate = false;
     private String currentGroupId = null;
 
-
+    private static final int MAX_RETRY_COUNT = 3; // 最大リトライ回数
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.ReadChecker.checked) return;
@@ -100,6 +101,8 @@ public class ReadChecker implements IHook {
                             "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
                     initializeLimeDatabase(appContext);
                     catchNotification(loadPackageParam, db3, db4, appContext, moduleContext);
+// RetryCatchメソッドの呼び出し例
+                    RetryCatch(db3, db4, appContext, moduleContext);
                 }
             }
         });
@@ -272,6 +275,40 @@ public class ReadChecker implements IHook {
             }
         });
 
+        // Delete ボタンを追加
+        if (limeOptions.ReadCheckerChatdataDelete.checked) {
+            Button deleteButton = new Button(activity);
+            deleteButton.setText(moduleContext.getResources().getString(R.string.Delete));
+            deleteButton.setBackgroundColor(Color.RED); // ボタンの背景色を赤に設定
+            deleteButton.setTextColor(Color.WHITE); // ボタンのテキスト色を白に設定
+
+            FrameLayout.LayoutParams deleteButtonParams = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+            );
+
+            // Delete ボタンの位置を画像ボタンの右側に設定
+            deleteButtonParams.setMargins(horizontalMarginPx + dpToPx(moduleContext, readCheckerSizeDp) + 20, verticalMarginPx, 0, 0);
+            deleteButton.setLayoutParams(deleteButtonParams);
+
+            deleteButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    if (currentGroupId != null) {
+                        new AlertDialog.Builder(activity)
+                                .setTitle(moduleContext.getResources().getString(R.string.check))
+                                .setMessage(moduleContext.getResources().getString(R.string.really_delete))
+                                .setPositiveButton(moduleContext.getResources().getString(R.string.yes), (confirmDialog, confirmWhich) -> deleteGroupData(currentGroupId, activity, moduleContext))
+                                .setNegativeButton(moduleContext.getResources().getString(R.string.no), null)
+                                .show();
+                    }
+                }
+            });
+
+            ViewGroup layout = activity.findViewById(android.R.id.content);
+            layout.addView(deleteButton);
+        }
+
         ViewGroup layout = activity.findViewById(android.R.id.content);
         layout.addView(imageButton);
     }
@@ -293,11 +330,11 @@ public class ReadChecker implements IHook {
             return;
         }
 
-        // SQLクエリの初期化
+// SQLクエリの初期化
         String query;
         if (limeOptions.MySendMessage.checked) {
-            // Send_User が null のメッセージのみを取得するクエリ
-            query = "SELECT server_id, content, created_time FROM read_message WHERE group_id=? AND Send_User IS NULL ORDER BY created_time ASC";
+            // Send_User が (null) のメッセージのみを取得するクエリ
+            query = "SELECT server_id, content, created_time FROM read_message WHERE group_id=? AND Send_User = '(null)' ORDER BY created_time ASC";
         } else {
             // 通常のクエリ
             query = "SELECT server_id, content, created_time FROM read_message WHERE group_id=? ORDER BY created_time ASC";
@@ -390,9 +427,11 @@ public class ReadChecker implements IHook {
         if (limeDatabase == null) {
             return Collections.emptyList();
         }
-        String query = "SELECT user_name FROM read_message WHERE server_id=? ORDER BY created_time ASC";
+
+        // ID カラムで降順ソートするクエリ
+        String query = "SELECT user_name FROM read_message WHERE server_id=? ORDER BY ID DESC";
         Cursor cursor = limeDatabase.rawQuery(query, new String[]{serverId});
-       List<String> userNames = new ArrayList<>();
+        List<String> userNames = new ArrayList<>();
 
         while (cursor.moveToNext()) {
             String userNameStr = cursor.getString(0);
@@ -404,7 +443,6 @@ public class ReadChecker implements IHook {
         cursor.close();
         return userNames;
     }
-
 
     private int countNewlines(String text) {
         if (text == null || text.isEmpty()) {
@@ -490,58 +528,151 @@ public class ReadChecker implements IHook {
     }
 
 
-    private void fetchDataAndSave(SQLiteDatabase db3, SQLiteDatabase db4, String paramValue, Context context, Context moduleContext) {
-
+    // fetchDataAndSaveメソッド: データを取得し、成功したかどうかを返す
+    private boolean fetchDataAndSave(SQLiteDatabase db3, SQLiteDatabase db4, String paramValue, Context context, Context moduleContext) {
         XposedBridge.log("fetchDataAndSave");
 
-        try {
-            String serverId = extractServerId(paramValue, context);
-            String SentUser = extractSentUser(paramValue);
-            if (serverId == null || SentUser == null) {
-                return;
-            }
-            String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
-            String groupId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
-            String groupName = queryDatabase(db3, "SELECT name FROM groups WHERE id=?", groupId);
-            String content = queryDatabase(db3, "SELECT content FROM chat_history WHERE server_id=?", serverId);
-            String user_name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
-            String timeEpochStr = queryDatabase(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
-            String timeFormatted = formatMessageTime(timeEpochStr);
-            String media = queryDatabase(db3, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
-            String mediaDescription = "";
-            if (media != null) {
-                switch (media) {
-                    case "7":
-                        mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                        break;
-                    case "1":
-                        mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                        break;
-                    case "2":
-                        mediaDescription = moduleContext.getResources().getString(R.string.video);
-                        break;
-                    default:
-                        mediaDescription = "";
-                        break;
+        int retryCount = MAX_RETRY_COUNT;
+        boolean success = false;
+        String serverId = null;
+        String SentUser = null;
+
+        while (retryCount > 0 && !success) {
+            try {
+                serverId = extractServerId(paramValue, context);
+                SentUser = extractSentUser(paramValue);
+                if (serverId == null || SentUser == null) {
+                    return false;
+                }
+
+                String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
+                String groupId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
+                String groupName = queryDatabase(db3, "SELECT name FROM groups WHERE id=?", groupId);
+                String content = queryDatabase(db3, "SELECT content FROM chat_history WHERE server_id=?", serverId);
+                String user_name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
+                String timeEpochStr = queryDatabase(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
+                String timeFormatted = formatMessageTime(timeEpochStr);
+                String media = queryDatabase(db3, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
+                String mediaDescription = "";
+                if (media != null) {
+                    switch (media) {
+                        case "7":
+                            mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                            break;
+                        case "1":
+                            mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                            break;
+                        case "2":
+                            mediaDescription = moduleContext.getResources().getString(R.string.video);
+                            break;
+                        default:
+                            mediaDescription = "";
+                            break;
+                    }
+                }
+                String finalContent = (content != null && !content.isEmpty()) ? content : (!mediaDescription.isEmpty() ? mediaDescription : "No content:" + serverId);
+                XposedBridge.log("セーブメゾットに渡したよ" + serverId + ", Sent_User: " + SentUser);
+                saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, user_name, timeFormatted, context);
+                success = true; // 成功したらループを抜ける
+            } catch (Exception e) {
+                retryCount--;
+                XposedBridge.log("エラーが発生しました: " + e.getMessage());
+                XposedBridge.log("残りリトライ回数: " + retryCount);
+
+                if (retryCount == 0) {
+                    Toast.makeText(context.getApplicationContext(), moduleContext.getResources().getString(R.string.read_checker_error), Toast.LENGTH_SHORT).show();
+                    XposedBridge.log("リトライ回数を超えました。エラーデータを保存します。");
+                    saveErrorToFile(serverId, SentUser); // エラーデータをファイルに保存
+                } else {
+                    try {
+                        Thread.sleep(1000); // 1秒待機してからリトライ
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                    }
                 }
             }
-            String finalContent = (content != null && !content.isEmpty()) ? content : (!mediaDescription.isEmpty() ? mediaDescription : "No content:" + serverId);
-            XposedBridge.log("セーブメゾットに渡したよ" + serverId + ", Sent_User: " + SentUser);
-            saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, user_name, timeFormatted, context);
-        } catch (Exception e) {
-            XposedBridge.log("データが正しく取得できなかったみたいsqliteの中身を見てみよう");
         }
+
+        return success; // 成功したかどうかを返す
     }
 
+    // ファイルを更新するメソッド
+    private void updateErrorFile(File errorFile, List<String> linesToKeep) {
+        File dir = errorFile.getParentFile();
+        File tempFile = new File(dir, "Read_error_temp.txt");
 
-
-    private void writeToFile(File file, String text) {
-        try (FileWriter writer = new FileWriter(file, true)) {
-            writer.write(text + "\n");
-        } catch (IOException ignored) {
+        try (FileWriter writer = new FileWriter(tempFile)) {
+            for (String line : linesToKeep) {
+                writer.write(line + "\n");
+            }
+        } catch (IOException e) {
+            XposedBridge.log("一時ファイルの書き込みに失敗しました: " + e.getMessage());
+            return;
         }
+
+        // 元のファイルを削除し、一時ファイルをリネーム
+        if (errorFile.delete() && tempFile.renameTo(errorFile)) {
+            XposedBridge.log("エラーファイルを更新しました。");
+        } else {
+            XposedBridge.log("エラーファイルの更新に失敗しました。");
+        }
+    }    // RetryCatchメソッド: エラーファイルからデータを読み取って再度取得する
+    public void RetryCatch(SQLiteDatabase db3, SQLiteDatabase db4, Context context, Context moduleContext) {
+        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+        File errorFile = new File(dir, "Read_error.txt");
+        Toast.makeText(context.getApplicationContext(), "Reacquiring existing readers", Toast.LENGTH_SHORT).show();
+
+        if (!errorFile.exists()) {
+            XposedBridge.log("エラーファイルが存在しません。");
+            return;
+        }
+
+        // ファイルの内容を一時的に保持するリスト
+        List<String> linesToKeep = new ArrayList<>();
+
+        try (Scanner scanner = new Scanner(errorFile)) {
+            while (scanner.hasNextLine()) {
+                String line = scanner.nextLine();
+                String[] parts = line.split(", ");
+                if (parts.length == 2) {
+                    String serverId = parts[0].replace("serverId: ", "");
+                    String SentUser = parts[1].replace("SentUser: ", "");
+                    XposedBridge.log("エラーファイルからデータを読み取りました: serverId=" + serverId + ", SentUser=" + SentUser);
+
+                    // データを再度取得
+                    boolean success = fetchDataAndSave(db3, db4, serverId, context, moduleContext);
+
+                    // 取得に失敗した場合はリストに保持
+                    if (!success) {
+                        linesToKeep.add(line);
+                    } else {
+                        XposedBridge.log("データの再取得に成功しました: serverId=" + serverId + ", SentUser=" + SentUser);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            XposedBridge.log("エラーファイルの読み取りに失敗しました: " + e.getMessage());
+        }
+
+        // ファイルを更新（成功したエントリを削除）
+        updateErrorFile(errorFile, linesToKeep);
     }
 
+    // エラーデータをファイルに保存するメソッド
+    private void saveErrorToFile(String serverId, String SentUser) {
+        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+        if (!dir.exists()) {
+            dir.mkdirs(); // ディレクトリが存在しない場合は作成
+        }
+
+        File errorFile = new File(dir, "Read_error.txt");
+        try (FileWriter writer = new FileWriter(errorFile, true)) { // true: 追記モード
+            writer.write("serverId: " + serverId + ", SentUser: " + SentUser + "\n");
+            XposedBridge.log("エラーデータをファイルに保存しました: " + errorFile.getAbsolutePath());
+        } catch (IOException e) {
+            XposedBridge.log("エラーデータの保存に失敗しました: " + e.getMessage());
+        }
+    }
 
     private String formatMessageTime(String timeEpochStr) {
         if (timeEpochStr == null) return null;
@@ -593,9 +724,7 @@ public class ReadChecker implements IHook {
 
 
     private void initializeLimeDatabase(Context context) {
-
-
-        File oldDbFile = new File(context.getFilesDir(), "limes_checked_data.db");
+        File oldDbFile = new File(context.getFilesDir(), "checked_data.db");
         if (oldDbFile.exists()) {
             boolean deleted = oldDbFile.delete();
             if (deleted) {
@@ -604,9 +733,12 @@ public class ReadChecker implements IHook {
                 //XposedBridge.log("Failed to delete old database file lime_data.db.");
             }
         }
-        File dbFile = new File(context.getFilesDir(), "checked_data.db");
+        File dbFile = new File(context.getFilesDir(), "lime_checked_data.db");
         limeDatabase = SQLiteDatabase.openOrCreateDatabase(dbFile, null);
+
+        // ID カラムを追加し、自動インクリメントさせる
         String createGroupTable = "CREATE TABLE IF NOT EXISTS read_message (" +
+                "ID INTEGER PRIMARY KEY AUTOINCREMENT, " +  // 新しいIDカラム
                 "group_id TEXT NOT NULL, " +
                 "server_id TEXT NOT NULL, " +
                 "Sent_User TEXT, " +
@@ -614,11 +746,10 @@ public class ReadChecker implements IHook {
                 "group_name TEXT, " +
                 "content TEXT, " +
                 "user_name TEXT, " +
-                "created_time TEXT, " +
-                "PRIMARY KEY(group_id, server_id, Sent_User, Send_User)" +
+                "created_time TEXT" +
                 ");";
         limeDatabase.execSQL(createGroupTable);
-        XposedBridge.log("Database initialized and read_message table created.");
+        XposedBridge.log("Database initialized and read_message table created with ID column.");
     }
 
 
@@ -711,29 +842,36 @@ public class ReadChecker implements IHook {
         }
     }
 
-    // レコードを挿入する共通メソッド
     private void insertRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime) {
-        String insertQuery = "INSERT INTO read_message(group_id, server_id, Sent_User, Send_User, group_name, content, user_name, created_time)" +
-                " VALUES(?, ?, ?, ?, ?, ?, ?, ?);";
+        // Send_User が null の場合に "(null)" として扱う
+        String sendUserValue = (SendUser == null) ? "(null)" : SendUser;
 
-        try {
-            // トランザクションを開始
-            limeDatabase.beginTransaction();
+        // 重複チェック（ID カラムがプライマリキーになったため、group_id, server_id, Sent_User, Send_User の組み合わせでチェック）
+        String checkQuery = "SELECT COUNT(*) FROM read_message WHERE group_id = ? AND server_id = ? AND Sent_User = ? AND Send_User = ?";
+        Cursor cursor = limeDatabase.rawQuery(checkQuery, new String[]{groupId, serverId, SentUser, sendUserValue});
 
-            // SQLクエリを実行
-            limeDatabase.execSQL(insertQuery, new Object[]{groupId, serverId, SentUser, SendUser, groupName, content, user_name, createdTime});
+        if (cursor != null && cursor.moveToFirst() && cursor.getInt(0) == 0) {
+            // 重複がない場合のみ挿入
+            String insertQuery = "INSERT INTO read_message(group_id, server_id, Sent_User, Send_User, group_name, content, user_name, created_time)" +
+                    " VALUES(?, ?, ?, ?, ?, ?, ?, ?);";
 
-            // トランザクションを成功としてマーク
-            limeDatabase.setTransactionSuccessful();
+            try {
+                limeDatabase.beginTransaction();
+                limeDatabase.execSQL(insertQuery, new Object[]{groupId, serverId, SentUser, sendUserValue, groupName, content, user_name, createdTime});
+                limeDatabase.setTransactionSuccessful();
+                XposedBridge.log("New record inserted successfully: server_id=" + serverId + ", Sent_User=" + SentUser);
+            } catch (Exception e) {
+                XposedBridge.log("Error inserting new record: " + e.getMessage());
+                e.printStackTrace();
+            } finally {
+                limeDatabase.endTransaction();
+            }
+        } else {
+            XposedBridge.log("Record already exists, skipping insertion: server_id=" + serverId + ", Sent_User=" + SentUser);
+        }
 
-            // ログ出力
-            XposedBridge.log("New record inserted successfully: server_id=" + serverId + ", Sent_User=" + SentUser);
-        } catch (Exception e) {
-            // エラーログ出力
-            XposedBridge.log("Error inserting new record: " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            limeDatabase.endTransaction();
+        if (cursor != null) {
+            cursor.close();
         }
     }
 

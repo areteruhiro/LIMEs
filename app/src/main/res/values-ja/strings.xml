@@ -144,6 +144,8 @@
     <string name="keep_unread_size">KeepUnreadボタンの大きさ</string>
     <string name="chat_unread_size">常に既読をつけないボタンの大きさ</string>
     <string name="chat_read_check_size">既読確認ボタンのサイズ</string>
+    <string name="read_checker_error">既読者が正しく取得できませんでした。\n再起動を推奨します</string>
+    <string name="ReadCheckerChatdataDelete">(緊急用)既読確認ボタンの右にデータ削除ボタンを作成する</string>
 
 
 </resources>

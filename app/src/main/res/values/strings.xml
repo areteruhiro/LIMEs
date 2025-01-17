@@ -150,4 +150,6 @@
     <string name="keep_unread_size">KeepUnread button size</string>
     <string name="chat_unread_size">Size of button that never marks as read</string>
     <string name="chat_read_check_size">Size of read confirmation button</string>
+    <string name="read_checker_error">Already read list could not be retrieved correctly. \\nWe recommend restarting</string>
+    <string name="ReadCheckerChatdataDelete">(For emergencies) Create a data deletion button to the right of the read confirmation button</string>
 </resources>

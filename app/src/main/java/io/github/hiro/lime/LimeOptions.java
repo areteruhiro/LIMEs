@@ -45,6 +45,7 @@ public class LimeOptions {
     public Option DialTone = new Option("DialTone", R.string.DialTone, false);
 
     public Option ReadChecker = new Option("ReadChecker", R.string.ReadChecker, false);
+    public Option ReadCheckerChatdataDelete = new Option("ReadCheckerChatdataDelete", R.string.ReadCheckerChatdataDelete, false);
     public Option MySendMessage = new Option("MySendMessage", R.string.MySendMessage, false);
 
 
@@ -75,7 +76,7 @@ public class LimeOptions {
             preventUnsendMessage,
             sendMuteMessage,
             Archived,
-            ReadChecker,MySendMessage,
+            ReadChecker,MySendMessage,ReadCheckerChatdataDelete,
             removeKeepUnread,
             KeepUnreadLSpatch,
             blockTracking,
