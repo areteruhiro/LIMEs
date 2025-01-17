@@ -330,7 +330,7 @@ public class ReadChecker implements IHook {
             return;
         }
 
-// SQLクエリの初期化
+        // SQLクエリの初期化
         String query;
         if (limeOptions.MySendMessage.checked) {
             // Send_User が (null) のメッセージのみを取得するクエリ
@@ -353,7 +353,11 @@ public class ReadChecker implements IHook {
 
             if (dataItemMap.containsKey(serverId)) {
                 DataItem existingItem = dataItemMap.get(serverId);
-                existingItem.user_names.addAll(user_nameList);
+                for (String user_name : user_nameList) {
+                    if (!existingItem.user_names.contains(user_name)) { // 重複排除
+                        existingItem.user_names.add(user_name);
+                    }
+                }
             } else {
                 DataItem dataItem = new DataItem(serverId, content, createdTime);
                 dataItem.user_names.addAll(user_nameList);
@@ -411,6 +415,29 @@ public class ReadChecker implements IHook {
         dialog.show();
         scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
     }
+
+    private List<String> getuser_namesForServerId(String serverId) {
+        if (limeDatabase == null) {
+            return Collections.emptyList();
+        }
+
+        // ID カラムで昇順ソートするクエリ
+        String query = "SELECT user_name, ID FROM read_message WHERE server_id=? ORDER BY CAST(ID AS INTEGER) ASC";
+        Cursor cursor = limeDatabase.rawQuery(query, new String[]{serverId});
+        List<String> userNames = new ArrayList<>();
+        Set<String> uniqueUserNames = new HashSet<>(); // 重複排除用の Set
+
+        while (cursor.moveToNext()) {
+            String userNameStr = cursor.getString(0);
+            int id = cursor.getInt(1); // ID を取得
+            if (userNameStr != null && !uniqueUserNames.contains(userNameStr)) {
+                userNames.add(userNameStr);
+                uniqueUserNames.add(userNameStr); // 重複排除
+            }
+        }
+        cursor.close();
+        return userNames;
+    }
     private void deleteGroupData(String groupId, Activity activity, Context moduleContext) {
         if (limeDatabase == null) {
             return;
@@ -420,28 +447,6 @@ public class ReadChecker implements IHook {
         String deleteQuery = "DELETE FROM read_message WHERE group_id=?";
         limeDatabase.execSQL(deleteQuery, new String[]{groupId});
         Toast.makeText(activity, moduleContext.getResources().getString(R.string.Reader_Data_Delete_Success), Toast.LENGTH_SHORT).show();
-    }
-
-
-    private List<String> getuser_namesForServerId(String serverId) {
-        if (limeDatabase == null) {
-            return Collections.emptyList();
-        }
-
-        // ID カラムで降順ソートするクエリ
-        String query = "SELECT user_name FROM read_message WHERE server_id=? ORDER BY ID DESC";
-        Cursor cursor = limeDatabase.rawQuery(query, new String[]{serverId});
-        List<String> userNames = new ArrayList<>();
-
-        while (cursor.moveToNext()) {
-            String userNameStr = cursor.getString(0);
-            if (userNameStr != null) {
-                // user_nameをそのままリストに追加
-                userNames.add(userNameStr);
-            }
-        }
-        cursor.close();
-        return userNames;
     }
 
     private int countNewlines(String text) {
@@ -462,14 +467,13 @@ public class ReadChecker implements IHook {
         String serverId;
         String content;
         String createdTime;
-        Set<String> user_names;
-
+        List<String> user_names; // Set から List に変更
 
         DataItem(String serverId, String content, String createdTime) {
             this.serverId = serverId;
             this.content = content;
             this.createdTime = createdTime;
-            this.user_names = new HashSet<>();
+            this.user_names = new ArrayList<>(); // HashSet から ArrayList に変更
         }
     }
 
@@ -620,7 +624,7 @@ public class ReadChecker implements IHook {
     public void RetryCatch(SQLiteDatabase db3, SQLiteDatabase db4, Context context, Context moduleContext) {
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
         File errorFile = new File(dir, "Read_error.txt");
-        Toast.makeText(context.getApplicationContext(), "Reacquiring existing readers", Toast.LENGTH_SHORT).show();
+
 
         if (!errorFile.exists()) {
             XposedBridge.log("エラーファイルが存在しません。");
@@ -631,6 +635,7 @@ public class ReadChecker implements IHook {
         List<String> linesToKeep = new ArrayList<>();
 
         try (Scanner scanner = new Scanner(errorFile)) {
+            Toast.makeText(context.getApplicationContext(), "Reacquiring existing readers", Toast.LENGTH_SHORT).show();
             while (scanner.hasNextLine()) {
                 String line = scanner.nextLine();
                 String[] parts = line.split(", ");
