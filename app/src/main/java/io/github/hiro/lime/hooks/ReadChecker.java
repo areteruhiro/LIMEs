@@ -847,9 +847,9 @@ public class ReadChecker implements IHook {
         // Send_User が null の場合に "(null)" として扱う
         String sendUserValue = (SendUser == null) ? "(null)" : SendUser;
 
-        // 重複チェック（ID カラムがプライマリキーになったため、group_id, server_id, Sent_User, Send_User の組み合わせでチェック）
-        String checkQuery = "SELECT COUNT(*) FROM read_message WHERE group_id = ? AND server_id = ? AND Sent_User = ? AND Send_User = ?";
-        Cursor cursor = limeDatabase.rawQuery(checkQuery, new String[]{groupId, serverId, SentUser, sendUserValue});
+        // 重複チェック（group_id, server_id, Sent_User の組み合わせでチェック）
+        String checkQuery = "SELECT COUNT(*) FROM read_message WHERE group_id = ? AND server_id = ? AND Sent_User = ?";
+        Cursor cursor = limeDatabase.rawQuery(checkQuery, new String[]{groupId, serverId, SentUser});
 
         if (cursor != null && cursor.moveToFirst() && cursor.getInt(0) == 0) {
             // 重複がない場合のみ挿入
@@ -875,5 +875,4 @@ public class ReadChecker implements IHook {
             cursor.close();
         }
     }
-
 }
