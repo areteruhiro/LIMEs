@@ -58,6 +58,25 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Release check
+        if: github.event.inputs.release == 'true'
+        run: |
+          if [ "${{ secrets.STORE_FILE }}" == "" ]; then
+            echo -e "\nERROR!\nTo release, you need to set up a signing key!\n"
+            echo "STORE_FILE: A Base64 encoded string of the signing key in JKS format"
+            echo "STORE_PASSWORD: Key store password"
+            echo "KEY_ALIAS: Key alias"
+            echo "KEY_PASSWORD: Key password"
+            echo ""
+            exit 1
+          fi
+          if [ "${{ steps.previous.outputs.tag }}" == "${{ env.versionName }}" ]; then
+            echo -e "\nERROR!\nThe same tag already exists!\n"
+            echo "Please change versionName in build.gradle"
+            echo ""
+            exit 1
+          fi
+
       - name: Download Required APKs
         if: github.event.inputs.release == 'true'
         run: |
