@@ -48,6 +48,7 @@ public class LimeOptions {
     public Option ReadCheckerChatdataDelete = new Option("ReadCheckerChatdataDelete", R.string.ReadCheckerChatdataDelete, false);
     public Option MySendMessage = new Option("MySendMessage", R.string.MySendMessage, false);
 
+    public Option AgeCheckSkip = new Option("AgeCheckSkip", R.string.AgeCheckSkip, false);
 
     public Option RemoveNotification = new Option("RemoveNotification", R.string.removeNotification, false);
     public Option DarkColor = new Option("DarkColor", R.string.DarkColor, false);
@@ -88,7 +89,8 @@ public class LimeOptions {
             DarkColor,
             MuteGroup,
             PhotoAddNotification,
-            RemoveVoiceRecord
+            RemoveVoiceRecord,
+            AgeCheckSkip
 
 
     };

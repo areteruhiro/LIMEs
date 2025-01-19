@@ -13,6 +13,7 @@ import de.robv.android.xposed.callbacks.XC_InitPackageResources;
 import de.robv.android.xposed.callbacks.XC_LayoutInflated;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.hooks.AddRegistrationOptions;
+import io.github.hiro.lime.hooks.AgeCheckSkip;
 import io.github.hiro.lime.hooks.AutomaticBackup;
 import io.github.hiro.lime.hooks.BlockTracking;
 import io.github.hiro.lime.hooks.CheckHookTargetVersion;
@@ -90,6 +91,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new Disabled_Group_notification(),
             new PhotoAddNotification(),
             new RemoveVoiceRecord(),
+            new AgeCheckSkip()
     };
 
     public void handleLoadPackage(@NonNull XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {

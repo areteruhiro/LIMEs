@@ -138,5 +138,7 @@
     <string name="keep_unread_size">保留未讀按鈕大小</string>
     <string name="chat_unread_size">永遠不會標記為已讀的按鈕的大小</string>
     <string name="chat_read_check_size">讀取確認按鈕的大小</string>
+    <string name="ReadCheckerChatdataDelete">（緊急）在聊天室內已讀確認按鈕右邊設定一個刪除紀錄按鈕</string>
+    <string name="AgeCheckSkip">跳過年齡驗證</string>
 
 </resources>
