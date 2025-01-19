@@ -40,21 +40,30 @@ public class AgeCheckSkip implements IHook {
                     SQLiteDatabase.OpenParams dbParams1 = builder1.build();
                     SQLiteDatabase db3 = SQLiteDatabase.openDatabase(dbFile3, dbParams1);
 
-                    // 新しいデータを挿入
-                    ContentValues values = new ContentValues();
-                    values.put("key", "AGE_VERIFICATION_RESULT");
-                    values.put("value", "2");
+                    // 既に "AGE_VERIFICATION_RESULT" が存在するか確認
+                    String query = "SELECT * FROM key_value_text WHERE key = ?";
+                    Cursor cursor = db3.rawQuery(query, new String[]{"AGE_VERIFICATION_RESULT"});
 
-                    long newRowId = db3.insert("key_value_text", null, values);
+                    if (cursor.getCount() == 0) {
+                        // 存在しない場合のみ挿入
+                        ContentValues values = new ContentValues();
+                        values.put("key", "AGE_VERIFICATION_RESULT");
+                        values.put("value", "2");
 
-                    if (newRowId == -1) {
-                        XposedBridge.log("データの挿入に失敗しました。");
+                        long newRowId = db3.insert("key_value_text", null, values);
+
+                        if (newRowId == -1) {
+                            XposedBridge.log("データの挿入に失敗しました。");
+                        } else {
+                            XposedBridge.log("データが正常に挿入されました。新しい行ID: " + newRowId);
+                        }
                     } else {
-                        XposedBridge.log("データが正常に挿入されました。新しい行ID: " + newRowId);
+                       return;
                     }
 
-                    Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                            "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                    cursor.close(); // カーソルを閉じる
+                    db3.close(); // データベースを閉じる
+
                 }
             }
         });
