@@ -146,11 +146,10 @@ public class ReadChecker implements IHook {
 
 
                 if (shouldHookOnCreate && currentGroupId != null) {
-                    
+                    if (!isNoGroup(currentGroupId)) {
                         Activity activity = (Activity) param.thisObject;
-
-
                         addButton(activity, moduleContext);
+                    }
                     }
                 }
             
@@ -428,45 +427,45 @@ public class ReadChecker implements IHook {
             String SentUser = cursor.getString(2); // Sent_User を取得
 
             if (userNameStr != null) {
-              //  XposedBridge.log("取得したuser_name: " + userNameStr);
-                //XposedBridge.log("取得したSent_User: " + SentUser);
-
                 // user_name の値をトリミングして "null" かどうかを確認
                 String trimmedUserName = userNameStr.trim();
-                if (trimmedUserName.startsWith("-")) {
-                    // "-ユーザー名 [時間]" の形式からユーザー名部分を抽出
-                    int bracketIndex = trimmedUserName.indexOf('[');
-                    if (bracketIndex != -1) {
-                        String userNamePart = trimmedUserName.substring(1, bracketIndex).trim();
-                       // XposedBridge.log("抽出したユーザー名部分: " + userNamePart);
 
-                        if (userNamePart.equals("null")) {
-                            // SentUser を mid として使用し、contacts テーブルからユーザー名を再取得
-                            if (SentUser != null) {
-                                String newUserName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
-                                //XposedBridge.log("再取得したnewUserName: " + newUserName);
+                // 重複排除
+                if (!uniqueUserNames.contains(trimmedUserName)) {
+                    if (trimmedUserName.startsWith("-")) {
+                        // "-ユーザー名 [時間]" の形式からユーザー名部分を抽出
+                        int bracketIndex = trimmedUserName.indexOf('[');
+                        if (bracketIndex != -1) {
+                            String userNamePart = trimmedUserName.substring(1, bracketIndex).trim();
 
-                                if (newUserName != null && !newUserName.equals("null")) {
+                            if (userNamePart.equals("null")) {
+                                // SentUser を mid として使用し、contacts テーブルからユーザー名を再取得
+                                if (SentUser != null) {
+                                    String newUserName = "No Contact"; // デフォルト値
+                                    try {
+                                        newUserName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
+                                        if (newUserName == null || newUserName.equals("null")) {
+                                            newUserName = "No Contact";
+                                        }
+                                    } catch (Exception e) {
+                                        // エラーが発生した場合は "No Contact" を設定
+                                        XposedBridge.log("再取得中にエラーが発生しました: " + e.getMessage());
+                                        newUserName = "No Contact";
+                                    }
+
                                     // 新しいユーザー名を反映
                                     userNameStr = "-" + newUserName + " [" + trimmedUserName.substring(bracketIndex + 1);
-                                    //XposedBridge.log("更新後のuser_name: " + userNameStr);
                                 }
-                            } else {
-                                //XposedBridge.log("SentUserがnullです。");
                             }
                         }
                     }
-                }
 
-                // 重複排除
-                if (!uniqueUserNames.contains(userNameStr)) {
                     userNames.add(userNameStr);
-                    uniqueUserNames.add(userNameStr);
+                    uniqueUserNames.add(trimmedUserName);
                 }
             }
         }
         cursor.close();
-       // XposedBridge.log("最終的なuserNames: " + userNames);
         return userNames;
     }
 
