@@ -55,5 +55,57 @@ public class PreventUnsendMessage implements IHook {
                 }
         );
 
+        XposedBridge.hookAllMethods(
+                loadPackageParam.classLoader.loadClass(Constants.RESPONSE_HOOK.className),
+                Constants.RESPONSE_HOOK.methodName,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        if ("fetchMyEvents".equals(param.args[0].toString())) {
+                            XposedBridge.log("param.args[0]: " + param.args[0].toString());
+                            XposedBridge.log("param.args[1]: " + param.args[1].toString());
+
+                            // wrapper オブジェクトを取得
+                            Object wrapper = param.args[1].getClass().getDeclaredField("a").get(param.args[1]);
+                            XposedBridge.log("Wrapper class: " + wrapper.getClass().getName());
+
+                            // Field 'b' を取得
+                            Field fieldB = wrapper.getClass().getDeclaredField("b");
+                            fieldB.setAccessible(true);
+                            Object fieldBValue = fieldB.get(wrapper);
+
+                            // Field 'b' がリスト型であることを確認
+                            if (fieldBValue instanceof List) {
+                                List<?> squareEvents = (List<?>) fieldBValue;
+                                for (Object squareEvent : squareEvents) {
+                                    // SquareEvent の Field 'c' を取得 (SquareEventPayload)
+                                    Field fieldC = squareEvent.getClass().getDeclaredField("c");
+                                    fieldC.setAccessible(true);
+                                    Object squareEventPayload = fieldC.get(squareEvent);
+
+                                    // SquareEventPayload の Field 'V4' を取得 (notificationMessage)
+                                    Field notificationMessageField = squareEventPayload.getClass().getDeclaredField("V4");
+                                    notificationMessageField.setAccessible(true);
+                                    Object notificationMessage = notificationMessageField.get(squareEventPayload);
+
+                                    // notificationMessage の Field 'a' を取得 (squareMessage)
+                                    Field squareMessageField = notificationMessage.getClass().getDeclaredField("a");
+                                    squareMessageField.setAccessible(true);
+                                    Object squareMessage = squareMessageField.get(notificationMessage);
+
+                                    // squareMessage のフィールドをログ出力
+                                    XposedBridge.log("SquareMessage fields:");
+                                    for (Field field : squareMessage.getClass().getDeclaredFields()) {
+                                        field.setAccessible(true);
+                                        XposedBridge.log("Field: " + field.getName() + " = " + field.get(squareMessage));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+        );
+
+
     }
 }

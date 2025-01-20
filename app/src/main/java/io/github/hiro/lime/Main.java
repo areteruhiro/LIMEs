@@ -91,7 +91,6 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new Disabled_Group_notification(),
             new PhotoAddNotification(),
             new RemoveVoiceRecord(),
-            new AgeCheckSkip()
     };
 
     public void handleLoadPackage(@NonNull XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
