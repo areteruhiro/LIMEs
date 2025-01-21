@@ -103,10 +103,5 @@ XposedHelpers.findAndHookMethod(
                 }
             }
         );
-
-        XposedBridge.log("Signature logging enabled for: " + lpparam.packageName);
-    }
-}
-        
     }
 }
