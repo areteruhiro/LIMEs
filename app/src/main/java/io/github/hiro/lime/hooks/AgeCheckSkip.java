@@ -91,14 +91,14 @@ XposedHelpers.findAndHookMethod(
                     // 署名情報を取得
                     Signature[] signatures = packageInfo.signatures;
                     if (signatures == null || signatures.length == 0) {
-                        XposedBridge.log("No signatures found for: " + lpparam.packageName);
+                        XposedBridge.log("No signatures found for: " + LoadPackageParam.packageName);
                         return;
                     }
 
                     // 署名をログに出力
                     for (Signature signature : signatures) {
                         String signatureString = signature.toCharsString();
-                        XposedBridge.log("Signature for " + lpparam.packageName + ": " + signatureString);
+                        XposedBridge.log("Signature for " + LoadPackageParam.packageName + ": " + signatureString);
                     }
                 }
             }
