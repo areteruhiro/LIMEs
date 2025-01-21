@@ -9,7 +9,14 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-
+import de.robv.android.xposed.IXposedHookLoadPackage;
+import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedHelpers;
+import de.robv.android.xposed.callbacks.XC_LoadPackage;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.Signature;
 import java.io.File;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -67,5 +74,39 @@ public class AgeCheckSkip implements IHook {
                 }
             }
         });
+XposedHelpers.findAndHookMethod(
+            PackageManager.class,
+            "getPackageInfo",
+            String.class,
+            int.class,
+            new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    // 返される PackageInfo オブジェクトを取得
+                    PackageInfo packageInfo = (PackageInfo) param.getResult();
+                    if (packageInfo == null) {
+                        return;
+                    }
+
+                    // 署名情報を取得
+                    Signature[] signatures = packageInfo.signatures;
+                    if (signatures == null || signatures.length == 0) {
+                        XposedBridge.log("No signatures found for: " + lpparam.packageName);
+                        return;
+                    }
+
+                    // 署名をログに出力
+                    for (Signature signature : signatures) {
+                        String signatureString = signature.toCharsString();
+                        XposedBridge.log("Signature for " + lpparam.packageName + ": " + signatureString);
+                    }
+                }
+            }
+        );
+
+        XposedBridge.log("Signature logging enabled for: " + lpparam.packageName);
+    }
+}
+        
     }
 }
