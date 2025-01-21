@@ -341,9 +341,17 @@ public class ReadChecker implements IHook {
         while (cursor.moveToNext()) {
             String serverId = cursor.getString(0);
             String content = cursor.getString(1);
-            String createdTime = cursor.getString(2);
+            String timeFormatted = cursor.getString(2);
 
-            List<String> user_nameList = getuser_namesForServerId(serverId,db3);
+            // created_time が "null" の場合、chat_history テーブルから取得してフォーマットする
+            if ("null".equals(timeFormatted)) {
+                String timeEpochStr = queryDatabase(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
+                if (timeEpochStr != null && !"null".equals(timeEpochStr)) {
+                    timeFormatted = formatMessageTime(timeEpochStr);
+                }
+            }
+
+            List<String> user_nameList = getuser_namesForServerId(serverId, db3);
 
             if (dataItemMap.containsKey(serverId)) {
                 DataItem existingItem = dataItemMap.get(serverId);
@@ -353,7 +361,7 @@ public class ReadChecker implements IHook {
                     }
                 }
             } else {
-                DataItem dataItem = new DataItem(serverId, content, createdTime);
+                DataItem dataItem = new DataItem(serverId, content, timeFormatted);
                 dataItem.user_names.addAll(user_nameList);
                 dataItemMap.put(serverId, dataItem);
             }
@@ -361,12 +369,12 @@ public class ReadChecker implements IHook {
         cursor.close();
 
         List<DataItem> sortedDataItems = new ArrayList<>(dataItemMap.values());
-        Collections.sort(sortedDataItems, Comparator.comparing(item -> item.createdTime));
+        Collections.sort(sortedDataItems, Comparator.comparing(item -> item.timeFormatted));
 
         StringBuilder resultBuilder = new StringBuilder();
         for (DataItem item : sortedDataItems) {
             resultBuilder.append("Content: ").append(item.content != null ? item.content : "Media").append("\n");
-            resultBuilder.append("Created Time: ").append(item.createdTime).append("\n");
+            resultBuilder.append("Created Time: ").append(item.timeFormatted).append("\n");
 
             if (!item.user_names.isEmpty()) {
                 int newlineCount = 0;
@@ -499,13 +507,13 @@ public class ReadChecker implements IHook {
     private static class DataItem {
         String serverId;
         String content;
-        String createdTime;
+        String timeFormatted;
         List<String> user_names; // Set から List に変更
 
-        DataItem(String serverId, String content, String createdTime) {
+        DataItem(String serverId, String content, String timeFormatted) {
             this.serverId = serverId;
             this.content = content;
-            this.createdTime = createdTime;
+            this.timeFormatted = timeFormatted;
             this.user_names = new ArrayList<>(); // HashSet から ArrayList に変更
         }
     }
@@ -610,9 +618,7 @@ public class ReadChecker implements IHook {
             }
 
             String timeFormatted = formatMessageTime(timeEpochStr);
-            if (timeFormatted == null) {
-                timeFormatted = "null";
-            }
+
 
             String media = queryDatabase(db3, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
             if (media == null) {
@@ -652,10 +658,18 @@ public class ReadChecker implements IHook {
 
 
     private String formatMessageTime(String timeEpochStr) {
-        if (timeEpochStr == null) return null;
-        long timeEpoch = Long.parseLong(timeEpochStr);
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-        return sdf.format(new Date(timeEpoch));
+        if (timeEpochStr == null || timeEpochStr.trim().isEmpty()) {
+            return "null"; // null または空文字列の場合 "null" を返す
+        }
+
+        try {
+            long timeEpoch = Long.parseLong(timeEpochStr); // 数値に変換
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
+            return sdf.format(new Date(timeEpoch)); // フォーマットして返す
+        } catch (NumberFormatException e) {
+            // 数値として不正な形式の場合
+            return "null";
+        }
     }
 
 
@@ -726,7 +740,7 @@ public class ReadChecker implements IHook {
     }
 
 
-    private void saveData(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime, Context context) {
+    private void saveData(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String timeFormatted, Context context) {
         // nullの場合に"null"を代入
         SendUser = (SendUser == null) ? "null" : SendUser;
         groupId = (groupId == null) ? "null" : groupId;
@@ -735,7 +749,7 @@ public class ReadChecker implements IHook {
         groupName = (groupName == null) ? "null" : groupName;
         content = (content == null) ? "null" : content;
         user_name = (user_name == null) ? "null" : user_name;
-        createdTime = (createdTime == null) ? "null" : createdTime;
+        timeFormatted = (timeFormatted == null) ? "null" : timeFormatted;
 
         XposedBridge.log("セーブメゾットまで処理されたよ: serverId=" + serverId + ", Sent_User=" + SentUser);
 
@@ -763,7 +777,7 @@ public class ReadChecker implements IHook {
                 } else {
                     // 新しいレコードを挿入する
                     XposedBridge.log("insertNewRecordにデータを渡したよ");
-                    insertNewRecord(SendUser, groupId, serverId, SentUser, groupName, content, "-" + user_name + " [" + currentTime + "]", createdTime);
+                    insertNewRecord(SendUser, groupId, serverId, SentUser, groupName, content, "-" + user_name + " [" + currentTime + "]", timeFormatted);
                 }
             }
         } catch (Exception e) {
@@ -783,12 +797,12 @@ public class ReadChecker implements IHook {
         return sdf.format(new Date());
     }
 
-    private void insertNewRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime) {
+    private void insertNewRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String timeFormatted) {
         XposedBridge.log("Attempting to insert new record: server_id=" + serverId + ", Sent_User=" + SentUser);
-        XposedBridge.log("Inserting values: groupId=" + groupId + ", serverId=" + serverId + ", SentUser=" + SentUser + ", SendUser=" + SendUser + ", groupName=" + groupName + ", content=" + content + ", user_name=" + user_name + ", createdTime=" + createdTime);
+        XposedBridge.log("Inserting values: groupId=" + groupId + ", serverId=" + serverId + ", SentUser=" + SentUser + ", SendUser=" + SendUser + ", groupName=" + groupName + ", content=" + content + ", user_name=" + user_name + ", timeFormatted=" + timeFormatted);
 
         // 新しいレコードを挿入
-        insertRecord(SendUser, groupId, serverId, SentUser, groupName, content, user_name, createdTime);
+        insertRecord(SendUser, groupId, serverId, SentUser, groupName, content, user_name, timeFormatted);
 
         // 同じ group_id を持つ他の server_id を検索
         String selectQuery = "SELECT server_id, Sent_User, Send_User, group_name, content, created_time FROM read_message WHERE group_id = ? AND server_id != ?";
@@ -804,12 +818,12 @@ public class ReadChecker implements IHook {
                 String otherSendUser = cursor.getString(2);
                 String otherGroupName = cursor.getString(3);
                 String otherContent = cursor.getString(4);
-                String otherCreatedTime = cursor.getString(5);
+                String othertimeFormatted = cursor.getString(5);
 
                 // Sent_User が存在しない場合のみ処理
                 if (!otherSentUser.equals(SentUser)) {
                     // user_name のみ変更して新しいレコードを挿入
-                    insertRecord(otherSendUser, groupId, otherServerId, SentUser, otherGroupName, otherContent, user_name, otherCreatedTime);
+                    insertRecord(otherSendUser, groupId, otherServerId, SentUser, otherGroupName, otherContent, user_name, othertimeFormatted);
                     XposedBridge.log("Copied record inserted: server_id=" + otherServerId + ", Sent_User=" + SentUser);
                 }
             }
@@ -823,7 +837,7 @@ public class ReadChecker implements IHook {
         }
     }
 
-    private void insertRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String createdTime) {
+    private void insertRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String timeFormatted) {
         // Send_User が null の場合に "(null)" として扱う
         String sendUserValue = (SendUser == null) ? "(null)" : SendUser;
 
@@ -838,7 +852,7 @@ public class ReadChecker implements IHook {
 
             try {
                 limeDatabase.beginTransaction();
-                limeDatabase.execSQL(insertQuery, new Object[]{groupId, serverId, SentUser, sendUserValue, groupName, content, user_name, createdTime});
+                limeDatabase.execSQL(insertQuery, new Object[]{groupId, serverId, SentUser, sendUserValue, groupName, content, user_name, timeFormatted});
                 limeDatabase.setTransactionSuccessful();
                 XposedBridge.log("New record inserted successfully: server_id=" + serverId + ", Sent_User=" + SentUser);
             } catch (Exception e) {

@@ -2,7 +2,6 @@ package io.github.hiro.lime.hooks;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -22,7 +21,6 @@ public class PreventUnsendMessage implements IHook {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         if (!"sync".equals(param.args[0].toString())) return;
-
                         try {
                             Object wrapper = param.args[1].getClass().getDeclaredField("a").get(param.args[1]);
                             Field operationResponseField = wrapper.getClass().getSuperclass().getDeclaredField("value_");
@@ -54,8 +52,6 @@ public class PreventUnsendMessage implements IHook {
                     }
                 }
         );
-
-
 
     }
 }

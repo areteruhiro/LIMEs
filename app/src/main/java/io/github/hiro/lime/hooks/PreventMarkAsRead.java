@@ -244,7 +244,7 @@ public class PreventMarkAsRead implements IHook {
                             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                                 if (param.args[0].toString().equals("sendChatChecked")) {
                                     if (!isSendChatCheckedEnabled) { // isSendChatCheckedEnabledがfalseの場合のみnullを設定
-                                        param.setResult(null);
+                                        param.args[0] = param.args[0].getClass().getMethod("valueOf", String.class).invoke(null, "DUMMY");
                                     }
                                 }
                             }
@@ -259,7 +259,7 @@ public class PreventMarkAsRead implements IHook {
                             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                                 if (param.args[0] != null && param.args[0].toString().equals("sendChatChecked")) {
                                     if (!isSendChatCheckedEnabled) {
-                                        param.setResult(null);
+                                        param.args[0] = param.args[0].getClass().getMethod("valueOf", String.class).invoke(null, "DUMMY");
                                     }
                                 }
                             }

@@ -17,6 +17,7 @@ import io.github.hiro.lime.LimeOptions;
 public class RingTone implements IHook {
     private android.media.Ringtone ringtone = null;
     private boolean isPlaying = false;
+
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.callTone.checked) return;

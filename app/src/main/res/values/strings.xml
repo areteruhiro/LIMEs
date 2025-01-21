@@ -153,4 +153,5 @@
     <string name="read_checker_error">Already read list could not be retrieved correctly. \\nWe recommend restarting</string>
     <string name="ReadCheckerChatdataDelete">(For emergencies) Create a data deletion button to the right of the read confirmation button</string>
     <string name="AgeCheckSkip">Skip Age Verification</string>
+    <string name="GroupNotification">GroupNotification</string>
 </resources>
