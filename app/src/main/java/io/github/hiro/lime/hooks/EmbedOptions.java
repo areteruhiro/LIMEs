@@ -435,24 +435,45 @@ public class EmbedOptions implements IHook {
                         AlertDialog dialog = builder.create();
                         Button button = new Button(context);
                         button.setText(R.string.app_name);
+
                         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
                                 FrameLayout.LayoutParams.WRAP_CONTENT,
                                 FrameLayout.LayoutParams.WRAP_CONTENT);
                         layoutParams.gravity = Gravity.TOP | Gravity.END;
                         layoutParams.rightMargin = Utils.dpToPx(10, context);
-                        layoutParams.topMargin = Utils.dpToPx(5, context);
+
+// ステータスバーの高さを取得
+                        int statusBarHeight = getStatusBarHeight(context);
+
+// ステータスバーの高さに係数（0.1）を掛けて調整
+                        layoutParams.topMargin = (int) (statusBarHeight * 0.1); // ステータスバーの高さの10%をマージンに設定
+
                         button.setLayoutParams(layoutParams);
                         button.setOnClickListener(new View.OnClickListener() {
                             @Override
                             public void onClick(View view) {
                                 dialog.show();
-                            }});
+                            }
+                        });
+
                         FrameLayout frameLayout = new FrameLayout(context);
                         frameLayout.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
                         frameLayout.addView(button);
                         viewGroup.addView(frameLayout);
-                    }});}
+                    }
+                }
 
+        );
+
+    }
+    public int getStatusBarHeight(Context context) {
+        int result = 0;
+        int resourceId = context.getResources().getIdentifier("status_bar_height", "dimen", "android");
+        if (resourceId > 0) {
+            result = context.getResources().getDimensionPixelSize(resourceId);
+        }
+        return result;
+    }
     private void KeepUnread_Button(Context context, Context moduleContext) {
         // ファイルパスを取得
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");

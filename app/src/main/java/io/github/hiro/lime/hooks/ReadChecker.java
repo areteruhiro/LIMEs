@@ -324,6 +324,17 @@ public class ReadChecker implements IHook {
             return;
         }
 
+        // group_id が null のレコードを探し、chat_history から chat_id を取得して更新する
+        Cursor nullGroupIdCursor = limeDatabase.rawQuery("SELECT server_id FROM read_message WHERE group_id = 'null'", null);
+        while (nullGroupIdCursor.moveToNext()) {
+            String serverId = nullGroupIdCursor.getString(0);
+            String chatId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
+            if (chatId != null && !"null".equals(chatId)) {
+                limeDatabase.execSQL("UPDATE read_message SET group_id=? WHERE server_id=?", new String[]{chatId, serverId});
+            }
+        }
+        nullGroupIdCursor.close();
+
         // SQLクエリの初期化
         String query;
         if (limeOptions.MySendMessage.checked) {
