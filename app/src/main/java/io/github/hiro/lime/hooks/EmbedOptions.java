@@ -57,7 +57,7 @@ public class EmbedOptions implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (Main.xModulePrefs.getBoolean("unembed_options", false)) return;
-        if (limeOptions.LINELabOnly.checked) {
+        if (!limeOptions.LINELabOnly.checked) {
             XposedBridge.hookAllMethods(
                     loadPackageParam.classLoader.loadClass("com.linecorp.line.settings.main.LineUserMainSettingsFragment"),
                     "onViewCreated",
@@ -849,12 +849,10 @@ public class EmbedOptions implements IHook {
 
 // ボタンのレイアウトパラメータを設定
                         android.widget.FrameLayout.LayoutParams layoutParams = new android.widget.FrameLayout.LayoutParams(
-                                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, // 幅
-                                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT  // 高さ
+                                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
+                                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
                         );
-                        layoutParams.gravity = Gravity.BOTTOM | Gravity.END; // 右下に配置
-                        layoutParams.bottomMargin = Utils.dpToPx(16, context); // 下マージンを16dpに設定
-                        layoutParams.rightMargin = Utils.dpToPx(16, context);  // 右マージンを16dpに設定
+                        layoutParams.gravity = Gravity.BOTTOM; // ボタンを一番下に配置
 
                         newButton.setLayoutParams(layoutParams);
 
