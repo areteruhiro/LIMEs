@@ -154,4 +154,5 @@
     <string name="ReadCheckerChatdataDelete">(For emergencies) Create a data deletion button to the right of the read confirmation button</string>
     <string name="AgeCheckSkip">Skip Age Verification</string>
     <string name="GroupNotification">GroupNotification</string>
+    <string name="LINELabOnly">Add the settings button exclusively to the LINE Lab screen.</string>
 </resources>

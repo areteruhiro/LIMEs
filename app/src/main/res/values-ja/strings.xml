@@ -148,6 +148,7 @@
     <string name="ReadCheckerChatdataDelete">(緊急用)既読確認ボタンの右にデータ削除ボタンを作成する</string>
     <string name="AgeCheckSkip">年齢確認をスキップ</string>
     <string name="GroupNotification">GroupNotification</string>
+    <string name="LINELabOnly">設定ボタンをLINEラボ画面のみに追加する</string>
 
 
 </resources>

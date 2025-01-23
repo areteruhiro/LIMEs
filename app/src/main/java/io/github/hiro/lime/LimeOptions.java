@@ -57,7 +57,7 @@ public class LimeOptions {
     public Option PhotoAddNotification = new Option("PhotoAddNotification", R.string.PhotoAddNotification, false);
     public Option GroupNotification = new Option("GroupNotification", R.string.GroupNotification, false);
     public Option RemoveVoiceRecord = new Option("RemoveVoiceRecord", R.string.RemoveVoiceRecord, false);
-
+    public Option LINELabOnly = new Option("LINELabOnly", R.string.LINELabOnly, false);
     public Option[] options = {
             removeVoom,
             removeWallet,
@@ -91,7 +91,8 @@ public class LimeOptions {
             MuteGroup,
             PhotoAddNotification,GroupNotification,
             RemoveVoiceRecord,
-            AgeCheckSkip
+            AgeCheckSkip,
+            LINELabOnly
 
 
     };
