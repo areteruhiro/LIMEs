@@ -447,7 +447,7 @@ public class EmbedOptions implements IHook {
                             int statusBarHeight = getStatusBarHeight(context);
 
 // ステータスバーの高さに係数（0.1）を掛けて調整
-                            layoutParams.topMargin = (int) (statusBarHeight * 0.1); // ステータスバーの高さの10%をマージンに設定
+                            layoutParams.topMargin = (int) (statusBarHeight); // ステータスバーの高さの10%をマージンに設定
 
                             button.setLayoutParams(layoutParams);
                             button.setOnClickListener(new View.OnClickListener() {
@@ -849,10 +849,12 @@ public class EmbedOptions implements IHook {
 
 // ボタンのレイアウトパラメータを設定
                         android.widget.FrameLayout.LayoutParams layoutParams = new android.widget.FrameLayout.LayoutParams(
-                                android.widget.FrameLayout.LayoutParams.MATCH_PARENT,
-                                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT
+                                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT, // 幅
+                                android.widget.FrameLayout.LayoutParams.WRAP_CONTENT  // 高さ
                         );
-                        layoutParams.gravity = Gravity.BOTTOM; // ボタンを一番下に配置
+                        layoutParams.gravity = Gravity.BOTTOM | Gravity.END; // 右下に配置
+                        layoutParams.bottomMargin = Utils.dpToPx(16, context); // 下マージンを16dpに設定
+                        layoutParams.rightMargin = Utils.dpToPx(16, context);  // 右マージンを16dpに設定
 
                         newButton.setLayoutParams(layoutParams);
 
