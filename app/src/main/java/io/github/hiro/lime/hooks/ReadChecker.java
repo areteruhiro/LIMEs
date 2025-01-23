@@ -323,35 +323,42 @@ public class ReadChecker implements IHook {
         if (limeDatabase == null) {
             return;
         }
-
-// group_id が null のレコードを探し、chat_history から chat_id を取得して更新する
-        Cursor nullGroupIdCursor = limeDatabase.rawQuery("SELECT server_id FROM read_message WHERE group_id = 'null'", null);
+// SQLクエリの初期化
+        String query;
+        // group_id が null のレコードを探し、chat_history から chat_id を取得して更新する
+        Cursor nullGroupIdCursor = limeDatabase.rawQuery("SELECT server_id, user_name FROM read_message WHERE group_id = 'null'", null);
         while (nullGroupIdCursor.moveToNext()) {
             String serverId = nullGroupIdCursor.getString(0);
+            String userName = nullGroupIdCursor.getString(1); // 更新したレコードの user_name
             String chatId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
+
             if (chatId != null && !"null".equals(chatId)) {
+                // group_id を更新
                 limeDatabase.execSQL("UPDATE read_message SET group_id=? WHERE server_id=?", new String[]{chatId, serverId});
 
                 // 同じ group_id を持つ他の server_id を検索
-                Cursor sameGroupIdCursor = limeDatabase.rawQuery("SELECT server_id, user_name FROM read_message WHERE group_id=? AND server_id!=?", new String[]{chatId, serverId});
+                Cursor sameGroupIdCursor = limeDatabase.rawQuery(
+                        "SELECT server_id, user_name FROM read_message WHERE group_id=? AND server_id != ?",
+                        new String[]{chatId, serverId}
+                );
+
                 while (sameGroupIdCursor.moveToNext()) {
                     String otherServerId = sameGroupIdCursor.getString(0);
-                    String userName = sameGroupIdCursor.getString(1);
-
-                    // Sent_User が存在しない場合のみ新しいレコードを挿入
-                    Cursor sentUserCursor = limeDatabase.rawQuery("SELECT Sent_User FROM read_message WHERE server_id=?", new String[]{otherServerId});
-                    if (sentUserCursor.getCount() == 0) {
-                        limeDatabase.execSQL("INSERT INTO read_message (server_id, group_id, user_name) VALUES (?, ?, ?)", new String[]{otherServerId, chatId, userName});
+                    String otherUserName = sameGroupIdCursor.getString(1);
+                    
+                    if (!userName.equals(otherUserName)) {
+                        // 新しいレコードを作成
+                        limeDatabase.execSQL(
+                                "INSERT INTO read_message (server_id, group_id, user_name) VALUES (?, ?, ?)",
+                                new String[]{otherServerId, chatId, userName}
+                        );
                     }
-                    sentUserCursor.close();
                 }
                 sameGroupIdCursor.close();
             }
         }
         nullGroupIdCursor.close();
 
-// SQLクエリの初期化
-        String query;
         if (limeOptions.MySendMessage.checked) {
             // Send_User が (null) のメッセージのみを取得するクエリ
             query = "SELECT server_id, content, created_time FROM read_message WHERE group_id=? AND Send_User = 'null' ORDER BY created_time ASC";
