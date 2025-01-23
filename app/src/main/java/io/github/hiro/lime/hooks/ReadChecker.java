@@ -325,47 +325,33 @@ public class ReadChecker implements IHook {
         }
 
 // group_id が null のレコードを探し、chat_history から chat_id を取得して更新する
-Cursor nullGroupIdCursor = limeDatabase.rawQuery("SELECT server_id FROM read_message WHERE group_id = 'null'", null);
-while (nullGroupIdCursor.moveToNext()) {
-    String serverId = nullGroupIdCursor.getString(0);
-    String chatId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
-    if (chatId != null && !"null".equals(chatId)) {
-        limeDatabase.execSQL("UPDATE read_message SET group_id=? WHERE server_id=?", new String[]{chatId, serverId});
-    }
-}
-nullGroupIdCursor.close();
+        Cursor nullGroupIdCursor = limeDatabase.rawQuery("SELECT server_id FROM read_message WHERE group_id = 'null'", null);
+        while (nullGroupIdCursor.moveToNext()) {
+            String serverId = nullGroupIdCursor.getString(0);
+            String chatId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
+            if (chatId != null && !"null".equals(chatId)) {
+                limeDatabase.execSQL("UPDATE read_message SET group_id=? WHERE server_id=?", new String[]{chatId, serverId});
+
+                // 同じ group_id を持つ他の server_id を検索
+                Cursor sameGroupIdCursor = limeDatabase.rawQuery("SELECT server_id, user_name FROM read_message WHERE group_id=? AND server_id!=?", new String[]{chatId, serverId});
+                while (sameGroupIdCursor.moveToNext()) {
+                    String otherServerId = sameGroupIdCursor.getString(0);
+                    String userName = sameGroupIdCursor.getString(1);
+
+                    // Sent_User が存在しない場合のみ新しいレコードを挿入
+                    Cursor sentUserCursor = limeDatabase.rawQuery("SELECT Sent_User FROM read_message WHERE server_id=?", new String[]{otherServerId});
+                    if (sentUserCursor.getCount() == 0) {
+                        limeDatabase.execSQL("INSERT INTO read_message (server_id, group_id, user_name) VALUES (?, ?, ?)", new String[]{otherServerId, chatId, userName});
+                    }
+                    sentUserCursor.close();
+                }
+                sameGroupIdCursor.close();
+            }
+        }
+        nullGroupIdCursor.close();
 
 // SQLクエリの初期化
-String query;
-
-// group_id と server_id を指定して、read_message テーブルからレコードを取得
-String selectQuery = "SELECT server_id, Sent_User, Send_User, group_name, content, created_time FROM read_message WHERE group_id = ? AND server_id != ?";
-Cursor cursor = null;
-
-try {
-    cursor = limeDatabase.rawQuery(selectQuery, new String[]{groupId, serverId});
-
-    // 検索結果をループ処理
-    while (cursor.moveToNext()) {
-        String otherServerId = cursor.getString(0);
-        String otherSentUser = cursor.getString(1);
-        String otherSendUser = cursor.getString(2);
-        String otherGroupName = cursor.getString(3);
-        String otherContent = cursor.getString(4);
-        String othertimeFormatted = cursor.getString(5);
-
-        // Sent_User が存在しない場合のみ処理
-        if (!otherSentUser.equals(SentUser)) {
-            // user_name のみ変更して新しいレコードを挿入
-            insertRecord(otherSendUser, groupId, otherServerId, SentUser, otherGroupName, otherContent, user_name, othertimeFormatted);
-            XposedBridge.log("Copied record inserted: server_id=" + otherServerId + ", Sent_User=" + SentUser);
-        }
-    }
-} finally {
-    if (cursor != null) {
-        cursor.close();
-    }
-}
+        String query;
         if (limeOptions.MySendMessage.checked) {
             // Send_User が (null) のメッセージのみを取得するクエリ
             query = "SELECT server_id, content, created_time FROM read_message WHERE group_id=? AND Send_User = 'null' ORDER BY created_time ASC";
