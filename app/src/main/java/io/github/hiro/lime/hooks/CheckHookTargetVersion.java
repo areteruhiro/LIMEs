@@ -27,7 +27,9 @@ public class CheckHookTargetVersion implements IHook {
                         long versionCode = pm.getPackageInfo(loadPackageParam.packageName, 0).getLongVersionCode();
                         String versionCodeStr = String.valueOf(versionCode);
 
-                        if (!BuildConfig.HOOK_TARGET_VERSION.equals(versionCodeStr)) {
+                        if (!BuildConfig.HOOK_TARGET_VERSION.equals(versionCodeStr) &&
+                                !versionCodeStr.equals("142110270") &&
+                                !versionCodeStr.equals("150000454")) {
                             Utils.addModuleAssetPath(context);
                             Toast.makeText(context.getApplicationContext(), context.getString(R.string.incompatible_version), Toast.LENGTH_SHORT).show();
                         }
