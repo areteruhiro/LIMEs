@@ -1,23 +1,92 @@
 package io.github.hiro.lime.hooks;
 
+import android.content.Context;
+import android.content.pm.PackageManager;
+import de.robv.android.xposed.XposedHelpers;
+import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
+
 public class Constants {
-    public static final String PACKAGE_NAME = "jp.naver.line.android";
-    public static final String MODULE_NAME = "io.github.hiro.lime";
+    public static  String PACKAGE_NAME = "jp.naver.line.android";
+    public static  String MODULE_NAME = "io.github.hiro.lime";
+
     //TRADITIONAL_CHINESE
-    static final HookTarget USER_AGENT_HOOK = new HookTarget("Wc1.c", "h");
+    static  HookTarget USER_AGENT_HOOK = new HookTarget("Wc1.c", "h");
     //HANDLED_AND_RETURN_TRUE
-    static final HookTarget WEBVIEW_CLIENT_HOOK = new HookTarget("OK0.l", "onPageFinished");
+    static  HookTarget WEBVIEW_CLIENT_HOOK = new HookTarget("OK0.l", "onPageFinished");
     //NOTIFICATION_DISABLED
-    static final HookTarget MUTE_MESSAGE_HOOK = new HookTarget("Ob1.b", "H");
+    static  HookTarget MUTE_MESSAGE_HOOK = new HookTarget("Ob1.b", "H");
     //PROCESSING
-    static final HookTarget MARK_AS_READ_HOOK = new HookTarget("WM.c$d", "run");
+    static  HookTarget MARK_AS_READ_HOOK = new HookTarget("WM.c$d", "run");
 
     //ChatListViewModel
-    static final HookTarget Archive = new HookTarget("sB.Q", "invokeSuspend");
+    static  HookTarget Archive = new HookTarget("sB.Q", "invokeSuspend");
     //StreamingFetchOperationHandler
-    static final HookTarget NOTIFICATION_READ_HOOK = new HookTarget("qd1.b", "invokeSuspend");
-    static final HookTarget REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
-    static final HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+    static  HookTarget NOTIFICATION_READ_HOOK = new HookTarget("qd1.b", "invokeSuspend");
+    static  HookTarget REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+    static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+    //無効にする
+    static HookTarget RemoveVoiceRecord_Hook_a = new HookTarget("af0.e", "run");
+    //有効から無効
+    static HookTarget RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
+//無効から有効
+static HookTarget RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
+    public static void initializeHooks(LoadPackageParam loadPackageParam) {
+        Context context = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
+                XposedHelpers.findClass("android.app.ActivityThread", null),
+                "currentActivityThread"
+        ), "getSystemContext");
+
+        PackageManager pm = context.getPackageManager();
+        long versionCode = 0;
+        try {
+            versionCode = pm.getPackageInfo(loadPackageParam.packageName, 0).getLongVersionCode();
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        // バージョンコードに応じてHookTargetを変更
+        if (versionCode == 141910383) {
+          USER_AGENT_HOOK = new HookTarget("Wc1.c", "h");
+          WEBVIEW_CLIENT_HOOK = new HookTarget("OK0.l", "onPageFinished");
+          MUTE_MESSAGE_HOOK = new HookTarget("Ob1.b", "H");
+          MARK_AS_READ_HOOK = new HookTarget("WM.c$d", "run");
+          Archive = new HookTarget("sB.Q", "invokeSuspend");
+          NOTIFICATION_READ_HOOK = new HookTarget("qd1.b", "invokeSuspend");
+          REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+          RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+          //com.linecorp.uts.android.t with result: null
+          RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+            //有効から無効
+        RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
+//無効から有効
+         RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
+        } else if (versionCode ==142110270) {
+          USER_AGENT_HOOK = new HookTarget("vf1.c", "j");
+          WEBVIEW_CLIENT_HOOK = new HookTarget("pN0.l", "onPageFinished");
+         MARK_AS_READ_HOOK = new HookTarget("xN.b$d", "run");
+        MUTE_MESSAGE_HOOK = new HookTarget("ne1.b", "H");
+         Archive = new HookTarget("tB.N", "invokeSuspend");
+         NOTIFICATION_READ_HOOK = new HookTarget("Pf1.c", "invokeSuspend");
+         REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+          RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+            RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+            RemoveVoiceRecord_Hook_b = new HookTarget("Fi1.j", "run");
+            RemoveVoiceRecord_Hook_c = new HookTarget("Fi1.j", "run");
+        } else if (versionCode == 150000454) {
+        USER_AGENT_HOOK = new HookTarget("Sg1.c", "j");
+        WEBVIEW_CLIENT_HOOK = new HookTarget("FO0.l", "onPageFinished");
+        MUTE_MESSAGE_HOOK = new HookTarget("Lf1.b", "I");
+        MARK_AS_READ_HOOK = new HookTarget("KO.d$d", "run");
+        Archive = new HookTarget("tB.P", "invokeSuspend");
+        NOTIFICATION_READ_HOOK = new HookTarget("mh1.b", "invokeSuspend");
+        REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+        RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+            RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
+            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
+
+    }
+    }
 
     public static class HookTarget {
         public String className;
@@ -29,4 +98,3 @@ public class Constants {
         }
     }
 }
-

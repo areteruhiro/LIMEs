@@ -13,6 +13,7 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteDatabaseLockedException;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
@@ -605,10 +606,8 @@ public class ReadChecker implements IHook {
         return messages;
     }
 
-
-    // fetchDataAndSaveメソッド: データを取得し、成功したかどうかを返す
     private void fetchDataAndSave(SQLiteDatabase db3, SQLiteDatabase db4, String paramValue, Context context, Context moduleContext) {
-       //("fetchDataAndSave");
+        //("fetchDataAndSave");
 
         String serverId = null;
         String SentUser = null;
@@ -620,73 +619,88 @@ public class ReadChecker implements IHook {
                 return;
             }
 
-            String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
+            // データベースが利用可能になるまで待機して再試行
+            String SendUser = queryDatabaseWithRetry(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
             if (SendUser == null) {
                 SendUser = "null";
             }
 
-            String groupId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
+            String groupId = queryDatabaseWithRetry(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
             if (groupId == null) {
                 groupId = "null";
             }
 
-            String groupName = queryDatabase(db3, "SELECT name FROM groups WHERE id=?", groupId);
+            String groupName = queryDatabaseWithRetry(db3, "SELECT name FROM groups WHERE id=?", groupId);
             if (groupName == null) {
                 groupName = "null";
             }
 
-            String content = queryDatabase(db3, "SELECT content FROM chat_history WHERE server_id=?", serverId);
+            String content = queryDatabaseWithRetry(db3, "SELECT content FROM chat_history WHERE server_id=?", serverId);
             if (content == null) {
                 content = "null";
             }
 
-            String user_name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
+            String user_name = queryDatabaseWithRetry(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
             if (user_name == null) {
                 user_name = "null";
             }
 
-            String timeEpochStr = queryDatabase(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
+            String timeEpochStr = queryDatabaseWithRetry(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
             if (timeEpochStr == null) {
                 timeEpochStr = "null";
             }
 
             String timeFormatted = formatMessageTime(timeEpochStr);
 
-
-            String media = queryDatabase(db3, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
-            if (media == null) {
-                media = "null";
-            }
-
+            String media = queryDatabaseWithRetry(db3, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
             String mediaDescription = "";
-            if (!media.equals("null")) { // mediaが"null"でない場合のみ処理
-                switch (media) {
-                    case "7":
-                        mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                        break;
-                    case "1":
-                        mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                        break;
-                    case "2":
-                        mediaDescription = moduleContext.getResources().getString(R.string.video);
-                        break;
-                    default:
-                        mediaDescription = "";
-                        break;
-                }
+
+            switch (media) {
+                case "7":
+                    mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                    break;
+                case "1":
+                    mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                    break;
+                case "2":
+                    mediaDescription = moduleContext.getResources().getString(R.string.video);
+                    break;
+                default:
+                    mediaDescription = "";
+                    break;
             }
 
             String finalContent = (content != null && !content.isEmpty() && !content.equals("null"))
                     ? content
                     : (!mediaDescription.isEmpty() ? mediaDescription : "No content:" + serverId);
 
-           //("セーブメゾットに渡したよ" + serverId + ", Sent_User: " + SentUser);
+            //("セーブメゾットに渡したよ" + serverId + ", Sent_User: " + SentUser);
             saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, user_name, timeFormatted, context);
 
         } catch (Resources.NotFoundException e) {
             throw new RuntimeException(e);
         }
+    }
 
+    /**
+     * データベースがロックされている場合に成功するまで再試行するメソッド
+     */
+    private String queryDatabaseWithRetry(SQLiteDatabase db, String query, String... params) {
+        final int RETRY_DELAY_MS = 100; // リトライ間隔（ミリ秒）
+
+        while (true) {
+            try {
+                return queryDatabase(db, query, params);
+            } catch (SQLiteDatabaseLockedException e) {
+                // データベースがロックされている場合、少し待って再試行
+                try {
+                    Thread.sleep(RETRY_DELAY_MS);
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new RuntimeException("Thread interrupted while waiting for database", ie);
+                }
+            }
+        }
     }
 
 

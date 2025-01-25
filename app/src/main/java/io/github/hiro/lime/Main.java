@@ -15,7 +15,6 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.hooks.AddRegistrationOptions;
 import io.github.hiro.lime.hooks.AgeCheckSkip;
 import io.github.hiro.lime.hooks.AutomaticBackup;
-import io.github.hiro.lime.hooks.BlockTracking;
 import io.github.hiro.lime.hooks.CheckHookTargetVersion;
 import io.github.hiro.lime.hooks.Constants;
 import io.github.hiro.lime.hooks.Disabled_Group_notification;
@@ -45,6 +44,7 @@ import io.github.hiro.lime.hooks.SendMuteMessage;
 import io.github.hiro.lime.hooks.SpoofAndroidId;
 import io.github.hiro.lime.hooks.SpoofUserAgent;
 
+import io.github.hiro.lime.hooks.Test;
 import io.github.hiro.lime.hooks.UnsentRec;
 import io.github.hiro.lime.hooks.Archived;
 import io.github.hiro.lime.hooks.ReadChecker;
@@ -52,6 +52,7 @@ import io.github.hiro.lime.hooks.DarkColor;
 
 
 public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResources, IXposedHookZygoteInit {
+
     public static String modulePath;
 
     public static XSharedPreferences xModulePrefs;
@@ -77,7 +78,6 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new PreventUnsendMessage(),
             new SendMuteMessage(),
             new KeepUnread(),
-            new BlockTracking(),
             new ModifyResponse(),
             new OutputRequest(),
             new Archived(),
@@ -92,11 +92,12 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new PhotoAddNotification(),
             new RemoveVoiceRecord(),
             new AgeCheckSkip()
+
     };
 
     public void handleLoadPackage(@NonNull XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!loadPackageParam.packageName.equals(Constants.PACKAGE_NAME)) return;
-
+        Constants.initializeHooks(loadPackageParam);
         xModulePrefs = new XSharedPreferences(Constants.MODULE_NAME, "options");
         xPackagePrefs = new XSharedPreferences(Constants.PACKAGE_NAME, Constants.MODULE_NAME + "-options");
         if (xModulePrefs.getBoolean("unembed_options", false)) {
