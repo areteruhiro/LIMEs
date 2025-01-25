@@ -682,17 +682,15 @@ public class ReadChecker implements IHook {
         }
     }
 
-    /**
-     * データベースがロックされている場合に成功するまで再試行するメソッド
-     */
+
     private String queryDatabaseWithRetry(SQLiteDatabase db, String query, String... params) {
-        final int RETRY_DELAY_MS = 100; // リトライ間隔（ミリ秒）
+        final int RETRY_DELAY_MS = 100;
 
         while (true) {
             try {
                 return queryDatabase(db, query, params);
             } catch (SQLiteDatabaseLockedException e) {
-                // データベースがロックされている場合、少し待って再試行
+
                 try {
                     Thread.sleep(RETRY_DELAY_MS);
                 } catch (InterruptedException ie) {
