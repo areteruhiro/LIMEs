@@ -62,6 +62,7 @@ body:
         - レスポンスを改変
   - type: checkboxes
     attributes:
+     required: false
       label: バージョンの確認
       multiple: false
       options:
