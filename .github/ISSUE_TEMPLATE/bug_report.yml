@@ -60,6 +60,14 @@ body:
         - Android ID を偽装
         - リクエストを改変
         - レスポンスを改変
+        - その他の機能
+  - type: textarea
+    attributes:
+      label: その他の機能の詳細
+      description: 「その他の機能」を選択した場合、その機能を教えて下さい
+      placeholder: 
+    validations:
+      required: false
   - type: checkboxes
     attributes:
       label: バージョンの確認
