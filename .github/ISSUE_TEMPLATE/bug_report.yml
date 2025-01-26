@@ -62,11 +62,9 @@ body:
         - レスポンスを改変
   - type: checkboxes
     attributes:
-     required: false
       label: バージョンの確認
       multiple: false
       options:
-        - 14.19.1
-        - 14.21.1
-        - 15.0.0
-  - type: checkboxes
+        - label: 14.19.1
+        - label: 14.21.1
+        - label: 15.0.0
