@@ -64,8 +64,8 @@ body:
   - type: textarea
     attributes:
       label: その他の機能の詳細
-      description: 「その他の機能」を選択した場合、その機能を教えて下さい
-      placeholder: 
+      description: 「その他の機能」を選択した場合、具体的に記述してください。
+      placeholder:
     validations:
       required: false
   - type: checkboxes
@@ -75,3 +75,10 @@ body:
         - label: 14.19.1
         - label: 14.21.1
         - label: 15.0.0
+  - type: file
+    attributes:
+      label: ログファイルの添付 (任意)
+      description: ログ出力ファイル（zip形式）を添付してください。ファイルサイズは10MB以下にしてください。
+      multiple: false
+    validations:
+      required: false
