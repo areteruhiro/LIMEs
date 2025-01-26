@@ -1,6 +1,6 @@
 # 通知が届かない場合
 
-##（チャット復元を行う場合）
+## （チャット復元を行う場合）
 
 ~~パッチをしていないLINE（14.3.2をインストール）~~
 ~~https://www.apkmirror.com/apk/line-corporation/line/line-14-3-2-release/~~
