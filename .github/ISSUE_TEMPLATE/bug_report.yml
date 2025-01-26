@@ -63,7 +63,6 @@ body:
   - type: checkboxes
     attributes:
       label: バージョンの確認
-      multiple: false
       options:
         - label: 14.19.1
         - label: 14.21.1
