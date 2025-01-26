@@ -7,6 +7,14 @@
 
  [LsPatch](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20LsPatch.md) 
  
+Wear Os for Ls Patch
+以下の1.2.2のLINE WEARをスマートウォッチにapkインストールすることができると、QRコード認証になるので、エラーが発生しませんでした。
+https://www.apkmirror.com/apk/line-corporation/line-calls-messages-wear-os/line-calls-messages-wear-os-1-2-2-wear-release/line-calls-messages-wear-os-1-2-2-wear-4-android-apk-download/
+
+wearinstaller
+https://play.google.com/store/apps/details?id=org.freepoc.wearinstaller&hl=ja
+
+
 
 ## 概要
 
