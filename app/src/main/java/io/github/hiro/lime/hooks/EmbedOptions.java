@@ -11,6 +11,7 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Typeface;
@@ -47,6 +48,7 @@ import java.util.Locale;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 import io.github.hiro.lime.Main;
@@ -64,6 +66,21 @@ public class EmbedOptions implements IHook {
                     new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+
+                            Context contextV = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
+                                    XposedHelpers.findClass("android.app.ActivityThread", null),
+                                    "currentActivityThread"
+                            ), "getSystemContext");
+
+                            PackageManager pm = contextV.getPackageManager();
+                            long versionCode = 0;
+                            try {
+                                versionCode = pm.getPackageInfo(loadPackageParam.packageName, 0).getLongVersionCode();
+                            } catch (PackageManager.NameNotFoundException e) {
+                                e.printStackTrace();
+                            }
+
+
 
                             Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                     "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
@@ -447,8 +464,14 @@ public class EmbedOptions implements IHook {
                             int statusBarHeight = getStatusBarHeight(context);
 
 // ステータスバーの高さに係数（0.1）を掛けて調整
-                            layoutParams.topMargin = (int) (statusBarHeight); // ステータスバーの高さの10%をマージンに設定
 
+
+                            String versionCodeStr = String.valueOf(versionCode);
+                            if (versionCodeStr.contains("15") ) {
+                                layoutParams.topMargin = (int) (statusBarHeight); // ステータスバーの高さの10%をマージンに設定
+                            } else {
+                                layoutParams.topMargin = Utils.dpToPx(5, context);
+                            }
                             button.setLayoutParams(layoutParams);
                             button.setOnClickListener(new View.OnClickListener() {
                                 @Override
