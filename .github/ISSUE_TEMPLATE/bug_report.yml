@@ -63,6 +63,9 @@ body:
   - type: checkboxes
     attributes:
       label: バージョンの確認
+      multiple: false
       options:
-        - label: 私は最新版の LIME を使用しており、それに適合するバージョンの LINE アプリを使用しています
-          required: false
+        - 14.19.1
+        - 14.21.1
+        - 15.0.0
+  - type: checkboxes
