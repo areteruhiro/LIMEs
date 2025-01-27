@@ -60,9 +60,24 @@ body:
         - Android ID を偽装
         - リクエストを改変
         - レスポンスを改変
+        - その他の機能
+  - type: textarea
+    attributes:
+      label: その他の機能の詳細
+      description: 「その他の機能」を選択した場合、具体的に記述してください。
+      placeholder:
+    validations:
+      required: false
   - type: checkboxes
     attributes:
       label: バージョンの確認
       options:
-        - label: 私は最新版の LIME を使用しており、それに適合するバージョンの LINE アプリを使用しています
-          required: false
+        - label: 14.19.1
+        - label: 14.21.1
+        - label: 15.0.0
+  - type: markdown
+    attributes:
+      value: |
+        ### ログファイルの添付について
+        ログファイル（zip形式）を添付する場合は、Issue 作成後に **「コメント」欄** からファイルをドラッグ＆ドロップしてください。  
+        ファイルサイズは **10MB以下** にしてください。
