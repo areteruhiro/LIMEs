@@ -6,12 +6,6 @@ name: Build
 
 on:
   push:
-    paths:
-      - '.github/workflows/build.yml'
-      - 'app/'
-      - 'gradle/'
-      - '.gradle'
-      - '.properties'
   pull_request:
   workflow_dispatch:
     inputs:
