@@ -679,23 +679,31 @@ public class ReadChecker implements IHook {
 
         } catch (Resources.NotFoundException e) {
             throw new RuntimeException(e);
+        } catch (InterruptedException e) {
+            // 割り込みが発生した場合の処理
+            Thread.currentThread().interrupt(); // 割り込み状態を再設定
+          //  System.out.println("Database operation was interrupted");
         }
     }
 
-
-    private String queryDatabaseWithRetry(SQLiteDatabase db, String query, String... params) {
+    private String queryDatabaseWithRetry(SQLiteDatabase db, String query, String... params) throws InterruptedException {
         final int RETRY_DELAY_MS = 100;
 
         while (true) {
             try {
+                // 割り込みが発生したかどうかをチェック
+                if (Thread.currentThread().isInterrupted()) {
+                    throw new InterruptedException("Thread was interrupted");
+                }
+
                 return queryDatabase(db, query, params);
             } catch (SQLiteDatabaseLockedException e) {
-
                 try {
                     Thread.sleep(RETRY_DELAY_MS);
                 } catch (InterruptedException ie) {
+                    // 割り込みが発生した場合、スレッドの割り込み状態を再設定し、例外をスロー
                     Thread.currentThread().interrupt();
-                    throw new RuntimeException("Thread interrupted while waiting for database", ie);
+                    throw ie;
                 }
             }
         }
