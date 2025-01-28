@@ -493,32 +493,35 @@ public class UnsentRec implements IHook {
                 // チャット ID をログに出力
                 XposedBridge.log("Chat ID: " + chatId);
                 String canceledContent = getCanceledContentFromFile(context, moduleContext);
+
                 // チェックボックスの状態を確認
                 if (limeOptions.hide_canceled_message.checked) {
                     XposedBridge.log("hide_canceled_message is checked");
 
                     // content と server_id, chat_id を取得 (複数レコードを想定)
-                    Cursor cursor = db1.rawQuery("SELECT content, server_id, chat_id FROM chat_history WHERE chat_id=?", new String[]{chatId});
+                    Cursor cursor = db1.rawQuery("SELECT content, server_id, chat_id, parameter FROM chat_history WHERE chat_id=?", new String[]{chatId});
                     if (cursor != null) {
                         try {
                             while (cursor.moveToNext()) {
                                 String content = cursor.getString(0);
                                 String serverId = cursor.getString(1);
                                 String currentChatId = cursor.getString(2);
+                                String parameter = cursor.getString(3); // parameter カラムを取得
 
                                 XposedBridge.log("Content: " + content);
                                 XposedBridge.log("Server ID: " + serverId);
                                 XposedBridge.log("Current Chat ID: " + currentChatId);
+                                XposedBridge.log("Parameter: " + parameter); // parameter をログに出力
 
-                                // content が「削除されたメッセージです」の場合のみ処理
-                                if (content != null && content.contains(canceledContent)) {
+                                // parameter が「LIMEsUnsend」の場合のみ処理
+                                if ("LIMEsUnsend".equals(parameter)) {
                                     if (currentChatId != null && !currentChatId.startsWith("/")) {
                                         // chat_id の先頭に "/" を付ける
                                         String updatedChatId = "/" + currentChatId;
 
-                                        // 更新クエリを実行 (content が「削除されたメッセージです」の場合のみ)
-                                        db1.execSQL("UPDATE chat_history SET chat_id=? WHERE chat_id=? AND server_id=? AND content=?",
-                                                new Object[]{updatedChatId, currentChatId, serverId, content});
+                                        // 更新クエリを実行 (parameter が「LIMEsUnsend」の場合のみ)
+                                        db1.execSQL("UPDATE chat_history SET chat_id=? WHERE chat_id=? AND server_id=? AND parameter=?",
+                                                new Object[]{updatedChatId, currentChatId, serverId, parameter});
                                         XposedBridge.log("Updated Chat ID: " + updatedChatId);
                                     }
                                 }
@@ -533,28 +536,30 @@ public class UnsentRec implements IHook {
                     XposedBridge.log("hide_canceled_message is NOT checked");
 
                     // hide_canceled_message.checked が false の場合
-                    String chatId1 = "/"+(String) param.getResult();
-                    Cursor cursor = db1.rawQuery("SELECT content, server_id, chat_id FROM chat_history WHERE chat_id=?", new String[]{chatId1});
+                    String chatId1 = "/" + (String) param.getResult();
+                    Cursor cursor = db1.rawQuery("SELECT content, server_id, chat_id, parameter FROM chat_history WHERE chat_id=?", new String[]{chatId1});
                     if (cursor != null) {
                         try {
                             while (cursor.moveToNext()) {
                                 String content = cursor.getString(0);
                                 String serverId = cursor.getString(1);
                                 String currentChatId = cursor.getString(2);
+                                String parameter = cursor.getString(3); // parameter カラムを取得
 
                                 XposedBridge.log("Content: " + content);
                                 XposedBridge.log("Server ID: " + serverId);
                                 XposedBridge.log("Current Chat ID: " + currentChatId);
+                                XposedBridge.log("Parameter: " + parameter); // parameter をログに出力
 
-                                // content が「削除されたメッセージです」の場合のみ処理
-                                if (content != null && content.contains(canceledContent)) {
+                                // parameter が「LIMEsUnsend」の場合のみ処理
+                                if ("LIMEsUnsend".equals(parameter)) {
                                     if (currentChatId != null && currentChatId.startsWith("/")) {
                                         // chat_id から "/" を除外する
                                         String updatedChatId = currentChatId.substring(1);
 
-                                        // 更新クエリを実行 (content が「削除されたメッセージです」の場合のみ)
-                                        db1.execSQL("UPDATE chat_history SET chat_id=? WHERE chat_id=? AND server_id=? AND content=?",
-                                                new Object[]{updatedChatId, currentChatId, serverId, content});
+                                        // 更新クエリを実行 (parameter が「LIMEsUnsend」の場合のみ)
+                                        db1.execSQL("UPDATE chat_history SET chat_id=? WHERE chat_id=? AND server_id=? AND parameter=?",
+                                                new Object[]{updatedChatId, currentChatId, serverId, parameter});
                                         XposedBridge.log("Updated Chat ID: " + updatedChatId);
                                     }
                                 }
@@ -627,7 +632,7 @@ public class UnsentRec implements IHook {
                 if (attachmentImageSize != null) values.put("attachement_image_size", attachmentImageSize);
                 values.put("attachement_type", attachmentType);
                 values.put("attachement_local_uri", attachmentLocalUri);
-                values.put("parameter", parameter);
+                values.put("parameter", "LIMEsUnsend"); // ここを修正
                 values.put("chunks", chunks);
 
                 db1.insert("chat_history", null, values);
