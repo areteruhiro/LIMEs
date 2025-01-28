@@ -49,7 +49,7 @@ public class LimeOptions {
     public Option MySendMessage = new Option("MySendMessage", R.string.MySendMessage, false);
 
     public Option AgeCheckSkip = new Option("AgeCheckSkip", R.string.AgeCheckSkip, false);
-
+    public Option hide_canceled_message = new Option("hide_canceled_message", R.string.hide_canceled_message, false);
     public Option RemoveNotification = new Option("RemoveNotification", R.string.removeNotification, false);
     public Option DarkColor = new Option("DarkColor", R.string.DarkColor, false);
     public Option NoMuteMessage = new Option("NoMuteMessage", R.string.NoMuteMessage, false);
@@ -75,7 +75,7 @@ public class LimeOptions {
             redirectWebView,
             openInBrowser,
             preventMarkAsRead,
-            preventUnsendMessage,
+            preventUnsendMessage,hide_canceled_message,
             sendMuteMessage,
             Archived,
             ReadChecker,MySendMessage,ReadCheckerChatdataDelete,

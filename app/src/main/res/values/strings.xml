@@ -155,4 +155,7 @@
     <string name="AgeCheckSkip">Skip Age Verification</string>
     <string name="GroupNotification">GroupNotification</string>
     <string name="LINELabOnly">Add the settings button exclusively to the LINE Lab screen.</string>
+    <string name="canceled_message">Change notification talk for canceled messages</string>
+    <string name="canceled_message_txt">This is a canceled message</string>
+    <string name="hide_canceled_message">Hide notification talk for canceled messages</string>
 </resources>

@@ -1,14 +1,18 @@
 package io.github.hiro.lime.hooks;
 
+import static io.github.hiro.lime.Main.limeOptions;
+
 import android.app.AlertDialog;
 import android.app.AndroidAppHelper;
 import android.app.Application;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
+import android.os.Environment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,6 +28,7 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -136,7 +141,7 @@ public class UnsentRec implements IHook {
                                                 writer.close();
                                                 Toast.makeText(appContext, moduleContext.getResources().getString(R.string.file_content_deleted), Toast.LENGTH_SHORT).show();
                                             } catch (IOException ignored) {
-                                            
+
                                                 Toast.makeText(appContext, moduleContext.getResources().getString(R.string.file_delete_failed), Toast.LENGTH_SHORT).show();
                                             }
                                         } else {
@@ -168,7 +173,7 @@ public class UnsentRec implements IHook {
                             try {
                                 originalFile.createNewFile();
                             } catch (IOException ignored) {
-                            
+
                                 Toast.makeText(context, moduleContext.getResources().getString(R.string.file_creation_failed), Toast.LENGTH_SHORT).show();
                                 return;
                             }
@@ -298,26 +303,39 @@ public class UnsentRec implements IHook {
                     SQLiteDatabase db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
 
 
-                    hookMessageDeletion(loadPackageParam, appContext, db1, db2);
+                    hookMessageDeletion(loadPackageParam, appContext, db1, db2,moduleContext);
                     resolveUnresolvedIds(loadPackageParam, appContext, db1, db2, moduleContext);
+
+                    canceled_message(loadPackageParam, appContext, db1, db2, moduleContext);
+
                 }
             }
         });
 
     }
 
-    private String queryDatabase(SQLiteDatabase db, String query, String... selectionArgs) {
+
+
+        private String queryDatabase(SQLiteDatabase db, String query, String... selectionArgs) {
         if (db == null) {
             return null;
         }
         Cursor cursor = db.rawQuery(query, selectionArgs);
         String result = null;
-        if (cursor.moveToFirst()) {
-            result = cursor.getString(0);
+
+        if (cursor != null && cursor.moveToFirst()) {
+            do {
+                result = cursor.getString(0);
+                XposedBridge.log("Query Result: " + result); // Log each result found
+            } while (cursor.moveToNext()); // In case there are multiple rows
+        } else {
+            XposedBridge.log("No rows found for query: " + query);
         }
+
         cursor.close();
         return result;
     }
+
 
     private int countLinesInFile(File file) {
         int count = 0;
@@ -334,7 +352,7 @@ public class UnsentRec implements IHook {
 
     }
 
-    private void hookMessageDeletion(XC_LoadPackage.LoadPackageParam loadPackageParam, Context context, SQLiteDatabase db1, SQLiteDatabase db2) {
+    private void hookMessageDeletion(XC_LoadPackage.LoadPackageParam loadPackageParam, Context context, SQLiteDatabase db1, SQLiteDatabase db2,Context moduleContext) {
         try {
             XposedBridge.hookAllMethods(
                     loadPackageParam.classLoader.loadClass(Constants.RESPONSE_HOOK.className),
@@ -355,7 +373,6 @@ public class UnsentRec implements IHook {
         } catch (ClassNotFoundException ignored) {
         }
     }
-
     private void processMessage(String paramValue, Context moduleContext, SQLiteDatabase db1, SQLiteDatabase db2, Context context) {
         String unresolvedFilePath = context.getFilesDir() + "/UnresolvedIds.txt";
 
@@ -398,6 +415,9 @@ public class UnsentRec implements IHook {
             }
 
             if (serverId != null && talkId != null) {
+                // 新しいメソッドを呼び出して、メッセージを取り消し済みとして更新
+                updateMessageAsCanceled(db1, serverId,context,moduleContext);
+
                 String content = queryDatabase(db1, "SELECT content FROM chat_history WHERE server_id=?", serverId);
                 String imageCheck = queryDatabase(db1, "SELECT attachement_image FROM chat_history WHERE server_id=?", serverId);
                 String timeEpochStr = queryDatabase(db1, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
@@ -460,10 +480,163 @@ public class UnsentRec implements IHook {
                 } catch (IOException ignored) {
                 }
             }
-
         }
     }
 
+    private void canceled_message(XC_LoadPackage.LoadPackageParam loadPackageParam, Context context, SQLiteDatabase db1, SQLiteDatabase db2, Context moduleContext) {
+        Class<?> chatHistoryRequestClass = XposedHelpers.findClass("com.linecorp.line.chat.request.ChatHistoryRequest", loadPackageParam.classLoader);
+        XposedHelpers.findAndHookMethod(chatHistoryRequestClass, "getChatId", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                String chatId = (String) param.getResult();
+
+                // チャット ID をログに出力
+                XposedBridge.log("Chat ID: " + chatId);
+                String canceledContent = getCanceledContentFromFile(context, moduleContext);
+                // チェックボックスの状態を確認
+                if (limeOptions.hide_canceled_message.checked) {
+                    XposedBridge.log("hide_canceled_message is checked");
+
+                    // content と server_id, chat_id を取得 (複数レコードを想定)
+                    Cursor cursor = db1.rawQuery("SELECT content, server_id, chat_id FROM chat_history WHERE chat_id=?", new String[]{chatId});
+                    if (cursor != null) {
+                        try {
+                            while (cursor.moveToNext()) {
+                                String content = cursor.getString(0);
+                                String serverId = cursor.getString(1);
+                                String currentChatId = cursor.getString(2);
+
+                                XposedBridge.log("Content: " + content);
+                                XposedBridge.log("Server ID: " + serverId);
+                                XposedBridge.log("Current Chat ID: " + currentChatId);
+
+                                // content が「削除されたメッセージです」の場合のみ処理
+                                if (content != null && content.contains(canceledContent)) {
+                                    if (currentChatId != null && !currentChatId.startsWith("/")) {
+                                        // chat_id の先頭に "/" を付ける
+                                        String updatedChatId = "/" + currentChatId;
+
+                                        // 更新クエリを実行 (content が「削除されたメッセージです」の場合のみ)
+                                        db1.execSQL("UPDATE chat_history SET chat_id=? WHERE chat_id=? AND server_id=? AND content=?",
+                                                new Object[]{updatedChatId, currentChatId, serverId, content});
+                                        XposedBridge.log("Updated Chat ID: " + updatedChatId);
+                                    }
+                                }
+                            }
+                        } finally {
+                            cursor.close();
+                        }
+                    } else {
+                        XposedBridge.log("No rows found for chat_id: " + chatId);
+                    }
+                } else {
+                    XposedBridge.log("hide_canceled_message is NOT checked");
+
+                    // hide_canceled_message.checked が false の場合
+                    String chatId1 = "/"+(String) param.getResult();
+                    Cursor cursor = db1.rawQuery("SELECT content, server_id, chat_id FROM chat_history WHERE chat_id=?", new String[]{chatId1});
+                    if (cursor != null) {
+                        try {
+                            while (cursor.moveToNext()) {
+                                String content = cursor.getString(0);
+                                String serverId = cursor.getString(1);
+                                String currentChatId = cursor.getString(2);
+
+                                XposedBridge.log("Content: " + content);
+                                XposedBridge.log("Server ID: " + serverId);
+                                XposedBridge.log("Current Chat ID: " + currentChatId);
+
+                                // content が「削除されたメッセージです」の場合のみ処理
+                                if (content != null && content.contains(canceledContent)) {
+                                    if (currentChatId != null && currentChatId.startsWith("/")) {
+                                        // chat_id から "/" を除外する
+                                        String updatedChatId = currentChatId.substring(1);
+
+                                        // 更新クエリを実行 (content が「削除されたメッセージです」の場合のみ)
+                                        db1.execSQL("UPDATE chat_history SET chat_id=? WHERE chat_id=? AND server_id=? AND content=?",
+                                                new Object[]{updatedChatId, currentChatId, serverId, content});
+                                        XposedBridge.log("Updated Chat ID: " + updatedChatId);
+                                    }
+                                }
+                            }
+                        } finally {
+                            cursor.close();
+                        }
+                    } else {
+                        XposedBridge.log("No rows found for chat_id: " + chatId);
+                    }
+                }
+            }
+        });
+    }
+
+    private void updateMessageAsCanceled(SQLiteDatabase db1, String serverId, Context context, Context moduleContext) {
+        // canceledContent をファイルから取得
+        String canceledContent = getCanceledContentFromFile(context, moduleContext);
+
+        // 既存のメッセージを取得
+        Cursor cursor = db1.rawQuery("SELECT * FROM chat_history WHERE server_id=?", new String[]{serverId});
+
+        if (cursor.moveToFirst()) {
+            // カラムの値を取得（null の場合もそのまま代入）
+            String type = cursor.isNull(cursor.getColumnIndex("type")) ? null : cursor.getString(cursor.getColumnIndex("type"));
+            String chatId = cursor.isNull(cursor.getColumnIndex("chat_id")) ? null : cursor.getString(cursor.getColumnIndex("chat_id"));
+            String fromMid = cursor.isNull(cursor.getColumnIndex("from_mid")) ? null : cursor.getString(cursor.getColumnIndex("from_mid"));
+            String createdTime = cursor.isNull(cursor.getColumnIndex("created_time")) ? null : cursor.getString(cursor.getColumnIndex("created_time"));
+            String deliveredTime = cursor.isNull(cursor.getColumnIndex("delivered_time")) ? null : cursor.getString(cursor.getColumnIndex("delivered_time"));
+            String status = cursor.isNull(cursor.getColumnIndex("status")) ? null : cursor.getString(cursor.getColumnIndex("status"));
+            Integer sentCount = cursor.isNull(cursor.getColumnIndex("sent_count")) ? null : cursor.getInt(cursor.getColumnIndex("sent_count"));
+            Integer readCount = cursor.isNull(cursor.getColumnIndex("read_count")) ? null : cursor.getInt(cursor.getColumnIndex("read_count"));
+            String locationName = cursor.isNull(cursor.getColumnIndex("location_name")) ? null : cursor.getString(cursor.getColumnIndex("location_name"));
+            String locationAddress = cursor.isNull(cursor.getColumnIndex("location_address")) ? null : cursor.getString(cursor.getColumnIndex("location_address"));
+            String locationPhone = cursor.isNull(cursor.getColumnIndex("location_phone")) ? null : cursor.getString(cursor.getColumnIndex("location_phone"));
+            Double locationLatitude = cursor.isNull(cursor.getColumnIndex("location_latitude")) ? null : cursor.getDouble(cursor.getColumnIndex("location_latitude"));
+            Double locationLongitude = cursor.isNull(cursor.getColumnIndex("location_longitude")) ? null : cursor.getDouble(cursor.getColumnIndex("location_longitude"));
+            String attachmentImage = cursor.isNull(cursor.getColumnIndex("attachement_image")) ? null : cursor.getString(cursor.getColumnIndex("attachement_image"));
+            Integer attachmentImageHeight = cursor.isNull(cursor.getColumnIndex("attachement_image_height")) ? null : cursor.getInt(cursor.getColumnIndex("attachement_image_height"));
+            Integer attachmentImageWidth = cursor.isNull(cursor.getColumnIndex("attachement_image_width")) ? null : cursor.getInt(cursor.getColumnIndex("attachement_image_width"));
+            Integer attachmentImageSize = cursor.isNull(cursor.getColumnIndex("attachement_image_size")) ? null : cursor.getInt(cursor.getColumnIndex("attachement_image_size"));
+            String attachmentType = cursor.isNull(cursor.getColumnIndex("attachement_type")) ? null : cursor.getString(cursor.getColumnIndex("attachement_type"));
+            String attachmentLocalUri = cursor.isNull(cursor.getColumnIndex("attachement_local_uri")) ? null : cursor.getString(cursor.getColumnIndex("attachement_local_uri"));
+            String parameter = cursor.isNull(cursor.getColumnIndex("parameter")) ? null : cursor.getString(cursor.getColumnIndex("parameter"));
+            String chunks = cursor.isNull(cursor.getColumnIndex("chunks")) ? null : cursor.getString(cursor.getColumnIndex("chunks"));
+
+            // 既存のレコードがあるか確認
+            Cursor existingCursor = db1.rawQuery("SELECT * FROM chat_history WHERE server_id=? AND content=?", new String[]{serverId, chatId});
+            if (!existingCursor.moveToFirst()) {
+                // 新しいレコードを挿入
+                ContentValues values = new ContentValues();
+                values.put("server_id", serverId);
+                values.put("type", type);
+                values.put("chat_id", chatId);
+                values.put("from_mid", fromMid);
+                values.put("content", canceledContent); // ファイルから取得した内容に変更
+                values.put("created_time", createdTime);
+                values.put("delivered_time", deliveredTime);
+                values.put("status", status);
+                if (sentCount != null) values.put("sent_count", sentCount);
+                if (readCount != null) values.put("read_count", readCount);
+                values.put("location_name", locationName);
+                values.put("location_address", locationAddress);
+                values.put("location_phone", locationPhone);
+                if (locationLatitude != null) values.put("location_latitude", locationLatitude);
+                if (locationLongitude != null) values.put("location_longitude", locationLongitude);
+                values.put("attachement_image", attachmentImage);
+                if (attachmentImageHeight != null) values.put("attachement_image_height", attachmentImageHeight);
+                if (attachmentImageWidth != null) values.put("attachement_image_width", attachmentImageWidth);
+                if (attachmentImageSize != null) values.put("attachement_image_size", attachmentImageSize);
+                values.put("attachement_type", attachmentType);
+                values.put("attachement_local_uri", attachmentLocalUri);
+                values.put("parameter", parameter);
+                values.put("chunks", chunks);
+
+                db1.insert("chat_history", null, values);
+            }
+            existingCursor.close();
+        }
+
+        cursor.close();
+    }
     private void saveUnresolvedIds(String serverId, String talkId, String filePath) {
         String newEntry = "serverId:" + serverId + ",talkId:" + talkId;
         try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
@@ -483,7 +656,45 @@ public class UnsentRec implements IHook {
         }
     }
 
+    private String getCanceledContentFromFile(Context context,Context moduleContext) {
+        // フォルダのパスを設定
+        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/Setting");
+        if (!dir.exists()) {
+            if (!dir.mkdirs()) {
+                return moduleContext.getResources().getString(R.string.canceled_message_txt); // フォルダ作成失敗時のデフォルト値
+            }
+        }
 
+        // ファイルのパスを設定
+        File file = new File(dir, "canceled_message.txt");
+
+        // ファイルが存在しない場合、デフォルトの文字列を書き込む
+        if (!file.exists()) {
+            try (FileOutputStream fos = new FileOutputStream(file)) {
+                
+                String defaultContent = moduleContext.getResources().getString(R.string.canceled_message_txt);
+                fos.write(defaultContent.getBytes());
+            } catch (IOException e) {
+                String defaultContent = moduleContext.getResources().getString(R.string.canceled_message_txt);
+                return defaultContent; // ファイル書き込み失敗時のデフォルト値
+            }
+        }
+
+        // ファイルから文字列を読み取る
+        StringBuilder contentBuilder = new StringBuilder();
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                contentBuilder.append(line).append("\n");
+            }
+        } catch (IOException e) {
+            return moduleContext.getResources().getString(R.string.canceled_message_txt); // ファイル読み込み失敗時のデフォルト値
+        }
+
+        // 読み取った内容を返す（末尾の改行を削除）
+        String content = contentBuilder.toString().trim();
+        return content.isEmpty() ? moduleContext.getResources().getString(R.string.canceled_message_txt) : content; // 空ファイルの場合のデフォルト値
+    }
     private void resolveUnresolvedIds(XC_LoadPackage.LoadPackageParam loadPackageParam, Context context, SQLiteDatabase db1, SQLiteDatabase db2, Context moduleContext) {
         String unresolvedFilePath = context.getFilesDir() + "/UnresolvedIds.txt";
 

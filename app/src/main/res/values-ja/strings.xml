@@ -149,6 +149,9 @@
     <string name="AgeCheckSkip">年齢確認をスキップ</string>
     <string name="GroupNotification">GroupNotification</string>
     <string name="LINELabOnly">設定ボタンをLINEラボ画面のみに追加する</string>
+    <string name="canceled_message">取り消されたメッセージのトークを変更する</string>
+    <string name="canceled_message_txt">取り消しされたメッセージです</string>
+    <string name="hide_canceled_message">取り消されたメッセージのメッセージを非表示にする</string>
 
 
 </resources>

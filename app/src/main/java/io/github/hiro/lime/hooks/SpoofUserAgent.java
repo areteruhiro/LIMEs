@@ -1,22 +1,28 @@
 package io.github.hiro.lime.hooks;
 
 import android.content.Context;
-import android.content.SharedPreferences;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
-import io.github.hiro.lime.Main;
 
 public class SpoofUserAgent implements IHook {
     private boolean hasLoggedSpoofedUserAgent = false;
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
-        if (!Main.xPackagePrefs.getBoolean("android_secondary", false)) return;
+        // CustomPreferences を初期化
+        io.github.hiro.lime.hooks.CustomPreferences customPreferences = new io.github.hiro.lime.hooks.CustomPreferences();
 
+
+        // 設定を確認
+        if (!Boolean.parseBoolean(customPreferences.getSetting("android_secondary", "false"))) {
+            return; // 設定が無効な場合は何もしない
+        }
+
+        // ターゲットメソッドをフック
         XposedHelpers.findAndHookMethod(
                 loadPackageParam.classLoader.loadClass(Constants.USER_AGENT_HOOK.className),
                 Constants.USER_AGENT_HOOK.methodName,
@@ -24,16 +30,17 @@ public class SpoofUserAgent implements IHook {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        SharedPreferences prefs = Main.xPackagePrefs;
+                        // 設定から値を取得
+                        String device = customPreferences.getSetting("device_name", "ANDROID");
+                        String androidVersion = customPreferences.getSetting("android_version", "14.16.0");
+                        String osName = customPreferences.getSetting("os_name", "Android OS");
+                        String osVersion = customPreferences.getSetting("os_version", "14");
 
-                        String device = prefs.getString("device_name", "ANDROID");
-                        String androidVersion = prefs.getString("android_version", "14.16.0");
-                        String osName = prefs.getString("os_name", "Android OS");
-                        String osVersion = prefs.getString("os_version", "14");
-
+                        // 偽の User-Agent を生成
                         String spoofedUserAgent = device + "\t" + androidVersion + "\t" + osName + "\t" + osVersion;
                         param.setResult(spoofedUserAgent);
 
+                        // ログに出力（初回のみ）
                         if (!hasLoggedSpoofedUserAgent) {
                             XposedBridge.log("Spoofed User-Agent: " + spoofedUserAgent);
                             hasLoggedSpoofedUserAgent = true;

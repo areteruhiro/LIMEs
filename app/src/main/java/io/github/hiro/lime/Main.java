@@ -1,59 +1,24 @@
 package io.github.hiro.lime;
 
 import android.content.res.XModuleResources;
-
-
+import android.os.Environment;
 import androidx.annotation.NonNull;
-
 import de.robv.android.xposed.IXposedHookInitPackageResources;
 import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.XSharedPreferences;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_InitPackageResources;
 import de.robv.android.xposed.callbacks.XC_LayoutInflated;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import io.github.hiro.lime.hooks.AddRegistrationOptions;
-import io.github.hiro.lime.hooks.AgeCheckSkip;
-import io.github.hiro.lime.hooks.AutomaticBackup;
-import io.github.hiro.lime.hooks.CheckHookTargetVersion;
-import io.github.hiro.lime.hooks.Constants;
-import io.github.hiro.lime.hooks.Disabled_Group_notification;
-import io.github.hiro.lime.hooks.EmbedOptions;
-import io.github.hiro.lime.hooks.IHook;
-import io.github.hiro.lime.hooks.KeepUnread;
-import io.github.hiro.lime.hooks.KeepUnreadLSpatch;
-import io.github.hiro.lime.hooks.ModifyRequest;
-import io.github.hiro.lime.hooks.ModifyResponse;
-import io.github.hiro.lime.hooks.PhotoAddNotification;
-import io.github.hiro.lime.hooks.OutputRequest;
-import io.github.hiro.lime.hooks.OutputResponse;
-import io.github.hiro.lime.hooks.PreventMarkAsRead;
-import io.github.hiro.lime.hooks.PreventUnsendMessage;
-import io.github.hiro.lime.hooks.RedirectWebView;
-import io.github.hiro.lime.hooks.RemoveAds;
-import io.github.hiro.lime.hooks.RemoveFlexibleContents;
-import io.github.hiro.lime.hooks.RemoveIconLabels;
-import io.github.hiro.lime.hooks.RemoveIcons;
-import io.github.hiro.lime.hooks.RemoveNotification;
-import io.github.hiro.lime.hooks.RemoveReplyMute;
-import io.github.hiro.lime.hooks.RemoveVoiceRecord;
+import io.github.hiro.lime.hooks.*;
 
-
-import io.github.hiro.lime.hooks.RingTone;
-import io.github.hiro.lime.hooks.SendMuteMessage;
-import io.github.hiro.lime.hooks.SpoofAndroidId;
-import io.github.hiro.lime.hooks.SpoofUserAgent;
-
-import io.github.hiro.lime.hooks.UnsentRec;
-import io.github.hiro.lime.hooks.Archived;
-import io.github.hiro.lime.hooks.ReadChecker;
-import io.github.hiro.lime.hooks.DarkColor;
-
+import java.io.File;
 
 public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResources, IXposedHookZygoteInit {
 
     public static String modulePath;
-
+    public static CustomPreferences customPreferences;
     public static XSharedPreferences xModulePrefs;
     public static XSharedPreferences xPackagePrefs;
     public static XSharedPreferences xPrefs;
@@ -91,23 +56,48 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new PhotoAddNotification(),
             new RemoveVoiceRecord(),
             new AgeCheckSkip()
-
     };
+
+    @Override
+    public void initZygote(@NonNull StartupParam startupParam) throws Throwable {
+        modulePath = startupParam.modulePath;
+        customPreferences = new CustomPreferences(); // CustomPreferences を初期化
+    }
 
     public void handleLoadPackage(@NonNull XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!loadPackageParam.packageName.equals(Constants.PACKAGE_NAME)) return;
         Constants.initializeHooks(loadPackageParam);
+
         xModulePrefs = new XSharedPreferences(Constants.MODULE_NAME, "options");
         xPackagePrefs = new XSharedPreferences(Constants.PACKAGE_NAME, Constants.MODULE_NAME + "-options");
-        if (xModulePrefs.getBoolean("unembed_options", false)) {
+
+        // 設定ファイルを再読み込み
+        xModulePrefs.reload();
+        xPackagePrefs.reload();
+
+        // unembed_optionsの値をログに出力
+        boolean unembedOptions = xModulePrefs.getBoolean("unembed_options", false);
+        XposedBridge.log("unembed_options: " + unembedOptions);
+
+        if (unembedOptions) {
             xPrefs = xModulePrefs;
+            XposedBridge.log("Using module preferences");
+
+            // xModulePrefsから設定を読み込む
+            for (LimeOptions.Option option : limeOptions.options) {
+                option.checked = xModulePrefs.getBoolean(option.name, option.checked);
+            }
         } else {
             xPrefs = xPackagePrefs;
-        }
-        for (LimeOptions.Option option : limeOptions.options) {
-            option.checked = xPrefs.getBoolean(option.name, option.checked);
+            XposedBridge.log("Using package preferences");
+
+            // customPreferencesから設定を読み込む
+            for (LimeOptions.Option option : limeOptions.options) {
+                option.checked = Boolean.parseBoolean(customPreferences.getSetting(option.name, String.valueOf(option.checked)));
+            }
         }
 
+        // 各フックを適用
         for (IHook hook : hooks) {
             hook.hook(limeOptions, loadPackageParam);
         }
@@ -120,8 +110,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
 
         XModuleResources xModuleResources = XModuleResources.createInstance(modulePath, resparam.res);
 
-
-
+        // 既存のリソースフック
         if (limeOptions.removeIconLabels.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "main_bnb_button_height", xModuleResources.fwd(R.dimen.main_bnb_button_height));
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "main_bnb_button_width", xModuleResources.fwd(R.dimen.main_bnb_button_width));
@@ -137,11 +126,6 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "home_tab_v3_service_icon_size", xModuleResources.fwd(R.dimen.home_tab_v3_service_icon_size));
         }
     }
-
-
-
-    @Override
-    public void initZygote(@NonNull StartupParam startupParam) throws Throwable {
-        modulePath = startupParam.modulePath;
-    }
 }
+
+
