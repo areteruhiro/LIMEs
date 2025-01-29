@@ -9,8 +9,8 @@ android {
     defaultConfig {
         minSdk 28
         targetSdk 35
-        versionCode 11602
-        versionName "1.16.02beta"
+        versionCode 11501
+        versionName "1.16.00beta"
         multiDexEnabled false
         proguardFiles += 'proguard-rules.pro'
         buildConfigField 'String', 'HOOK_TARGET_VERSION', '"141910383"'

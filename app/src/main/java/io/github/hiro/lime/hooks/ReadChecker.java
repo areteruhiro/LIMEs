@@ -1,12 +1,14 @@
 package io.github.hiro.lime.hooks;
 
 
+import static android.content.ContentValues.TAG;
 import static io.github.hiro.lime.Main.limeOptions;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AndroidAppHelper;
 import android.app.Application;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -18,8 +20,13 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.ParcelFileDescriptor;
+import android.provider.MediaStore;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -192,16 +199,19 @@ public class ReadChecker implements IHook {
         return noGroup;
     }
 
-
-    private void addButton(Activity activity, Context moduleContext) {
-        // ファイルパスを取得
-        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-        File file = new File(dir, "margin_settings.txt");
+    private static final String TAG = "FileHandler";
+    public void addButton(Activity activity, Context moduleContext) {
+        // ファイル取得処理（フォールバック対応）
+        File file = getFile(activity);
+        if (file == null) {
+            Log.e(TAG, "Failed to get a valid file.");
+            return;
+        }
 
         // デフォルト値
-        float readCheckerHorizontalMarginFactor = 0.5f; // デフォルト値
-        int readCheckerVerticalMarginDp = 100; // デフォルト値
-        float readCheckerSizeDp = 60; // デフォルト値
+        float readCheckerHorizontalMarginFactor = 0.5f;
+        int readCheckerVerticalMarginDp = 100;
+        float readCheckerSizeDp = 60;
 
         // ファイルの内容を読み込む
         if (file.exists()) {
@@ -210,12 +220,16 @@ public class ReadChecker implements IHook {
                 while ((line = reader.readLine()) != null) {
                     String[] parts = line.split("=", 2);
                     if (parts.length == 2) {
-                        if (parts[0].trim().equals("Read_checker_horizontalMarginFactor")) {
-                            readCheckerHorizontalMarginFactor = Float.parseFloat(parts[1].trim());
-                        } else if (parts[0].trim().equals("Read_checker_verticalMarginDp")) {
-                            readCheckerVerticalMarginDp = Integer.parseInt(parts[1].trim());
-                        } else if (parts[0].trim().equals("chat_read_check_size")) {
-                            readCheckerSizeDp = Float.parseFloat(parts[1].trim());
+                        switch (parts[0].trim()) {
+                            case "Read_checker_horizontalMarginFactor":
+                                readCheckerHorizontalMarginFactor = Float.parseFloat(parts[1].trim());
+                                break;
+                            case "Read_checker_verticalMarginDp":
+                                readCheckerVerticalMarginDp = Integer.parseInt(parts[1].trim());
+                                break;
+                            case "chat_read_check_size":
+                                readCheckerSizeDp = Float.parseFloat(parts[1].trim());
+                                break;
                         }
                     }
                 }
@@ -223,9 +237,10 @@ public class ReadChecker implements IHook {
             }
         }
 
+        // 画像ボタンの設定
         ImageView imageButton = new ImageView(activity);
         String imageName = "read_checker.png";
-        File imageFile = new File(dir, imageName);
+        File imageFile = new File(file.getParent(), imageName);
 
         if (!imageFile.exists()) {
             try (InputStream in = moduleContext.getResources().openRawResource(
@@ -245,11 +260,11 @@ public class ReadChecker implements IHook {
             Drawable drawable = Drawable.createFromPath(imageFile.getAbsolutePath());
             if (drawable != null) {
                 int sizeInPx = dpToPx(moduleContext, readCheckerSizeDp);
-                drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
                 imageButton.setImageDrawable(drawable);
             }
         }
 
+        // 画像ボタンのレイアウト
         FrameLayout.LayoutParams frameParams = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
@@ -260,13 +275,9 @@ public class ReadChecker implements IHook {
         frameParams.setMargins(horizontalMarginPx, verticalMarginPx, 0, 0);
 
         imageButton.setLayoutParams(frameParams);
-
-        imageButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (currentGroupId != null) {
-                    showDataForGroupId(activity, currentGroupId, moduleContext);
-                }
+        imageButton.setOnClickListener(v -> {
+            if (currentGroupId != null) {
+                showDataForGroupId(activity, currentGroupId, moduleContext);
             }
         });
 
@@ -274,29 +285,25 @@ public class ReadChecker implements IHook {
         if (limeOptions.ReadCheckerChatdataDelete.checked) {
             Button deleteButton = new Button(activity);
             deleteButton.setText(moduleContext.getResources().getString(R.string.Delete));
-            deleteButton.setBackgroundColor(Color.RED); // ボタンの背景色を赤に設定
-            deleteButton.setTextColor(Color.WHITE); // ボタンのテキスト色を白に設定
+            deleteButton.setBackgroundColor(Color.RED);
+            deleteButton.setTextColor(Color.WHITE);
 
             FrameLayout.LayoutParams deleteButtonParams = new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.WRAP_CONTENT,
                     FrameLayout.LayoutParams.WRAP_CONTENT
             );
 
-            // Delete ボタンの位置を画像ボタンの右側に設定
             deleteButtonParams.setMargins(horizontalMarginPx + dpToPx(moduleContext, readCheckerSizeDp) + 20, verticalMarginPx, 0, 0);
             deleteButton.setLayoutParams(deleteButtonParams);
 
-            deleteButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (currentGroupId != null) {
-                        new AlertDialog.Builder(activity)
-                                .setTitle(moduleContext.getResources().getString(R.string.check))
-                                .setMessage(moduleContext.getResources().getString(R.string.really_delete))
-                                .setPositiveButton(moduleContext.getResources().getString(R.string.yes), (confirmDialog, confirmWhich) -> deleteGroupData(currentGroupId, activity, moduleContext))
-                                .setNegativeButton(moduleContext.getResources().getString(R.string.no), null)
-                                .show();
-                    }
+            deleteButton.setOnClickListener(v -> {
+                if (currentGroupId != null) {
+                    new AlertDialog.Builder(activity)
+                            .setTitle(moduleContext.getResources().getString(R.string.check))
+                            .setMessage(moduleContext.getResources().getString(R.string.really_delete))
+                            .setPositiveButton(moduleContext.getResources().getString(R.string.yes), (dialog, which) -> deleteGroupData(currentGroupId, activity, moduleContext))
+                            .setNegativeButton(moduleContext.getResources().getString(R.string.no), null)
+                            .show();
                 }
             });
 
@@ -307,6 +314,50 @@ public class ReadChecker implements IHook {
         ViewGroup layout = activity.findViewById(android.R.id.content);
         layout.addView(imageButton);
     }
+
+    private File getFile(Activity activity) {
+        File dir;
+        File file;
+
+        try {
+            dir = new File(activity.getExternalFilesDir(null), "LimeBackup");
+            if (!dir.exists() && !dir.mkdirs()) {
+                throw new IOException("Failed to create directory");
+            }
+            file = new File(dir, "margin_settings.txt");
+
+            if (!file.exists() && !file.createNewFile()) {
+                throw new IOException("Failed to create file");
+            }
+            return file;
+        } catch (Exception e) {
+            Log.e(TAG, "getExternalFilesDir failed, falling back to MediaStore.", e);
+            return getFileFromMediaStore(activity, "LimeBackup/margin_settings.txt");
+        }
+    }
+
+    private File getFileFromMediaStore(Context context, String relativePath) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            ContentResolver resolver = context.getContentResolver();
+            ContentValues values = new ContentValues();
+            values.put(MediaStore.Downloads.DISPLAY_NAME, "margin_settings.txt");
+            values.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS + "/LimeBackup");
+            values.put(MediaStore.Downloads.MIME_TYPE, "text/plain");
+
+            Uri fileUri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+            if (fileUri != null) {
+                try (ParcelFileDescriptor pfd = resolver.openFileDescriptor(fileUri, "rw")) {
+                    if (pfd != null) {
+                        return new File(context.getFilesDir(), "margin_settings.txt");
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+        return null;
+    }
+
 
     private int dpToPx(@NonNull Context context, float dp) {
         float density = context.getResources().getDisplayMetrics().density;
