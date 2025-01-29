@@ -614,7 +614,7 @@ public class UnsentRec implements IHook {
                 // 新しいレコードを挿入
                 ContentValues values = new ContentValues();
                 values.put("server_id", serverId);
-                values.put("type", type);
+                values.put("type", "1");
                 values.put("chat_id", chatId);
                 values.put("from_mid", fromMid);
                 values.put("content", canceledContent); // ファイルから取得した内容に変更
