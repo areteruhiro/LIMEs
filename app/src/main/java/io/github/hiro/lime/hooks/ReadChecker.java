@@ -346,7 +346,7 @@ public class ReadChecker implements IHook {
                 while (sameGroupIdCursor.moveToNext()) {
                     String otherServerId = sameGroupIdCursor.getString(0);
                     String otherUserName = sameGroupIdCursor.getString(1);
-                    
+
                     if (!userName.equals(otherUserName)) {
                         // 新しいレコードを作成
                         limeDatabase.execSQL(

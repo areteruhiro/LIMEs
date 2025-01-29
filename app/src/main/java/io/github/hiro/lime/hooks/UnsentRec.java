@@ -316,25 +316,19 @@ public class UnsentRec implements IHook {
 
 
 
-        private String queryDatabase(SQLiteDatabase db, String query, String... selectionArgs) {
+    private String queryDatabase(SQLiteDatabase db, String query, String... selectionArgs) {
         if (db == null) {
             return null;
         }
         Cursor cursor = db.rawQuery(query, selectionArgs);
         String result = null;
-
-        if (cursor != null && cursor.moveToFirst()) {
-            do {
-                result = cursor.getString(0);
-                XposedBridge.log("Query Result: " + result); // Log each result found
-            } while (cursor.moveToNext()); // In case there are multiple rows
-        } else {
-            XposedBridge.log("No rows found for query: " + query);
+        if (cursor.moveToFirst()) {
+            result = cursor.getString(0);
         }
-
         cursor.close();
         return result;
     }
+
 
 
     private int countLinesInFile(File file) {
@@ -387,16 +381,14 @@ public class UnsentRec implements IHook {
             String param12 = null;
             String param22 = null;
             String operationContent = null;
-            String serverId = null;
             String talkId = null;
+            String serverId = null; // serverIdをここで宣言
 
             String[] parts = operation.split(",");
             for (String part : parts) {
                 part = part.trim();
                 if (part.startsWith("param1:")) {
                     talkId = part.substring("param1:".length()).trim();
-                } else if (part.startsWith("param2:")) {
-                    serverId = part.substring("param2:".length()).trim();
                 } else if (part.startsWith("revision:")) {
                     revision = part.substring("revision:".length()).trim();
                 } else if (part.startsWith("createdTime:")) {
@@ -414,10 +406,23 @@ public class UnsentRec implements IHook {
                 }
             }
 
-            if (serverId != null && talkId != null) {
-                // 新しいメソッドを呼び出して、メッセージを取り消し済みとして更新
+            // typeがNOTIFIED_DESTROY_MESSAGEの場合のみserverIdを設定
+            if ("NOTIFIED_DESTROY_MESSAGE".equals(type)) {
+                for (String part : parts) {
+                    part = part.trim();
+                    if (part.startsWith("param2:")) {
+                        serverId = part.substring("param2:".length()).trim();
+                        break; // param2が見つかったらループを抜ける
+                    }
+                }
                 updateMessageAsCanceled(db1, serverId,context,moduleContext);
+                // serverIdを使用した処理をここに追加
+                XposedBridge.log("Server ID for NOTIFIED_DESTROY_MESSAGE: " + serverId);
+            }
 
+            // serverIdとtalkIdが両方ともnullでない場合に処理を行う
+            if (serverId != null && talkId != null) {
+                XposedBridge.log(paramValue + serverId);
                 String content = queryDatabase(db1, "SELECT content FROM chat_history WHERE server_id=?", serverId);
                 String imageCheck = queryDatabase(db1, "SELECT attachement_image FROM chat_history WHERE server_id=?", serverId);
                 String timeEpochStr = queryDatabase(db1, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
@@ -459,6 +464,8 @@ public class UnsentRec implements IHook {
                             break;
                     }
                 }
+                XposedBridge.log("S" + serverId);
+                // 新しいメソッドを呼び出して、メッセージを取り消し済みとして更新
 
                 String logEntry = (timeFormatted != null ? timeFormatted : "No Time: ")
                         + name
@@ -482,21 +489,16 @@ public class UnsentRec implements IHook {
             }
         }
     }
-
     private void canceled_message(XC_LoadPackage.LoadPackageParam loadPackageParam, Context context, SQLiteDatabase db1, SQLiteDatabase db2, Context moduleContext) {
         Class<?> chatHistoryRequestClass = XposedHelpers.findClass("com.linecorp.line.chat.request.ChatHistoryRequest", loadPackageParam.classLoader);
         XposedHelpers.findAndHookMethod(chatHistoryRequestClass, "getChatId", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 String chatId = (String) param.getResult();
-
-                // チャット ID をログに出力
-                XposedBridge.log("Chat ID: " + chatId);
                 String canceledContent = getCanceledContentFromFile(context, moduleContext);
 
                 // チェックボックスの状態を確認
                 if (limeOptions.hide_canceled_message.checked) {
-                    XposedBridge.log("hide_canceled_message is checked");
 
                     // content と server_id, chat_id を取得 (複数レコードを想定)
                     Cursor cursor = db1.rawQuery("SELECT content, server_id, chat_id, parameter FROM chat_history WHERE chat_id=?", new String[]{chatId});
@@ -530,10 +532,9 @@ public class UnsentRec implements IHook {
                             cursor.close();
                         }
                     } else {
-                        XposedBridge.log("No rows found for chat_id: " + chatId);
+
                     }
                 } else {
-                    XposedBridge.log("hide_canceled_message is NOT checked");
 
                     // hide_canceled_message.checked が false の場合
                     String chatId1 = "/" + (String) param.getResult();
@@ -578,9 +579,9 @@ public class UnsentRec implements IHook {
     private void updateMessageAsCanceled(SQLiteDatabase db1, String serverId, Context context, Context moduleContext) {
         // canceledContent をファイルから取得
         String canceledContent = getCanceledContentFromFile(context, moduleContext);
-
         // 既存のメッセージを取得
         Cursor cursor = db1.rawQuery("SELECT * FROM chat_history WHERE server_id=?", new String[]{serverId});
+
 
         if (cursor.moveToFirst()) {
             // カラムの値を取得（null の場合もそのまま代入）
@@ -609,6 +610,7 @@ public class UnsentRec implements IHook {
             // 既存のレコードがあるか確認
             Cursor existingCursor = db1.rawQuery("SELECT * FROM chat_history WHERE server_id=? AND content=?", new String[]{serverId, chatId});
             if (!existingCursor.moveToFirst()) {
+                XposedBridge.log(serverId);
                 // 新しいレコードを挿入
                 ContentValues values = new ContentValues();
                 values.put("server_id", serverId);
@@ -626,11 +628,14 @@ public class UnsentRec implements IHook {
                 values.put("location_phone", locationPhone);
                 if (locationLatitude != null) values.put("location_latitude", locationLatitude);
                 if (locationLongitude != null) values.put("location_longitude", locationLongitude);
-                values.put("attachement_image", attachmentImage);
+                values.put("attachement_image", "0");
                 if (attachmentImageHeight != null) values.put("attachement_image_height", attachmentImageHeight);
+                else values.put("attachement_image_height", (String) null);
                 if (attachmentImageWidth != null) values.put("attachement_image_width", attachmentImageWidth);
+                else values.put("attachement_image_width", (String) null);
                 if (attachmentImageSize != null) values.put("attachement_image_size", attachmentImageSize);
-                values.put("attachement_type", attachmentType);
+                else values.put("attachement_image_size", (String) null);
+                values.put("attachement_type", "0");
                 values.put("attachement_local_uri", attachmentLocalUri);
                 values.put("parameter", "LIMEsUnsend"); // ここを修正
                 values.put("chunks", chunks);
