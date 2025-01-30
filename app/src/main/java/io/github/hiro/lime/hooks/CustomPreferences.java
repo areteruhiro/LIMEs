@@ -18,16 +18,11 @@ public class CustomPreferences {
     private final File settingsFile;
 
     public CustomPreferences() throws PackageManager.NameNotFoundException {
-        Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), SETTINGS_DIR);
         if (!dir.exists() && !dir.mkdirs()) {
             // 最初のディレクトリの作成に失敗した場合
             dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
-            if (!dir.exists() && !dir.mkdirs()) {
-                // 次のディレクトリの作成に失敗した場合
-                dir = moduleContext.getFilesDir(); // アプリの内部ストレージを使用
-            }
         }
         settingsFile = new File(dir, SETTINGS_FILE);
     }
