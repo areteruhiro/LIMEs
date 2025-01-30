@@ -7,7 +7,6 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import io.github.hiro.lime.BuildConfig;
 import io.github.hiro.lime.LimeOptions;
 public class RemoveVoiceRecord implements IHook {
     private boolean isXg1EaRunCalled = false;
@@ -28,19 +27,21 @@ public class RemoveVoiceRecord implements IHook {
                         }
                         param.setResult(null);
 
-                        Context context = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
-                                XposedHelpers.findClass("android.app.ActivityThread", null),
-                                "currentActivityThread"
-                        ), "getSystemContext");
-                        PackageManager pm = context.getPackageManager();
-                        long versionCode = pm.getPackageInfo(loadPackageParam.packageName, 0).getLongVersionCode();
-                        versionCodeStr = String.valueOf(versionCode);
                     }
                 }
         );
 
 
-        if (BuildConfig.HOOK_TARGET_VERSION.equals(versionCodeStr)) {
+        Context context = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
+                XposedHelpers.findClass("android.app.ActivityThread", null),
+                "currentActivityThread"
+        ), "getSystemContext");
+        PackageManager pm = context.getPackageManager();
+        String versionName = ""; // 初期化
+        versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
+        versionName = String.valueOf(versionName);
+
+        if (versionName.equals("14.19.1")) {
             XposedBridge.hookAllMethods(
                     loadPackageParam.classLoader.loadClass(Constants.RemoveVoiceRecord_Hook_b.className),
                     "run",

@@ -73,9 +73,9 @@ public class EmbedOptions implements IHook {
                             ), "getSystemContext");
 
                             PackageManager pm = contextV.getPackageManager();
-                            long versionCode = 0;
+                            String versionName = ""; // 初期化
                             try {
-                                versionCode = pm.getPackageInfo(loadPackageParam.packageName, 0).getLongVersionCode();
+                                versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
                             } catch (PackageManager.NameNotFoundException e) {
                                 e.printStackTrace();
                             }
@@ -483,11 +483,13 @@ public class EmbedOptions implements IHook {
 // ステータスバーの高さに係数（0.1）を掛けて調整
 
 
-                            String versionCodeStr = String.valueOf(versionCode);
-                            if (versionCodeStr.contains("15") ) {
-                                layoutParams.topMargin = (int) (statusBarHeight); // ステータスバーの高さの10%をマージンに設定
+                            String versionNameStr = String.valueOf(versionName);
+                            int versionNameInt = Integer.parseInt(versionNameStr); // Convert the string to an integer
+
+                            if (versionNameInt >= 15) {
+                                layoutParams.topMargin = (int) (statusBarHeight); // Set margin to status bar height
                             } else {
-                                layoutParams.topMargin = Utils.dpToPx(5, context);
+                                layoutParams.topMargin = Utils.dpToPx(5, context); // Set margin to 5dp
                             }
                             button.setLayoutParams(layoutParams);
                             button.setOnClickListener(new View.OnClickListener() {

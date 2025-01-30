@@ -7,7 +7,6 @@ import android.widget.Toast;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import io.github.hiro.lime.BuildConfig;
 import io.github.hiro.lime.LimeOptions;
 import io.github.hiro.lime.R;
 import io.github.hiro.lime.Utils;
@@ -24,12 +23,12 @@ public class CheckHookTargetVersion implements IHook {
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         Context context = (Context) param.thisObject;
                         PackageManager pm = context.getPackageManager();
-                        long versionCode = pm.getPackageInfo(loadPackageParam.packageName, 0).getLongVersionCode();
-                        String versionCodeStr = String.valueOf(versionCode);
 
-                        if (!BuildConfig.HOOK_TARGET_VERSION.equals(versionCodeStr) &&
-                                !versionCodeStr.equals("142110270") &&
-                                !versionCodeStr.equals("150000454")) {
+                        String versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
+                        String versionNameStr = String.valueOf(versionName);
+                        if (!versionNameStr.equals("14.19.1")&&
+                                !versionNameStr.equals("14.21.1") &&
+                                !versionNameStr.equals("15.0.0")) {
                             Utils.addModuleAssetPath(context);
                             Toast.makeText(context.getApplicationContext(), context.getString(R.string.incompatible_version), Toast.LENGTH_SHORT).show();
                         }

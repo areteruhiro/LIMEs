@@ -37,55 +37,51 @@ static HookTarget RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
         ), "getSystemContext");
 
         PackageManager pm = context.getPackageManager();
-        long versionCode = 0;
+        String versionName = ""; // 初期化
         try {
-            versionCode = pm.getPackageInfo(loadPackageParam.packageName, 0).getLongVersionCode();
+            versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
 
-        // バージョンコードに応じてHookTargetを変更
-        if (versionCode == 141910383) {
-          USER_AGENT_HOOK = new HookTarget("Wc1.c", "h");
-          WEBVIEW_CLIENT_HOOK = new HookTarget("OK0.l", "onPageFinished");
-          MUTE_MESSAGE_HOOK = new HookTarget("Ob1.b", "H");
-          MARK_AS_READ_HOOK = new HookTarget("WM.c$d", "run");
-          Archive = new HookTarget("sB.Q", "invokeSuspend");
-          NOTIFICATION_READ_HOOK = new HookTarget("qd1.b", "invokeSuspend");
-          REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
-          RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
-          //com.linecorp.uts.android.t with result: null
-          RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
-            //有効から無効
-        RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
-//無効から有効
-         RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
-        } else if (versionCode ==142110270) {
-          USER_AGENT_HOOK = new HookTarget("vf1.c", "j");
-          WEBVIEW_CLIENT_HOOK = new HookTarget("pN0.l", "onPageFinished");
-         MARK_AS_READ_HOOK = new HookTarget("xN.b$d", "run");
-        MUTE_MESSAGE_HOOK = new HookTarget("ne1.b", "H");
-         Archive = new HookTarget("tB.N", "invokeSuspend");
-         NOTIFICATION_READ_HOOK = new HookTarget("Pf1.c", "invokeSuspend");
-         REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
-          RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+        // バージョンネームに応じてHookTargetを変更
+        if (versionName.equals("14.19.1")) {
+            USER_AGENT_HOOK = new HookTarget("Wc1.c", "h");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("OK0.l", "onPageFinished");
+            MUTE_MESSAGE_HOOK = new HookTarget("Ob1.b", "H");
+            MARK_AS_READ_HOOK = new HookTarget("WM.c$d", "run");
+            Archive = new HookTarget("sB.Q", "invokeSuspend");
+            NOTIFICATION_READ_HOOK = new HookTarget("qd1.b", "invokeSuspend");
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+            RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+            RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
+            RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
+        } else if (versionName.equals("14.21.1")) {
+            USER_AGENT_HOOK = new HookTarget("vf1.c", "j");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("pN0.l", "onPageFinished");
+            MARK_AS_READ_HOOK = new HookTarget("xN.b$d", "run");
+            MUTE_MESSAGE_HOOK = new HookTarget("ne1.b", "H");
+            Archive = new HookTarget("tB.N", "invokeSuspend");
+            NOTIFICATION_READ_HOOK = new HookTarget("Pf1.c", "invokeSuspend");
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
             RemoveVoiceRecord_Hook_b = new HookTarget("Fi1.j", "run");
             RemoveVoiceRecord_Hook_c = new HookTarget("Fi1.j", "run");
-        } else if (versionCode == 150000454) {
-        USER_AGENT_HOOK = new HookTarget("Sg1.c", "j");
-        WEBVIEW_CLIENT_HOOK = new HookTarget("FO0.l", "onPageFinished");
-        MUTE_MESSAGE_HOOK = new HookTarget("Lf1.b", "I");
-        MARK_AS_READ_HOOK = new HookTarget("KO.d$d", "run");
-        Archive = new HookTarget("tB.P", "invokeSuspend");
-        NOTIFICATION_READ_HOOK = new HookTarget("mh1.b", "invokeSuspend");
-        REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
-        RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+        } else if (versionName.equals("15.0.0")) {
+            USER_AGENT_HOOK = new HookTarget("Sg1.c", "j");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("FO0.l", "onPageFinished");
+            MUTE_MESSAGE_HOOK = new HookTarget("Lf1.b", "I");
+            MARK_AS_READ_HOOK = new HookTarget("KO.d$d", "run");
+            Archive = new HookTarget("tB.P", "invokeSuspend");
+            NOTIFICATION_READ_HOOK = new HookTarget("mh1.b", "invokeSuspend");
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
             RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
             RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
-
-    }
+        }
     }
 
     public static class HookTarget {
