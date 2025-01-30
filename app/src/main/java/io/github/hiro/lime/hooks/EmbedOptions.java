@@ -489,7 +489,8 @@ public class EmbedOptions implements IHook {
 
 
                             String versionNameStr = String.valueOf(versionName);
-                            int versionNameInt = Integer.parseInt(versionNameStr); // Convert the string to an integer
+                            String majorVersionStr = versionNameStr.split("\\.")[0]; // Extract the major version number
+                            int versionNameInt = Integer.parseInt(majorVersionStr); // Convert the major version to an integer
 
                             if (versionNameInt >= 15) {
                                 layoutParams.topMargin = (int) (statusBarHeight); // Set margin to status bar height
