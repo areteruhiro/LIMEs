@@ -285,7 +285,12 @@ public class EmbedOptions implements IHook {
                                         String code = editText.getText().toString();
                                         if (!code.equals(script)) {
                                             // CustomPreferencesのインスタンスを作成
-                                            CustomPreferences customPreferences = new CustomPreferences();
+                                            CustomPreferences customPreferences = null;
+                                            try {
+                                                customPreferences = new CustomPreferences();
+                                            } catch (PackageManager.NameNotFoundException e) {
+                                                throw new RuntimeException(e);
+                                            }
                                             // Base64エンコードして設定を保存
                                             String encodedCode = Base64.encodeToString(code.getBytes(), Base64.NO_WRAP);
                                             customPreferences.saveSetting("encoded_js_modify_request", encodedCode);
@@ -515,10 +520,21 @@ public class EmbedOptions implements IHook {
 
 
     private void Cancel_Message_Button(Context context, Context moduleContext) {
-        // フォルダのパスを設定
+// フォルダのパスを設定
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/Setting");
+
+// 最初のディレクトリを確認
         if (!dir.exists()) {
-            if (!dir.mkdirs()) {
+            // 次のディレクトリを確認
+            dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/LimeBackup/Setting");
+
+            if (!dir.exists()) {
+                // 内部ストレージを確認
+                dir = new File(context.getFilesDir(), "LimeBackup/Setting");
+            }
+
+            // 最終的にディレクトリを作成
+            if (!dir.exists() && !dir.mkdirs()) {
                 Toast.makeText(context, "Failed to create directory", Toast.LENGTH_SHORT).show();
                 return;
             }
@@ -601,10 +617,17 @@ public class EmbedOptions implements IHook {
         return result;
     }
     private void KeepUnread_Button(Context context, Context moduleContext) {
-        // ファイルパスを取得
+        // 最初のディレクトリパスを取得
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+
+        // ディレクトリの作成を試みる
         if (!dir.exists() && !dir.mkdirs()) {
-            return;
+            // 最初のディレクトリの作成に失敗した場合
+            dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
+            if (!dir.exists() && !dir.mkdirs()) {
+                // 次のディレクトリの作成に失敗した場合
+                dir = moduleContext.getFilesDir(); // アプリの内部ストレージを使用
+            }
         }
         File file = new File(dir, "margin_settings.txt");
 

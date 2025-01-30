@@ -125,19 +125,31 @@ public class PreventMarkAsRead implements IHook {
                     File file = new File(dir, fileName);
                     Map<String, String> settings = new HashMap<>();
 
+                    // ファイルが存在しない場合、他のディレクトリを確認
                     if (!file.exists()) {
+                        // 次のディレクトリを確認
+                        dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
+                        file = new File(dir, fileName);
+
+                        // それでも存在しない場合、内部ストレージを確認
+                        if (!file.exists()) {
+                            file = new File(context.getFilesDir(), fileName);
+                        }
                     }
 
-                    try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                        String line;
-                        while ((line = reader.readLine()) != null) {
-                            String[] parts = line.split("=", 2);
-                            if (parts.length == 2) {
-                                settings.put(parts[0].trim(), parts[1].trim());
+                    // ファイルが存在する場合、内容を読み込む
+                    if (file.exists()) {
+                        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                            String line;
+                            while ((line = reader.readLine()) != null) {
+                                String[] parts = line.split("=", 2);
+                                if (parts.length == 2) {
+                                    settings.put(parts[0].trim(), parts[1].trim());
+                                }
                             }
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
-                    } catch (IOException e) {
-
                     }
                     return settings;
                 }
@@ -151,6 +163,17 @@ public class PreventMarkAsRead implements IHook {
                     float chatUnreadSizeDp = 30; // デフォルト値
 
                     // ファイルの内容を読み込む
+                    if (!file.exists()) {
+                        // 次のディレクトリを確認
+                        dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
+                        file = new File(dir, "margin_settings.txt");
+
+                        // それでも存在しない場合、内部ストレージを確認
+                        if (!file.exists()) {
+                            file = new File(moduleContext.getFilesDir(), "margin_settings.txt");
+                        }
+                    }
+
                     if (file.exists()) {
                         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                             String line;
@@ -175,16 +198,23 @@ public class PreventMarkAsRead implements IHook {
 
                     // 画像ファイルが存在しない場合、リソースからコピーして保存
                     if (!imageFile.exists()) {
-                        try (InputStream in = moduleContext.getResources().openRawResource(
-                                moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));
-                             OutputStream out = new FileOutputStream(imageFile)) {
-                            byte[] buffer = new byte[1024];
-                            int length;
-                            while ((length = in.read(buffer)) > 0) {
-                                out.write(buffer, 0, length);
+                        // 最初のディレクトリにコピーを試みる
+                        if (!copyImageFile(moduleContext, imageName, imageFile)) {
+                            // 次のディレクトリにコピーを試みる
+                            File fallbackDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
+                            if (!fallbackDir.exists()) {
+                                fallbackDir.mkdirs();
                             }
-                        } catch (IOException e) {
-                            e.printStackTrace();
+                            imageFile = new File(fallbackDir, imageName);
+                            if (!copyImageFile(moduleContext, imageName, imageFile)) {
+                                // 内部ストレージにコピーを試みる
+                                File internalDir = new File(moduleContext.getFilesDir(), "backup");
+                                if (!internalDir.exists()) {
+                                    internalDir.mkdirs();
+                                }
+                                imageFile = new File(internalDir, imageName);
+                                copyImageFile(moduleContext, imageName, imageFile);
+                            }
                         }
                     }
 
@@ -199,6 +229,22 @@ public class PreventMarkAsRead implements IHook {
                             // ImageViewにスケーリングされた画像を設定
                             imageView.setImageDrawable(drawable);
                         }
+                    }
+                }
+
+                private boolean copyImageFile(Context moduleContext, String imageName, File destinationFile) {
+                    try (InputStream in = moduleContext.getResources().openRawResource(
+                            moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));
+                         OutputStream out = new FileOutputStream(destinationFile)) {
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = in.read(buffer)) > 0) {
+                            out.write(buffer, 0, length);
+                        }
+                        return true; // コピー成功
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        return false; // コピー失敗
                     }
                 }
                 // DP値をピクセル値に変換するメソッド

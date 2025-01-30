@@ -24,7 +24,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     public static XSharedPreferences xPrefs;
     public static LimeOptions limeOptions = new LimeOptions();
 
-    static final IHook[] hooks = new IHook[]{
+    static final IHook[] hooks = {
             new OutputResponse(),
             new ModifyRequest(),
             new CheckHookTargetVersion(),
@@ -61,9 +61,22 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     @Override
     public void initZygote(@NonNull StartupParam startupParam) throws Throwable {
         modulePath = startupParam.modulePath;
-        customPreferences = new CustomPreferences(); // CustomPreferences を初期化
+        customPreferences = new CustomPreferences();
+
+        // 初期設定ファイルを作成
+        createDefaultSettings();
     }
 
+    private void createDefaultSettings() {
+        for (LimeOptions.Option option : limeOptions.options) {
+            String currentValue = customPreferences.getSetting(option.name, null);
+            if (currentValue == null) {
+                customPreferences.saveSetting(option.name, String.valueOf(option.checked));
+            }
+        }
+    }
+
+    @Override
     public void handleLoadPackage(@NonNull XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!loadPackageParam.packageName.equals(Constants.PACKAGE_NAME)) return;
         Constants.initializeHooks(loadPackageParam);
@@ -71,11 +84,9 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
         xModulePrefs = new XSharedPreferences(Constants.MODULE_NAME, "options");
         xPackagePrefs = new XSharedPreferences(Constants.PACKAGE_NAME, Constants.MODULE_NAME + "-options");
 
-        // 設定ファイルを再読み込み
         xModulePrefs.reload();
         xPackagePrefs.reload();
 
-        // unembed_optionsの値をログに出力
         boolean unembedOptions = xModulePrefs.getBoolean("unembed_options", false);
         XposedBridge.log("unembed_options: " + unembedOptions);
 
@@ -83,7 +94,6 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             xPrefs = xModulePrefs;
             XposedBridge.log("Using module preferences");
 
-            // xModulePrefsから設定を読み込む
             for (LimeOptions.Option option : limeOptions.options) {
                 option.checked = xModulePrefs.getBoolean(option.name, option.checked);
             }
@@ -91,13 +101,11 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             xPrefs = xPackagePrefs;
             XposedBridge.log("Using package preferences");
 
-            // customPreferencesから設定を読み込む
             for (LimeOptions.Option option : limeOptions.options) {
                 option.checked = Boolean.parseBoolean(customPreferences.getSetting(option.name, String.valueOf(option.checked)));
             }
         }
 
-        // 各フックを適用
         for (IHook hook : hooks) {
             hook.hook(limeOptions, loadPackageParam);
         }
@@ -105,12 +113,10 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
 
     @Override
     public void handleInitPackageResources(@NonNull XC_InitPackageResources.InitPackageResourcesParam resparam) throws Throwable {
-        if (!resparam.packageName.equals(Constants.PACKAGE_NAME))
-            return;
+        if (!resparam.packageName.equals(Constants.PACKAGE_NAME)) return;
 
         XModuleResources xModuleResources = XModuleResources.createInstance(modulePath, resparam.res);
 
-        // 既存のリソースフック
         if (limeOptions.removeIconLabels.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "main_bnb_button_height", xModuleResources.fwd(R.dimen.main_bnb_button_height));
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "main_bnb_button_width", xModuleResources.fwd(R.dimen.main_bnb_button_width));
@@ -127,5 +133,3 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
         }
     }
 }
-
-

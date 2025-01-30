@@ -138,24 +138,37 @@ public class KeepUnread implements IHook {
                         File file = new File(dir, fileName);
                         Map<String, String> settings = new HashMap<>();
 
+                        // ファイルが存在しない場合、他のディレクトリを確認
                         if (!file.exists()) {
+                            // 次のディレクトリを確認
+                            dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
+                            file = new File(dir, fileName);
 
-                        }
-
-                        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                String[] parts = line.split("=", 2);
-                                if (parts.length == 2) {
-                                    settings.put(parts[0].trim(), parts[1].trim());
-                                }
+                            // それでも存在しない場合、内部ストレージを確認
+                            if (!file.exists()) {
+                                file = new File(context.getFilesDir(), fileName);
                             }
-                        } catch (IOException e) {
-                            Log.e("FileError", "Error reading file: " + e.getMessage());
                         }
+
+                        // ファイルが存在する場合、内容を読み込む
+                        if (file.exists()) {
+                            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                                String line;
+                                while ((line = reader.readLine()) != null) {
+                                    String[] parts = line.split("=", 2);
+                                    if (parts.length == 2) {
+                                        settings.put(parts[0].trim(), parts[1].trim());
+                                    }
+                                }
+                            } catch (IOException e) {
+                                Log.e("FileError", "Error reading file: " + e.getMessage());
+                            }
+                        } else {
+                            Log.e("FileError", "File not found: " + file.getAbsolutePath());
+                        }
+
                         return settings;
                     }
-
                     private float getkeep_unread_horizontalMarginFactor(Context context) {
                         Map<String, String> settings = readSettingsFromExternalFile(context);
                         try {
