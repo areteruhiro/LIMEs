@@ -92,8 +92,6 @@ public class LimeOptions {
             PhotoAddNotification,GroupNotification,
             RemoveVoiceRecord,
             AgeCheckSkip,
-            LINELabOnly
-
 
     };
 
