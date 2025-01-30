@@ -136,7 +136,7 @@ jobs:
             # 更新内容
 
             ## 対応するLINEのバージョン
-            ${{ env.line_ver }}
+            14.19.1 <br>14.21.1 <br>15.0.0
 
             ### 差分
             https://github.com/${{ github.repository }}/compare/${{ env.version }}^...${{ env.version }}
