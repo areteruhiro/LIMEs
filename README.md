@@ -14,10 +14,6 @@
 
 "LINEをより使いやすく"
 
-~~このアプリで追加されている機能は、いずれPRするものがおおいですが、機能の追加を優先しているため、修正が必要なものが多く、このような形で公開させていただいております。~~
-
-大幅な変更をしているため、PRも中々出来なくなってしまいました、、
-
 [機能リスト](https://github.com/areteruhiro/LIMEs/blob/master/FunctionLIST.md) 
  
 
@@ -74,12 +70,12 @@ We are very grateful to the following people for making this possible:
 継続した開発時間の確保のため寄付のほどお願いいたします<br>
 Please donate to ensure continued development time.
 
-* [100円 PayPay](https://qr.paypay.ne.jp/p2p01_qIqiHEfm7jWiXaKd)<br>
+* [100円 PayPay](https://qr.paypay.ne.jp/p2p01_QCyKIpeN2IcnQlWL)<br>
 * [300円
-PayPay](https://qr.paypay.ne.jp/p2p01_oc9qTsEoIg8kn8Gy)<br>
+PayPay](https://qr.paypay.ne.jp/p2p01_6x7eKC9MxsPGkdRS)<br>
 
 * [Free yen
-PayPay](https://qr.paypay.ne.jp/p2p01_oc9qTsEoIg8kn8Gy)<br>
+PayPay](https://qr.paypay.ne.jp/p2p01_VSDjYW0Fq4jn2eHu)<br>
 
 
 * [Amazon Gift Card](https://www.amazon.co.jp/gp/product/B004N3APGO) Send to (limebeta.dev@gmail.com)<br>
