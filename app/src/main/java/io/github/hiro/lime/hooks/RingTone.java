@@ -114,8 +114,11 @@ public class RingTone implements IHook {
                                                 return; // 再生中の場合は何もしない
                                             }
 
+                                            Uri customRingtoneUri = Uri.parse("file://" + Environment.getExternalStorageDirectory().getPath() + "/Notifications/LIME_Dialtone.mp3");
                                             Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
-                                            ringtone = RingtoneManager.getRingtone(appContext, ringtoneUri);
+                                            if (isFileExists(customRingtoneUri)) {
+                                                ringtoneUri = customRingtoneUri;
+                                            }
 
                                             if (ringtone != null) {
                                                 //Log.d("Xposed", "Playing ringtone.");
@@ -155,5 +158,17 @@ public class RingTone implements IHook {
                 }
             }
         });
+    }
+
+    public boolean isFileExists(Uri uri) {
+        if (uri == null) {
+            return false;
+        }
+        String filePath = uri.getPath();
+        if (filePath == null) {
+            return false;
+        }
+        File file = new File(filePath);
+        return file.exists();
     }
 }
