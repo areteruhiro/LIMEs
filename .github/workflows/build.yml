@@ -97,7 +97,7 @@ jobs:
       - name: LSPatch
         if: github.event.inputs.release == 'true'
         run: |
-          for file in Original_Universal_ARM.apk Original_ARMv7.apk Original_ARM64.apk; do
+          for file in LINE.15.0.0.arm64-v8a.armeabi-v7a.apk LINE.15.0.0.armeabi-v7a.apk LINE.15.0.0arm64-v8a.apk; do
             echo "Patching $file..."
             java -jar lspatch.jar "$file" -m "${{ env.repo }}-${{ env.version }}.apk" -l 2 -v
 
