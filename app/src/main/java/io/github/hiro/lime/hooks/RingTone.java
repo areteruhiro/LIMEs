@@ -117,6 +117,7 @@ public class RingTone implements IHook {
                                             if (isFileExists(customRingtoneUri)) {
                                                 ringtoneUri = customRingtoneUri;
                                             }
+                                            ringtone = RingtoneManager.getRingtone(appContext, ringtoneUri);
 
                                             if (ringtone != null) {
                                                 //Log.d("Xposed", "Playing ringtone.");
