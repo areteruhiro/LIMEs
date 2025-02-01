@@ -87,8 +87,6 @@ PayPay](https://qr.paypay.ne.jp/p2p01_VSDjYW0Fq4jn2eHu)<br>
 # Support Server
 https://t.me/LsPosedLIMEs
 
-# List of donors
-
 
 # 更新について
 更新内容を記載していないReleaseについては、差分を押してください、必要でない更新でなければ無理して更新を行う必要はありません。
