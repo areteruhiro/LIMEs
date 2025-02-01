@@ -27,9 +27,9 @@ public class Constants {
     //無効にする
     static HookTarget RemoveVoiceRecord_Hook_a = new HookTarget("af0.e", "run");
     //有効から無効
-    static HookTarget RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
-//無効から有効
-static HookTarget RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
+//    static HookTarget RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
+////無効から有効
+//static HookTarget RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
     public static void initializeHooks(LoadPackageParam loadPackageParam) {
         Context context = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
                 XposedHelpers.findClass("android.app.ActivityThread", null),
@@ -54,9 +54,9 @@ static HookTarget RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
             NOTIFICATION_READ_HOOK = new HookTarget("qd1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
-            RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
-            RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
-            RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
+            RemoveVoiceRecord_Hook_a = new HookTarget("af0.e", "run");
+//            RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
+  //          RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
         } else if (versionName.equals("14.21.1")) {
             USER_AGENT_HOOK = new HookTarget("vf1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("pN0.l", "onPageFinished");
@@ -67,8 +67,8 @@ static HookTarget RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
-            RemoveVoiceRecord_Hook_b = new HookTarget("Fi1.j", "run");
-            RemoveVoiceRecord_Hook_c = new HookTarget("Fi1.j", "run");
+     //       RemoveVoiceRecord_Hook_b = new HookTarget("Fi1.j", "run");
+       //     RemoveVoiceRecord_Hook_c = new HookTarget("Fi1.j", "run");
         } else if (versionName.equals("15.0.0")) {
             USER_AGENT_HOOK = new HookTarget("Sg1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("FO0.l", "onPageFinished");
@@ -79,8 +79,8 @@ static HookTarget RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
-            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
-            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
+//            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
+//            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
         }
     }
 

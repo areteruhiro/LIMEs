@@ -9,8 +9,6 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 public class RemoveVoiceRecord implements IHook {
-    private boolean isXg1EaRunCalled = false;
-    private String versionCodeStr; // フィールドとして定義
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
@@ -22,49 +20,11 @@ public class RemoveVoiceRecord implements IHook {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        if (isXg1EaRunCalled) {
-                            return;
-                        }
                         param.setResult(null);
 
                     }
                 }
         );
 
-
-        Context context = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
-                XposedHelpers.findClass("android.app.ActivityThread", null),
-                "currentActivityThread"
-        ), "getSystemContext");
-        PackageManager pm = context.getPackageManager();
-        String versionName = ""; // 初期化
-        versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
-        versionName = String.valueOf(versionName);
-
-        if (versionName.equals("14.19.1")) {
-            XposedBridge.hookAllMethods(
-                    loadPackageParam.classLoader.loadClass(Constants.RemoveVoiceRecord_Hook_b.className),
-                    "run",
-                    new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            isXg1EaRunCalled = false;
-                        }
-                    }
-            );
-
-            XposedBridge.hookAllMethods(
-                    loadPackageParam.classLoader.loadClass(Constants.RemoveVoiceRecord_Hook_c.className),
-                    "run",
-                    new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-
-                                isXg1EaRunCalled = true;
-                            }
-
-                    }
-            );
-        }
     }
 }
