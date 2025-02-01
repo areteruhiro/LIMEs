@@ -126,7 +126,6 @@
     <string name="Reader">既読者</string>
     <string name="Delete">削除</string>
     <string name="Reader_Data_Delete_Success">既読データが削除されました。</string>
-    <string name="callTone">本体の発着信音を鳴らす(LsPach用)</string>
     <string name="removeNotification">更新されたプロフィールを削除</string>
     <string name="AutomaticBackup">定期的にバックアップ</string>
     <string name="set_id">Set ID</string>
@@ -136,7 +135,6 @@
     <string name="edit_margin_settings">ボタンの設定</string>
     <string name="keep_unread_horizontalMarginFactor">横マージン (KeepUnread)</string>
     <string name="keep_unread_vertical">縦マージン (KeepUnread)</string>
-    <string name="DialTone">発信音を無効にする\n</string>
     <string name="Read_buttom_Chat_horizontalMarginFactor">チャット内の既読ボタン(横マージン)</string>
     <string name="Read_checker_horizontalMarginFactor">既読者確認ボタン(横マージン)</string>
     <string name="Read_checker_verticalMarginDp">既読者確認ボタン(縦マージン)</string>
@@ -152,6 +150,7 @@
     <string name="canceled_message">取り消されたメッセージのトークを変更する</string>
     <string name="canceled_message_txt">取り消しされたメッセージです</string>
     <string name="hide_canceled_message">取り消されたメッセージのお知らせメッセージを非表示にする</string>
+    <string name="DeviceCallTone">本体の発信音を鳴らす(LsPach用)</string>
 
 
 </resources>

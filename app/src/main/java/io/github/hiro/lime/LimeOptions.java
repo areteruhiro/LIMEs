@@ -40,9 +40,10 @@ public class LimeOptions {
     public Option outputCommunication = new Option("output_communication", R.string.switch_output_communication, false);
     public Option Archived = new Option("Archived_message", R.string.switch_archived, false);
     public Option removeAllServices = new Option("remove_Services", R.string.RemoveService, false);
-    public Option callTone = new Option("callTone", R.string.callTone, false);
-    public Option MuteTone = new Option("MuteTone", R.string.MuteTone, false);
-    public Option DialTone = new Option("DialTone", R.string.DialTone, false);
+    public Option DeviceCallTone = new Option("DeviceCallTone", R.string.DeviceCallTone, false);
+    public Option DeviceDialTone = new Option("DeviceDialTone", R.string.DeviceDialTone, false);
+    public Option MuteCallTone = new Option("MuteCallTone", R.string.MuteCallTone, false);
+    public Option MuteDialTone = new Option("MuteDialTone", R.string.MuteDialTone, false);
 
     public Option ReadChecker = new Option("ReadChecker", R.string.ReadChecker, false);
     public Option ReadCheckerChatdataDelete = new Option("ReadCheckerChatdataDelete", R.string.ReadCheckerChatdataDelete, false);
@@ -84,9 +85,10 @@ public class LimeOptions {
             blockTracking,
             stopVersionCheck,
             outputCommunication,
-            callTone,
-            MuteTone,
-            DialTone,
+            DeviceCallTone,
+            DeviceDialTone,
+            MuteCallTone,
+            MuteDialTone,
             DarkColor,
             MuteGroup,
             PhotoAddNotification,GroupNotification,
