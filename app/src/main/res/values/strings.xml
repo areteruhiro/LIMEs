@@ -41,9 +41,8 @@
     <string name="switch_BlockUpdateProfileNotification">Do not notify of profile updates</string>
 
     <string name="MuteCallTone" translatable="false">(Root用)着信音のミュート</string>
-    <string name="MuteDialTone" translatable="false">(Root用)呼出音のミュート</string>
     <string name="DeviceCallTone">Device Ringtones(For LsPatch)</string>
-    <string name="DeviceDialTone" translatable="false">本体の呼出音を鳴らす(LsPach用)</string>
+    <string name="CustomDialTone" translatable="false">呼出音のカスタマイズ\n/sdcard/Notifications/LIME_Dialtone.mp3を再生します\nファイルがない場合は本体の着信音を再生します</string>
     <string name="RemoveService">Remove service item</string>
     <string name="ReadChecker">Check the readership of sent messages</string>
     <string name="removeNotification">Remove updated profiles\n</string>

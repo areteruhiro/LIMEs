@@ -22,7 +22,7 @@ public class RingTone implements IHook {
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
-        if (!limeOptions.DeviceCallTone.checked && !limeOptions.DeviceDialTone.checked && !limeOptions.MuteCallTone.checked && !limeOptions.MuteDialTone.checked) {
+        if (!limeOptions.DeviceCallTone.checked && !limeOptions.MuteCallTone.checked && !limeOptions.CustomDialTone.checked) {
             return;
         }
 
@@ -69,7 +69,7 @@ public class RingTone implements IHook {
                             });
                 }
 
-                if (!limeOptions.DeviceDialTone.checked && !limeOptions.MuteCallTone.checked && !limeOptions.MuteDialTone.checked) {
+                if (!limeOptions.MuteCallTone.checked && !limeOptions.CustomDialTone.checked) {
                     return;
                 }
 
@@ -100,12 +100,10 @@ public class RingTone implements IHook {
 
                             if (method.getName().equals("processToneEvent")) {
                                 Object arg0 = param.args[0];
-                                if (limeOptions.MuteDialTone.checked) {
-                                    //Log.d("Xposed", "MuteTone is enabled. Suppressing tone event.");
+                                if (limeOptions.CustomDialTone.checked) {
+                                    //Log.d("Xposed", "MuteDialTone is enabled. Suppressing tone event.");
                                     param.setResult(null);
-                                }
 
-                                if (limeOptions.DeviceDialTone.checked) {
                                     if (arg0.toString().contains("START")) {
                                         if (appContext != null) {
                                             // ringtone が初期化されており、再生中の場合はスキップ
