@@ -150,7 +150,7 @@
     <string name="canceled_message">取り消されたメッセージのトークを変更する</string>
     <string name="canceled_message_txt">取り消しされたメッセージです</string>
     <string name="hide_canceled_message">取り消されたメッセージのお知らせメッセージを非表示にする</string>
-    <string name="DeviceCallTone">本体の発信音を鳴らす(LsPach用)</string>
+    <string name="DeviceCallTone">本体の着信音を鳴らす(LsPach用)</string>
 
 
 </resources>
