@@ -137,20 +137,10 @@ public class KeepUnread implements IHook {
                         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
                         File file = new File(dir, fileName);
                         Map<String, String> settings = new HashMap<>();
-
-                        // ファイルが存在しない場合、他のディレクトリを確認
                         if (!file.exists()) {
-                            // 次のディレクトリを確認
                             dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
                             file = new File(dir, fileName);
-
-                            // それでも存在しない場合、内部ストレージを確認
-                            if (!file.exists()) {
-                                file = new File(context.getFilesDir(), fileName);
-                            }
                         }
-
-                        // ファイルが存在する場合、内容を読み込む
                         if (file.exists()) {
                             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                                 String line;
@@ -190,15 +180,13 @@ public class KeepUnread implements IHook {
                     private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext) {
                         String imageName = isOn ? "keep_switch_on.png" : "keep_switch_off.png"; // 拡張子を追加
                         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-
-                        // ディレクトリが存在しない場合は作成
                         if (!dir.exists()) {
-                            dir.mkdirs();
+                            if (!dir.mkdirs()) {
+                                dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
+                            }
                         }
-
                         File imageFile = new File(dir, imageName);
 
-                        // 画像ファイルが存在しない場合はリソースからコピー
                         if (!imageFile.exists()) {
                             try (InputStream in = moduleContext.getResources().openRawResource(
                                     moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));

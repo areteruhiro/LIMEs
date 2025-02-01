@@ -618,16 +618,11 @@ public class EmbedOptions implements IHook {
         return result;
     }
     private void KeepUnread_Button(Context context, Context moduleContext) {
-        // 最初のディレクトリパスを取得
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-
-        // ディレクトリの作成を試みる
         if (!dir.exists() && !dir.mkdirs()) {
-            // 最初のディレクトリの作成に失敗した場合
             dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
             if (!dir.exists() && !dir.mkdirs()) {
-                // 次のディレクトリの作成に失敗した場合
-                dir = moduleContext.getFilesDir(); // アプリの内部ストレージを使用
+                dir = moduleContext.getFilesDir();
             }
         }
         File file = new File(dir, "margin_settings.txt");
@@ -921,19 +916,29 @@ public class EmbedOptions implements IHook {
         }
     }
 
-    private void MuteGroups_Button(Context context,Context moduleContext) {
+    private void MuteGroups_Button(Context context, Context moduleContext) {
         File dir = context.getFilesDir();
         File file = new File(dir, "Notification.txt");
         StringBuilder fileContent = new StringBuilder();
+
+        if (!dir.exists()) {
+            if (!dir.mkdirs()) {
+                dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
+            }
+        }
+
+        // ファイルが存在する場合、内容を読み込む
         if (file.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     fileContent.append(line).append("\n");
                 }
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                Log.e("MuteGroups_Button", "Error reading file", e);
             }
         }
+
         final EditText editText = new EditText(context);
         editText.setText(fileContent.toString());
         editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
@@ -1080,11 +1085,18 @@ public class EmbedOptions implements IHook {
     private void restoreChat(Context context,Context moduleContext) {
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
         File backupDbFile = new File(backupDir, "naver_line_backup.db");
-        if (!backupDbFile.exists()) {
-            Toast.makeText(context,moduleContext.getResources().getString(R.string.Backup_file_not_found), Toast.LENGTH_SHORT).show();
-            return;
-        }
 
+        if (!backupDbFile.exists()) {
+            File alternativeDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
+            File alternativeDbFile = new File(alternativeDir, "naver_line_backup.db");
+
+            if (!alternativeDbFile.exists()) {
+                Toast.makeText(context, moduleContext.getResources().getString(R.string.Backup_file_not_found), Toast.LENGTH_SHORT).show();
+                return;
+            } else {
+                backupDbFile = alternativeDbFile;
+            }
+        }
         SQLiteDatabase backupDb = null;
         SQLiteDatabase originalDb = null;
         try {
@@ -1179,10 +1191,21 @@ public class EmbedOptions implements IHook {
         File originalChatsDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/files/chats");
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
 
-        if (!backupDir.exists() && !backupDir.mkdirs()) {return;}
+        if (!backupDir.exists() && !backupDir.mkdirs()) {
+            backupDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/backup");
+            if (!backupDir.exists() && !backupDir.mkdirs()) {
+                Toast.makeText(context, "Failed to create backup directory", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
 
         File backupChatsDir = new File(backupDir, "chats_backup");
-        if (!backupChatsDir.exists() && !backupChatsDir.mkdirs()) {return;}
+        if (!backupChatsDir.exists() && !backupChatsDir.mkdirs()) {
+            Toast.makeText(context, "Failed to create chats_backup directory", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+
         try {
             copyDirectory(originalChatsDir, backupChatsDir);
             Toast.makeText(context,moduleContext.getResources().getString(R.string.BackUp_Chat_Photo_Success), Toast.LENGTH_SHORT).show();
@@ -1222,23 +1245,27 @@ public class EmbedOptions implements IHook {
     }
 
 
-    private void restoreChatsFolder(Context context,Context moduleContext) {
-
+    private void restoreChatsFolder(Context context, Context moduleContext) {
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/chats_backup");
         File originalChatsDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/files/chats");
         if (!backupDir.exists()) {
-            Toast.makeText(context,moduleContext.getResources().getString(R.string.Restore_Chat_Photo_Not_Folder), Toast.LENGTH_SHORT).show();
-            return;
+            File alternativeBackupDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/backup/chats_backup");
+            if (!alternativeBackupDir.exists()) {
+                Toast.makeText(context, moduleContext.getResources().getString(R.string.Restore_Chat_Photo_Not_Folder), Toast.LENGTH_SHORT).show();
+                return;
+            } else {
+                backupDir = alternativeBackupDir;
+            }
         }
         if (!originalChatsDir.exists() && !originalChatsDir.mkdirs()) {
-            Toast.makeText(context,moduleContext.getResources().getString(R.string.Restore_Create_Failed_Chat_Photo_Folder), Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, moduleContext.getResources().getString(R.string.Restore_Create_Failed_Chat_Photo_Folder), Toast.LENGTH_SHORT).show();
             return;
         }
         try {
             copyDirectory(backupDir, originalChatsDir);
-            Toast.makeText(context,moduleContext.getResources().getString(R.string.Restore_Chat_Photo_Success), Toast.LENGTH_SHORT).show();
-        } catch (IOException ignored) {
-            Toast.makeText(context,moduleContext.getResources().getString(R.string.Restore_Chat_Photo_Error), Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, moduleContext.getResources().getString(R.string.Restore_Chat_Photo_Success), Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            Toast.makeText(context, moduleContext.getResources().getString(R.string.Restore_Chat_Photo_Error), Toast.LENGTH_SHORT).show();
         }
     }
 

@@ -315,8 +315,7 @@ public class PhotoAddNotification implements IHook {
         // バックアップ用ディレクトリとファイル
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
         if (!backupDir.exists() && !backupDir.mkdirs()) {
-            //XposedBridge.log("getFileWithId: Failed to create backup directory.");
-            return null; // ディレクトリ作成失敗
+            backupDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
         }
 
         File waitTimeFile = new File(backupDir, "wait_time.txt");

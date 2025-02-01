@@ -60,8 +60,12 @@ public class AutomaticBackup implements IHook {
         File originalDbFile = appContext.getDatabasePath("naver_line");
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
         if (!backupDir.exists() && !backupDir.mkdirs()) {
-            return;
+            backupDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
+
         }
+
+
+
         File backupFileWithTimestamp = new File(backupDir, "naver_line_backup" + ".db");
 
         try (FileChannel source = new FileInputStream(originalDbFile).getChannel()) {
@@ -79,10 +83,11 @@ public class AutomaticBackup implements IHook {
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
 
         if (!backupDir.exists() && !backupDir.mkdirs()) {
-            return;
+            backupDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
         }
         File backupChatsDir = new File(backupDir, "chats_backup");
         if (!backupChatsDir.exists() && !backupChatsDir.mkdirs()) {
+
             return;
         }
         try {

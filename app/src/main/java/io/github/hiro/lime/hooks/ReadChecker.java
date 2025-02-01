@@ -65,8 +65,6 @@ public class ReadChecker implements IHook {
     private SQLiteDatabase db4 = null;
     private boolean shouldHookOnCreate = false;
     private String currentGroupId = null;
-
-    private static final int MAX_RETRY_COUNT = 3; // 最大リトライ回数
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.ReadChecker.checked) return;
@@ -207,10 +205,6 @@ public class ReadChecker implements IHook {
             dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
             file = new File(dir, "margin_settings.txt");
 
-            // それでも存在しない場合、内部ストレージを確認
-            if (!file.exists()) {
-                file = new File(moduleContext.getFilesDir(), "margin_settings.txt");
-            }
         }
 
         if (file.exists()) {
@@ -287,23 +281,17 @@ public class ReadChecker implements IHook {
                 }
             }
         });
-
-        // Delete ボタンを追加
         if (limeOptions.ReadCheckerChatdataDelete.checked) {
             Button deleteButton = new Button(activity);
             deleteButton.setText(moduleContext.getResources().getString(R.string.Delete));
-            deleteButton.setBackgroundColor(Color.RED); // ボタンの背景色を赤に設定
-            deleteButton.setTextColor(Color.WHITE); // ボタンのテキスト色を白に設定
-
+            deleteButton.setBackgroundColor(Color.RED);
+            deleteButton.setTextColor(Color.WHITE);
             FrameLayout.LayoutParams deleteButtonParams = new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.WRAP_CONTENT,
                     FrameLayout.LayoutParams.WRAP_CONTENT
             );
-
-            // Delete ボタンの位置を画像ボタンの右側に設定
             deleteButtonParams.setMargins(horizontalMarginPx + dpToPx(moduleContext, readCheckerSizeDp) + 20, verticalMarginPx, 0, 0);
             deleteButton.setLayoutParams(deleteButtonParams);
-
             deleteButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
@@ -335,10 +323,10 @@ public class ReadChecker implements IHook {
             while ((length = in.read(buffer)) > 0) {
                 out.write(buffer, 0, length);
             }
-            return true; // コピー成功
+            return true;
         } catch (IOException e) {
             e.printStackTrace();
-            return false; // コピー失敗
+            return false;
         }
     }
     private int dpToPx(@NonNull Context context, float dp) {
@@ -357,9 +345,7 @@ public class ReadChecker implements IHook {
         if (limeDatabase == null) {
             return;
         }
-// SQLクエリの初期化
         String query;
-        // group_id が null のレコードを探し、chat_history から chat_id を取得して更新する
         Cursor nullGroupIdCursor = limeDatabase.rawQuery("SELECT server_id, user_name FROM read_message WHERE group_id = 'null'", null);
         while (nullGroupIdCursor.moveToNext()) {
             String serverId = nullGroupIdCursor.getString(0);
@@ -367,10 +353,7 @@ public class ReadChecker implements IHook {
             String chatId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
 
             if (chatId != null && !"null".equals(chatId)) {
-                // group_id を更新
                 limeDatabase.execSQL("UPDATE read_message SET group_id=? WHERE server_id=?", new String[]{chatId, serverId});
-
-                // 同じ group_id を持つ他の server_id を検索
                 Cursor sameGroupIdCursor = limeDatabase.rawQuery(
                         "SELECT server_id, user_name FROM read_message WHERE group_id=? AND server_id != ?",
                         new String[]{chatId, serverId}
@@ -381,7 +364,7 @@ public class ReadChecker implements IHook {
                     String otherUserName = sameGroupIdCursor.getString(1);
                     
                     if (!userName.equals(otherUserName)) {
-                        // 新しいレコードを作成
+
                         limeDatabase.execSQL(
                                 "INSERT INTO read_message (server_id, group_id, user_name) VALUES (?, ?, ?)",
                                 new String[]{otherServerId, chatId, userName}
@@ -394,10 +377,8 @@ public class ReadChecker implements IHook {
         nullGroupIdCursor.close();
 
         if (limeOptions.MySendMessage.checked) {
-            // Send_User が (null) のメッセージのみを取得するクエリ
-            query = "SELECT server_id, content, created_time FROM read_message WHERE group_id=? AND Send_User = 'null' ORDER BY created_time ASC";
+                query = "SELECT server_id, content, created_time FROM read_message WHERE group_id=? AND Send_User = 'null' ORDER BY created_time ASC";
         } else {
-            // 通常のクエリ
             query = "SELECT server_id, content, created_time FROM read_message WHERE group_id=? ORDER BY created_time ASC";
         }
 
@@ -409,8 +390,6 @@ public class ReadChecker implements IHook {
             String serverId = cursor.getString(0);
             String content = cursor.getString(1);
             String timeFormatted = cursor.getString(2);
-
-            // created_time が "null" の場合、chat_history テーブルから取得してフォーマットする
             if ("null".equals(timeFormatted)) {
                 String timeEpochStr = queryDatabase(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
                 if (timeEpochStr != null && !"null".equals(timeEpochStr)) {
@@ -490,40 +469,29 @@ public class ReadChecker implements IHook {
            //("limeDatabaseがnullです。");
             return Collections.emptyList();
         }
-
-        // ID カラムで昇順ソートするクエリ
         String query = "SELECT user_name, ID, Sent_User FROM read_message WHERE server_id=? ORDER BY CAST(ID AS INTEGER) ASC";
         Cursor cursor = limeDatabase.rawQuery(query, new String[]{serverId});
         List<String> userNames = new ArrayList<>();
-        Set<String> uniqueUserNames = new HashSet<>(); // 重複排除用の Set
-
+        Set<String> uniqueUserNames = new HashSet<>();
         while (cursor.moveToNext()) {
             String userNameStr = cursor.getString(0);
-            int id = cursor.getInt(1); // ID を取得
-            String SentUser = cursor.getString(2); // Sent_User を取得
-
+            int id = cursor.getInt(1);
+            String SentUser = cursor.getString(2);
             if (userNameStr != null) {
               // //("取得したuser_name: " + userNameStr);
                 //XposedBridge.log("取得したSent_User: " + SentUser);
-
-                // user_name の値をトリミングして "null" かどうかを確認
                 String trimmedUserName = userNameStr.trim();
                 if (trimmedUserName.startsWith("-")) {
-                    // "-ユーザー名 [時間]" の形式からユーザー名部分を抽出
                     int bracketIndex = trimmedUserName.indexOf('[');
                     if (bracketIndex != -1) {
                         String userNamePart = trimmedUserName.substring(1, bracketIndex).trim();
-                       ////("抽出したユーザー名部分: " + userNamePart);
-
                         if (userNamePart.equals("null")) {
-                            // SentUser を mid として使用し、contacts テーブルからユーザー名を再取得
-                            if (SentUser != null) {
+                                if (SentUser != null) {
                                 String newUserName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
                                 //XposedBridge.log("再取得したnewUserName: " + newUserName);
 
                                 if (newUserName != null && !newUserName.equals("null")) {
-                                    // 新しいユーザー名を反映
-                                    userNameStr = "-" + newUserName + " [" + trimmedUserName.substring(bracketIndex + 1);
+                                         userNameStr = "-" + newUserName + " [" + trimmedUserName.substring(bracketIndex + 1);
                                     //XposedBridge.log("更新後のuser_name: " + userNameStr);
                                 }
                             } else {
@@ -651,8 +619,6 @@ public class ReadChecker implements IHook {
             if (serverId == null || SentUser == null) {
                 return;
             }
-
-            // データベースが利用可能になるまで待機して再試行
             String SendUser = queryDatabaseWithRetry(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
             if (SendUser == null) {
                 SendUser = "null";
@@ -706,37 +672,31 @@ public class ReadChecker implements IHook {
             String finalContent = (content != null && !content.isEmpty() && !content.equals("null"))
                     ? content
                     : (!mediaDescription.isEmpty() ? mediaDescription : "No content:" + serverId);
+            String currentTime = getCurrentTime();
 
             //("セーブメゾットに渡したよ" + serverId + ", Sent_User: " + SentUser);
-            saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, user_name, timeFormatted, context);
+            saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, user_name, timeFormatted, context,currentTime);
+
 
         } catch (Resources.NotFoundException e) {
             throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            // 割り込みが発生した場合の処理
-            Thread.currentThread().interrupt(); // 割り込み状態を再設定
-          //  System.out.println("Database operation was interrupted");
         }
     }
 
-    private String queryDatabaseWithRetry(SQLiteDatabase db, String query, String... params) throws InterruptedException {
+
+    private String queryDatabaseWithRetry(SQLiteDatabase db, String query, String... params) {
         final int RETRY_DELAY_MS = 100;
 
         while (true) {
             try {
-                // 割り込みが発生したかどうかをチェック
-                if (Thread.currentThread().isInterrupted()) {
-                    throw new InterruptedException("Thread was interrupted");
-                }
-
                 return queryDatabase(db, query, params);
             } catch (SQLiteDatabaseLockedException e) {
+
                 try {
                     Thread.sleep(RETRY_DELAY_MS);
                 } catch (InterruptedException ie) {
-                    // 割り込みが発生した場合、スレッドの割り込み状態を再設定し、例外をスロー
                     Thread.currentThread().interrupt();
-                    throw ie;
+                    throw new RuntimeException("Thread interrupted while waiting for database", ie);
                 }
             }
         }
@@ -745,15 +705,14 @@ public class ReadChecker implements IHook {
 
     private String formatMessageTime(String timeEpochStr) {
         if (timeEpochStr == null || timeEpochStr.trim().isEmpty()) {
-            return "null"; // null または空文字列の場合 "null" を返す
+            return "null";
         }
 
         try {
             long timeEpoch = Long.parseLong(timeEpochStr); // 数値に変換
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
-            return sdf.format(new Date(timeEpoch)); // フォーマットして返す
+            return sdf.format(new Date(timeEpoch));
         } catch (NumberFormatException e) {
-            // 数値として不正な形式の場合
             return "null";
         }
     }
@@ -826,7 +785,7 @@ public class ReadChecker implements IHook {
     }
 
 
-    private void saveData(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String timeFormatted, Context context) {
+    private void saveData(String SendUser, String groupId, String serverId, String SentUser, String groupName, String content, String user_name, String timeFormatted, Context context,String currentTime) {
         // nullの場合に"null"を代入
         SendUser = (SendUser == null) ? "null" : SendUser;
         groupId = (groupId == null) ? "null" : groupId;
@@ -848,7 +807,7 @@ public class ReadChecker implements IHook {
             if (cursor.moveToFirst()) {
                 int count = cursor.getInt(0);
                 String existingUserName = cursor.getString(1);
-                String currentTime = getCurrentTime();
+
 
                 if (count > 0) {
                     // 既存のレコードがある場合

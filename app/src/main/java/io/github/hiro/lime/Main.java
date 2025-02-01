@@ -62,8 +62,6 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     public void initZygote(@NonNull StartupParam startupParam) throws Throwable {
         modulePath = startupParam.modulePath;
         customPreferences = new CustomPreferences();
-
-        // 初期設定ファイルを作成
         createDefaultSettings();
     }
 
