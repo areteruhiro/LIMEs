@@ -69,10 +69,6 @@ public class RingTone implements IHook {
                             });
                 }
 
-                if (!limeOptions.MuteCallTone.checked && !limeOptions.CustomDialTone.checked) {
-                    return;
-                }
-
                 Class<?> targetClass = loadPackageParam.classLoader.loadClass("com.linecorp.andromeda.audio.AudioManager");
                 Method[] methods = targetClass.getDeclaredMethods();
 
@@ -100,47 +96,46 @@ public class RingTone implements IHook {
 
                             if (method.getName().equals("processToneEvent")) {
                                 Object arg0 = param.args[0];
-                                if (limeOptions.CustomDialTone.checked) {
-                                    //Log.d("Xposed", "MuteDialTone is enabled. Suppressing tone event.");
+                                String type = arg0.toString().contains("RING_BACK") ? "dialtone" : arg0.toString().contains("RING") && !arg0.toString().contains("RING_BACK") ? "calltone" : "";
+
+                                if ((limeOptions.CustomDialTone.checked && type.equals("dialtone")) || (limeOptions.MuteCallTone.checked && type.equals("calltone"))) {
+                                    //Log.d("Xposed", "MuteTone is enabled. Suppressing tone event.");
                                     param.setResult(null);
+                                }
 
-                                    if (arg0.toString().contains("START")) {
-                                        if (appContext != null) {
-                                            // ringtone が初期化されており、再生中の場合はスキップ
-                                            if (ringtone != null && ringtone.isPlaying()) {
-                                                //Log.d("Xposed", "Ringtone is already playing. Skipping playback.");
-                                                return; // 再生中の場合は何もしない
-                                            }
+                                if (arg0.toString().contains("START") && ((limeOptions.CustomDialTone.checked && type.equals("dialtone")) || (limeOptions.DeviceCallTone.checked && type.equals("calltone")))) {
+                                    if (appContext != null) {
+                                        // ringtone が初期化されており、再生中の場合はスキップ
+                                        if (ringtone != null && ringtone.isPlaying()) {
+                                            //Log.d("Xposed", "Ringtone is already playing. Skipping playback.");
+                                            return; // 再生中の場合は何もしない
+                                        }
 
+                                        Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
+                                        if (arg0.toString().contains("RING_BACK")) {
                                             Uri customRingtoneUri = Uri.parse("file://" + Environment.getExternalStorageDirectory().getPath() + "/Notifications/LIME_Dialtone.mp3");
-                                            Uri ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE);
                                             if (isFileExists(customRingtoneUri)) {
                                                 ringtoneUri = customRingtoneUri;
                                             }
-                                            ringtone = RingtoneManager.getRingtone(appContext, ringtoneUri);
+                                        }
+                                        ringtone = RingtoneManager.getRingtone(appContext, ringtoneUri);
 
-                                            if (ringtone != null) {
-                                                //Log.d("Xposed", "Playing ringtone.");
-                                                ringtone.play();
-                                                isPlaying = true;
-                                            } else {
-                                                //Log.d("Xposed", "Ringtone is null. Cannot play ringtone.");
-                                                return;
-                                            }
+                                        if (ringtone != null) {
+                                            //Log.d("Xposed", "Playing ringtone.");
+                                            ringtone.play();
+                                            isPlaying = true;
                                         } else {
-                                            //Log.d("Xposed", "appContext is null. Cannot play ringtone.");
+                                            //Log.d("Xposed", "Ringtone is null. Cannot play ringtone.");
                                             return;
                                         }
                                     } else {
-                                        //Log.d("Xposed", "Argument is not 'START'. Actual value: " + arg0);
+                                        //Log.d("Xposed", "appContext is null. Cannot play ringtone.");
+                                        return;
                                     }
+                                } else {
+                                    //Log.d("Xposed", "Argument is not 'START'. Actual value: " + arg0);
                                 }
-                            }
 
-                            if (limeOptions.MuteCallTone.checked) {
-                                if (method.getName().equals("setTonePlayer")) {
-                                    param.setResult(null);
-                                }
                             }
 
                             if (method.getName().equals("ACTIVATED") && param.args != null && param.args.length > 0) {
