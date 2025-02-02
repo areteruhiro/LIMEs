@@ -93,10 +93,9 @@ public class RingTone implements IHook {
                                             mediaPlayer.start();
                                             isPlaying = true;
 
-                                            // 再生が終了したときのリスナーを設定
                                             mediaPlayer.setOnCompletionListener(mp -> {
-                                                mp.seekTo(0); // 最初に戻る
-                                                mp.start(); // 再生を開始
+                                                mp.seekTo(0);
+                                                mp.start();
                                             });
                                         }
                                     }
@@ -104,12 +103,20 @@ public class RingTone implements IHook {
 
                                 if (paramValue.contains("RESULT=REJECTED,")) {
                                     if (mediaPlayer != null) {
-                                        if (mediaPlayer.isPlaying()) {
-                                            mediaPlayer.stop();
+                                        try {
+                                            if (mediaPlayer.isPlaying()) {
+                                                mediaPlayer.stop();
+                                            }
+                                        } catch (IllegalStateException ignored) {
                                         }
-                                        mediaPlayer.release(); // MediaPlayerを解放
-                                        mediaPlayer = null; // MediaPlayerのインスタンスをnullに設定
-                                        isPlaying = false;
+                                        try {
+                                            mediaPlayer.release();
+                                        } catch (IllegalStateException ignored) {
+
+                                        } finally {
+                                            mediaPlayer = null;
+                                            isPlaying = false;
+                                        }
                                     }
                                 }
                             }
@@ -159,14 +166,14 @@ public class RingTone implements IHook {
                                         Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                                 "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
-                                        String resourceName = "dial_tone";
-                                        int resourceId = moduleContext.getResources().getIdentifier(resourceName, "raw", "io.github.hiro.lime");
+                                        String resourceNameA = "dial_tone";
+                                        int resourceId = moduleContext.getResources().getIdentifier(resourceNameA, "raw", "io.github.hiro.lime");
 
                                         File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
                                         if (!ringtoneDir.exists()) {
                                             ringtoneDir.mkdirs(); // ディレクトリが存在しない場合は作成
                                         }
-                                        File destFile = new File(ringtoneDir, resourceName + ".wav");
+                                        File destFile = new File(ringtoneDir, resourceNameA + ".wav");
 
                                         // リソースをストリームとして読み込み、ファイルに書き込む
                                         if (!destFile.exists()) {
@@ -187,20 +194,13 @@ public class RingTone implements IHook {
                                         mediaPlayer.setLooping(true); // 繰り返し再生を設定
 
                                         if (mediaPlayer != null) {
-                                            Log.d("Xposed", "Playing media.");
                                             mediaPlayer.start();
                                         } else {
-                                            Log.d("Xposed", "MediaPlayer is null. Cannot play media.");
                                             return;
                                         }
                                     } else {
-                                        Log.d("Xposed", "appContext is null. Cannot play media.");
                                         return;
                                     }
-                                }
-
-                                else {
-                                    Log.d("Xposed", "Argument is not 'START'. Actual value: " + arg0);
                                 }
                             }
 
