@@ -6,6 +6,7 @@ import android.content.Context;
 import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Environment;
+import android.util.Log;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -167,7 +168,8 @@ public class RingTone implements IHook {
                                         ringtone = RingtoneManager.getRingtone(appContext, ringtoneUri);
 
                                         if (ringtone != null) {
-                                            //Log.d("Xposed", "Playing ringtone.");
+
+                                            Log.d("Xposed", "Playing ringtone.");
                                             ringtone.play();
                                             isPlaying = true;
                                         } else {
