@@ -8,7 +8,6 @@ import android.net.Uri;
 import android.os.Environment;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,8 +35,6 @@ public class RingTone implements IHook {
                 if (appContext == null) {
                     return;
                 }
-                Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                        "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
                 XposedBridge.hookAllMethods(
                         loadPackageParam.classLoader.loadClass(Constants.RESPONSE_HOOK.className),
@@ -48,12 +45,14 @@ public class RingTone implements IHook {
                             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                                 String paramValue = param.args[1].toString();
                                 Context context = AndroidAppHelper.currentApplication().getApplicationContext();
+                                Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                                        "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
-                               
-                                String resourceName = "ringtone"; 
+
+                                String resourceName = "ringtone";
                                 int resourceId = moduleContext.getResources().getIdentifier(resourceName, "raw", "io.github.hiro.lime");
 
-                                
+
                                 File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RINGTONES), "LimeBackup");
                                 if (!ringtoneDir.exists()) {
                                     ringtoneDir.mkdirs();
@@ -76,7 +75,8 @@ public class RingTone implements IHook {
                                 if (paramValue.contains("type:NOTIFIED_RECEIVED_CALL,") && !isPlaying) {
                                     if (context != null) {
                                         if (ringtone != null && ringtone.isPlaying()) {
-                                            return;
+                                            //Log.d("Xposed", "Ringtone is already playing. Skipping playback.");
+                                            return; // 再生中の場合は何もしない
                                         }
                                         Uri ringtoneUri = Uri.fromFile(destFile); // コピーしたファイルのURIを取得
                                         ringtone = RingtoneManager.getRingtone(context, ringtoneUri);
@@ -91,9 +91,9 @@ public class RingTone implements IHook {
                                         isPlaying = false;
                                     }
                                 }
+
                             }
-                        }
-                        );
+                        });
 
 
                 Class<?> targetClass = loadPackageParam.classLoader.loadClass("com.linecorp.andromeda.audio.AudioManager");
@@ -104,6 +104,7 @@ public class RingTone implements IHook {
 
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+
                             if (method.getName().equals("setServerConfig")) {
                                 if (ringtone != null && ringtone.isPlaying()) {
                                     ringtone.stop();
@@ -111,12 +112,14 @@ public class RingTone implements IHook {
                                 }
                             }
 
+
                             if (method.getName().equals("stop")) {
                                 if (ringtone != null && ringtone.isPlaying()) {
                                     ringtone.stop();
                                     isPlaying = false;
                                 }
                             }
+
 
                             if (method.getName().equals("processToneEvent")) {
                                 Object arg0 = param.args[0];
@@ -128,17 +131,18 @@ public class RingTone implements IHook {
 
                                 if (arg0.toString().contains("START")) {
                                     if (appContext != null) {
-                                        
+                                        // ringtone が初期化されており、再生中の場合はスキップ
                                         if (ringtone != null && ringtone.isPlaying()) {
                                             //Log.d("Xposed", "Ringtone is already playing. Skipping playback.");
-                                            return;
+                                            return; // 再生中の場合は何もしない
                                         }
+                                        Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                                                "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
-                                       
-                                        String resourceName = "dial_tone"; 
+                                        String resourceName = "dial_tone";
                                         int resourceId = moduleContext.getResources().getIdentifier(resourceName, "raw", "io.github.hiro.lime");
 
-                                        
+
                                         File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RINGTONES), "LimeBackup");
                                         if (!ringtoneDir.exists()) {
                                             ringtoneDir.mkdirs(); // ディレクトリが存在しない場合は作成
@@ -159,9 +163,9 @@ public class RingTone implements IHook {
                                             }
                                         }
 
-                                        // Ringtoneを再生する
                                         Uri ringtoneUri = Uri.fromFile(destFile); // コピーしたファイルのURIを取得
                                         ringtone = RingtoneManager.getRingtone(appContext, ringtoneUri);
+
                                         if (ringtone != null) {
                                             //Log.d("Xposed", "Playing ringtone.");
                                             ringtone.play();
@@ -177,12 +181,14 @@ public class RingTone implements IHook {
                                 } else {
                                     //Log.d("Xposed", "Argument is not 'START'. Actual value: " + arg0);
                                 }
-                            }
 
+
+                            }
                             if (limeOptions.MuteTone.checked) {
                                 if (method.getName().equals("setTonePlayer")) {
                                     param.setResult(null);
                                 }
+
                             }
 
                             if (method.getName().equals("ACTIVATED") && param.args != null && param.args.length > 0) {
@@ -203,5 +209,3 @@ public class RingTone implements IHook {
         });
     }
 }
-
-
