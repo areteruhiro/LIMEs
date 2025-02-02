@@ -54,7 +54,7 @@ public class RingTone implements IHook {
                                 int resourceId = moduleContext.getResources().getIdentifier(resourceName, "raw", "io.github.hiro.lime");
 
 
-                                File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RINGTONES), "LimeBackup");
+                                File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
                                 if (!ringtoneDir.exists()) {
                                     ringtoneDir.mkdirs();
                                 }
@@ -144,7 +144,7 @@ public class RingTone implements IHook {
                                         int resourceId = moduleContext.getResources().getIdentifier(resourceName, "raw", "io.github.hiro.lime");
 
 
-                                        File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RINGTONES), "LimeBackup");
+                                        File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
                                         if (!ringtoneDir.exists()) {
                                             ringtoneDir.mkdirs(); // ディレクトリが存在しない場合は作成
                                         }
@@ -169,7 +169,7 @@ public class RingTone implements IHook {
 
                                         if (ringtone != null) {
 
-                                            Log.d("Xposed", "Playing ringtone.");
+                                            //Log.d("Xposed", "Playing ringtone.");
                                             ringtone.play();
                                             isPlaying = true;
                                         } else {
