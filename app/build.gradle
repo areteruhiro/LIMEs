@@ -9,7 +9,7 @@ android {
     defaultConfig {
         minSdk 28
         targetSdk 35
-        versionCode 11616
+        versionCode 116160
         versionName "1.16.160"
         multiDexEnabled false
         proguardFiles += 'proguard-rules.pro'
