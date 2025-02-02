@@ -151,7 +151,7 @@ public class RingTone implements IHook {
                             if (method.getName().equals("processToneEvent")) {
                                 Object arg0 = param.args[0];
                                 if (limeOptions.DialTone.checked) {
-                                    Log.d("Xposed", "MuteTone is enabled. Suppressing tone event.");
+                                    //Log.d("Xposed", "MuteTone is enabled. Suppressing tone event.");
                                     param.setResult(null);
                                     return;
                                 }
@@ -160,14 +160,14 @@ public class RingTone implements IHook {
                                     if (appContext != null) {
                                         // MediaPlayerが初期化されており、再生中の場合はスキップ
                                         if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                                            Log.d("Xposed", "MediaPlayer is already playing. Skipping playback.");
+                                            //Log.d("Xposed", "MediaPlayer is already playing. Skipping playback.");
                                             return; // 再生中の場合は何もしない
                                         }
                                         Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                                 "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
                                         String resourceNameA = "dial_tone";
-                                        int resourceId = moduleContext.getResources().getIdentifier(resourceNameA, "raw", "io.github.hiro.lime");
+                                        int resourceIdA = moduleContext.getResources().getIdentifier(resourceNameA, "raw", "io.github.hiro.lime");
 
                                         File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
                                         if (!ringtoneDir.exists()) {
@@ -177,7 +177,7 @@ public class RingTone implements IHook {
 
                                         // リソースをストリームとして読み込み、ファイルに書き込む
                                         if (!destFile.exists()) {
-                                            try (InputStream in = moduleContext.getResources().openRawResource(resourceId);
+                                            try (InputStream in = moduleContext.getResources().openRawResource(resourceIdA);
                                                  OutputStream out = new FileOutputStream(destFile)) {
                                                 byte[] buffer = new byte[1024];
                                                 int length;
