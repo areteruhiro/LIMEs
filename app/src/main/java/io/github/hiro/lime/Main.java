@@ -126,7 +126,12 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                 }
             });
         }
+      //    resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_albums", xModuleResources.fwd(R.drawable.empty_drawable));
 
+        if (limeOptions.RemoveVoiceRecord.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_normal", xModuleResources.fwd(R.drawable.empty_drawable));
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_pressed", xModuleResources.fwd(R.drawable.empty_drawable));
+        }
         if (limeOptions.removeServiceLabels.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "home_tab_v3_service_icon_size", xModuleResources.fwd(R.dimen.home_tab_v3_service_icon_size));
         }

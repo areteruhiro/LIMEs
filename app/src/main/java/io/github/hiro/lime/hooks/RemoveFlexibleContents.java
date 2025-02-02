@@ -44,8 +44,6 @@ public class RemoveFlexibleContents implements IHook {
                 "onAttachedToWindow",
                 new XC_MethodHook() {
                     View view;
-
-
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         view = (View) param.thisObject;

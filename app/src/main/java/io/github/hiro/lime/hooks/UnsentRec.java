@@ -769,7 +769,7 @@ public class UnsentRec implements IHook {
                 }
                 testWriter.write(moduleContext.getResources().getString(R.string.reacquisition) + logEntry);
                 testWriter.newLine();
-
+                updateMessageAsCanceled(db1, serverId,context,moduleContext);
 
             }
 
