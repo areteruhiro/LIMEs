@@ -1,4 +1,3 @@
-
 package io.github.hiro.lime.hooks;
 
 import android.app.AndroidAppHelper;
@@ -52,32 +51,10 @@ public class RingTone implements IHook {
                                 Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                         "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
-                                String resourceNameA = "dial_tone";
-                                int resourceIdA = moduleContext.getResources().getIdentifier(resourceNameA, "raw", "io.github.hiro.lime");
-
-                                File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-                                if (!ringtoneDir.exists()) {
-                                    ringtoneDir.mkdirs();
-                                }
-                                File destFileA = new File(ringtoneDir, resourceNameA + ".wav");
-
-                                if (!destFileA.exists()) {
-                                    try (InputStream in = moduleContext.getResources().openRawResource(resourceIdA);
-                                         OutputStream out = new FileOutputStream(destFileA)) {
-                                        byte[] buffer = new byte[1024];
-                                        int length;
-                                        while ((length = in.read(buffer)) > 0) {
-                                            out.write(buffer, 0, length);
-                                        }
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-
-
                                 String resourceName = "ringtone";
                                 int resourceId = moduleContext.getResources().getIdentifier(resourceName, "raw", "io.github.hiro.lime");
 
+                                File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
                                 if (!ringtoneDir.exists()) {
                                     ringtoneDir.mkdirs();
                                 }
@@ -95,9 +72,6 @@ public class RingTone implements IHook {
                                         e.printStackTrace();
                                     }
                                 }
-
-
-
 
                                 if (paramValue.contains("type:NOTIFIED_RECEIVED_CALL,") && !isPlaying) {
                                     if (context != null) {
@@ -185,11 +159,11 @@ public class RingTone implements IHook {
                                         if (!ringtoneDir.exists()) {
                                             ringtoneDir.mkdirs();
                                         }
-                                        File destFileA = new File(ringtoneDir, resourceNameA + ".wav");
+                                        File destFile = new File(ringtoneDir, resourceNameA + ".wav");
 
-                                        if (!destFileA.exists()) {
+                                        if (!destFile.exists()) {
                                             try (InputStream in = moduleContext.getResources().openRawResource(resourceIdA);
-                                                 OutputStream out = new FileOutputStream(destFileA)) {
+                                                 OutputStream out = new FileOutputStream(destFile)) {
                                                 byte[] buffer = new byte[1024];
                                                 int length;
                                                 while ((length = in.read(buffer)) > 0) {
@@ -200,7 +174,7 @@ public class RingTone implements IHook {
                                             }
                                         }
 
-                                        Uri ringtoneUri = Uri.fromFile(destFileA);
+                                        Uri ringtoneUri = Uri.fromFile(destFile);
                                         mediaPlayer = MediaPlayer.create(appContext, ringtoneUri);
                                         mediaPlayer.setLooping(true);
 
