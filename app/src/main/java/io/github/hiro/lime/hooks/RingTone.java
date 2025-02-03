@@ -4,7 +4,6 @@ import android.app.AndroidAppHelper;
 import android.app.Application;
 import android.content.Context;
 import android.media.MediaPlayer;
-import android.media.RingtoneManager;
 import android.net.Uri;
 import android.os.Environment;
 import android.util.Log;
@@ -43,7 +42,6 @@ public class RingTone implements IHook {
                         Constants.RESPONSE_HOOK.methodName,
                         new XC_MethodHook() {
 
-
                             @Override
                             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                                 String paramValue = param.args[1].toString();
@@ -73,38 +71,31 @@ public class RingTone implements IHook {
                                     }
                                 }
 
-                                if (paramValue.contains("type:NOTIFIED_RECEIVED_CALL,") && !isPlaying) {
+                                if (paramValue.contains("type:NOTIFIED_RECEIVED_CALL,")) {
                                     if (context != null) {
+                                        // MediaPlayerが初期化されているか確認
                                         if (mediaPlayer != null) {
+                                            // MediaPlayerが再生中の場合は停止
                                             if (mediaPlayer.isPlaying()) {
-                                                return;
-                                            } else {
-                                                mediaPlayer.release();
-                                                mediaPlayer = null;
+                                                Log.d("Xposed", "MediaPlayer is already playing. Stopping playback.");
+                                                mediaPlayer.stop(); // 再生中の場合は停止
                                             }
+                                            mediaPlayer.release(); // MediaPlayerを解放
+                                            mediaPlayer = null; // MediaPlayerのインスタンスをnullに設定
                                         }
 
-                                        Uri ringtoneUri = Uri.fromFile(destFile);
+                                        Uri ringtoneUri = Uri.fromFile(destFile); // コピーしたファイルのURIを取得
                                         mediaPlayer = MediaPlayer.create(context, ringtoneUri);
-                                        mediaPlayer.setLooping(true);
+                                        mediaPlayer.setLooping(true); // 繰り返し再生を設定
 
                                         if (mediaPlayer != null) {
                                             mediaPlayer.start();
                                             isPlaying = true;
-
-                                            mediaPlayer.setOnCompletionListener(mp -> {
-                                                isPlaying = false;
-                                                mp.seekTo(0);
-                                                mp.start();
-                                                isPlaying = true;
-                                            });
                                         }
                                     }
                                 }
                             }
-                        }
-
-                );
+                        });
 
 
                 Class<?> targetClass = loadPackageParam.classLoader.loadClass("com.linecorp.andromeda.audio.AudioManager");
@@ -117,52 +108,57 @@ public class RingTone implements IHook {
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
 
                             if (method.getName().equals("setServerConfig")) {
-                                if (mediaPlayer != null) {
-                                    if (mediaPlayer.isPlaying()) {
-                                        mediaPlayer.stop();
-                                    }
-                                    mediaPlayer.release();
-                                    mediaPlayer = null;
+                                if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+                                    mediaPlayer.stop();
+                                    mediaPlayer.release(); // MediaPlayerを解放
+                                    mediaPlayer = null; // MediaPlayerのインスタンスをnullに設定
                                 }
                             }
 
                             if (method.getName().equals("stop")) {
-                                if (mediaPlayer != null) {
-                                    if (mediaPlayer.isPlaying()) {
-                                        mediaPlayer.stop();
-                                    }
-                                    mediaPlayer.release();
-                                    mediaPlayer = null;
+                                if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+                                    mediaPlayer.stop();
+                                    mediaPlayer.release(); // MediaPlayerを解放
+                                    mediaPlayer = null; // MediaPlayerのインスタンスをnullに設定
                                 }
                             }
 
                             if (method.getName().equals("processToneEvent")) {
                                 Object arg0 = param.args[0];
                                 if (limeOptions.DialTone.checked) {
+                                    Log.d("Xposed", "MuteTone is enabled. Suppressing tone event.");
                                     param.setResult(null);
                                     return;
                                 }
 
                                 if (arg0.toString().contains("START")) {
                                     if (appContext != null) {
-                                        if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                                            return;
+                                        // MediaPlayerが初期化されている場合
+                                        if (mediaPlayer != null) {
+                                            // MediaPlayerが再生中の場合は停止
+                                            if (mediaPlayer.isPlaying()) {
+                                                Log.d("Xposed", "MediaPlayer is already playing. Stopping playback.");
+                                                mediaPlayer.stop(); // 再生中の場合は停止
+                                            }
+                                            mediaPlayer.release(); // MediaPlayerを解放
+                                            mediaPlayer = null; // MediaPlayerのインスタンスをnullに設定
                                         }
 
                                         Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                                 "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
                                         String resourceNameA = "dial_tone";
-                                        int resourceIdA = moduleContext.getResources().getIdentifier(resourceNameA, "raw", "io.github.hiro.lime");
+                                        int resourceId = moduleContext.getResources().getIdentifier(resourceNameA, "raw", "io.github.hiro.lime");
 
                                         File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
                                         if (!ringtoneDir.exists()) {
-                                            ringtoneDir.mkdirs();
+                                            ringtoneDir.mkdirs(); // ディレクトリが存在しない場合は作成
                                         }
                                         File destFile = new File(ringtoneDir, resourceNameA + ".wav");
 
+                                        // リソースをストリームとして読み込み、ファイルに書き込む
                                         if (!destFile.exists()) {
-                                            try (InputStream in = moduleContext.getResources().openRawResource(resourceIdA);
+                                            try (InputStream in = moduleContext.getResources().openRawResource(resourceId);
                                                  OutputStream out = new FileOutputStream(destFile)) {
                                                 byte[] buffer = new byte[1024];
                                                 int length;
@@ -174,19 +170,24 @@ public class RingTone implements IHook {
                                             }
                                         }
 
-                                        Uri ringtoneUri = Uri.fromFile(destFile);
+                                        Uri ringtoneUri = Uri.fromFile(destFile); // コピーしたファイルのURIを取得
                                         mediaPlayer = MediaPlayer.create(appContext, ringtoneUri);
-                                        mediaPlayer.setLooping(true);
+                                        mediaPlayer.setLooping(true); // 繰り返し再生を設定
 
                                         if (mediaPlayer != null) {
+                                            Log.d("Xposed", "Playing media.");
                                             mediaPlayer.start();
-
-                                            mediaPlayer.setOnCompletionListener(mp -> {
-                                                mp.seekTo(0);
-                                                mp.start();
-                                            });
+                                        } else {
+                                            Log.d("Xposed", "MediaPlayer is null. Cannot play media.");
+                                            return;
                                         }
+                                    } else {
+                                        Log.d("Xposed", "appContext is null. Cannot play media.");
+                                        return;
                                     }
+                                } else {
+                                    Log.d("Xposed", "Argument is not 'START'. Actual value: " + arg0);
+
                                 }
                             }
 
@@ -199,12 +200,10 @@ public class RingTone implements IHook {
                             if (method.getName().equals("ACTIVATED") && param.args != null && param.args.length > 0) {
                                 Object arg0 = param.args[0];
                                 if ("ACTIVATED".equals(arg0)) {
-                                    if (mediaPlayer != null) {
-                                        if (mediaPlayer.isPlaying()) {
-                                            mediaPlayer.stop();
-                                        }
-                                        mediaPlayer.release();
-                                        mediaPlayer = null;
+                                    if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+                                        mediaPlayer.stop();
+                                        mediaPlayer.release(); // MediaPlayerを解放
+                                        mediaPlayer = null; // MediaPlayerのインスタンスをnullに設定
                                     }
                                 }
                             }
