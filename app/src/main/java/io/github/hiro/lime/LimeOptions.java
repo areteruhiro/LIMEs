@@ -26,8 +26,8 @@ public class LimeOptions {
     public Option removeServiceLabels = new Option("remove_service_labels", R.string.switch_remove_service_labels, false);
 
 
-    public Option removeSearchBar = new Option("removeSearchBar", R.string.removeSearchBar, true);
-    public Option removeNaviAlbum = new Option("removeNaviAlbum", R.string.removeNaviAlbum, true);
+    public Option removeSearchBar = new Option("removeSearchBar", R.string.removeSearchBar, false);
+    public Option removeNaviAlbum = new Option("removeNaviAlbum", R.string.removeNaviAlbum, false);
     public Option removeNaviOpenchat = new Option("removeNaviOpenchat", R.string.removeNaviOpenchat, false);
 
 
