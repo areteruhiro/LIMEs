@@ -77,10 +77,11 @@ public class RingTone implements IHook {
                                     ringtoneDir.mkdirs(); // ディレクトリが存在しない場合は作成
                                 }
                                 File destFileA = new File(ringtoneDir, resourceNameA + ".wav");
+                                int resourceIdA = moduleContext.getResources().getIdentifier(resourceName, "raw", "io.github.hiro.lime");
 
                                 // リソースをストリームとして読み込み、ファイルに書き込む
                                 if (!destFileA.exists()) {
-                                    try (InputStream in = moduleContext.getResources().openRawResource(resourceId);
+                                    try (InputStream in = moduleContext.getResources().openRawResource(resourceIdA);
                                          OutputStream out = new FileOutputStream(destFileA)) {
                                         byte[] buffer = new byte[1024];
                                         int length;
