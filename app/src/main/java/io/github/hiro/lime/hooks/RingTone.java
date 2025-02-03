@@ -71,6 +71,27 @@ public class RingTone implements IHook {
                                     }
                                 }
 
+
+                                String resourceNameA = "dial_tone";
+                                if (!ringtoneDir.exists()) {
+                                    ringtoneDir.mkdirs(); // ディレクトリが存在しない場合は作成
+                                }
+                                File destFileA = new File(ringtoneDir, resourceNameA + ".wav");
+
+                                // リソースをストリームとして読み込み、ファイルに書き込む
+                                if (!destFileA.exists()) {
+                                    try (InputStream in = moduleContext.getResources().openRawResource(resourceId);
+                                         OutputStream out = new FileOutputStream(destFileA)) {
+                                        byte[] buffer = new byte[1024];
+                                        int length;
+                                        while ((length = in.read(buffer)) > 0) {
+                                            out.write(buffer, 0, length);
+                                        }
+                                    } catch (IOException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+
                                 if (paramValue.contains("type:NOTIFIED_RECEIVED_CALL,")) {
                                     if (context != null) {
                                         // MediaPlayerが初期化されているか確認
@@ -94,8 +115,6 @@ public class RingTone implements IHook {
                                         }
                                     }
                                 }
-                            }
-                        });
 
 
                 Class<?> targetClass = loadPackageParam.classLoader.loadClass("com.linecorp.andromeda.audio.AudioManager");
@@ -144,33 +163,8 @@ public class RingTone implements IHook {
                                             mediaPlayer = null; // MediaPlayerのインスタンスをnullに設定
                                         }
 
-                                        Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                                                "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
-                                        String resourceNameA = "dial_tone";
-                                        int resourceId = moduleContext.getResources().getIdentifier(resourceNameA, "raw", "io.github.hiro.lime");
-
-                                        File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-                                        if (!ringtoneDir.exists()) {
-                                            ringtoneDir.mkdirs(); // ディレクトリが存在しない場合は作成
-                                        }
-                                        File destFile = new File(ringtoneDir, resourceNameA + ".wav");
-
-                                        // リソースをストリームとして読み込み、ファイルに書き込む
-                                        if (!destFile.exists()) {
-                                            try (InputStream in = moduleContext.getResources().openRawResource(resourceId);
-                                                 OutputStream out = new FileOutputStream(destFile)) {
-                                                byte[] buffer = new byte[1024];
-                                                int length;
-                                                while ((length = in.read(buffer)) > 0) {
-                                                    out.write(buffer, 0, length);
-                                                }
-                                            } catch (IOException e) {
-                                                e.printStackTrace();
-                                            }
-                                        }
-
-                                        Uri ringtoneUri = Uri.fromFile(destFile); // コピーしたファイルのURIを取得
+                                        Uri ringtoneUri = Uri.fromFile(destFileA); // コピーしたファイルのURIを取得
                                         mediaPlayer = MediaPlayer.create(appContext, ringtoneUri);
                                         mediaPlayer.setLooping(true); // 繰り返し再生を設定
 
@@ -214,5 +208,8 @@ public class RingTone implements IHook {
                 }
             }
         });
+            }
+        });
+
     }
 }

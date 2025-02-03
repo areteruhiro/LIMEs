@@ -3,6 +3,8 @@ package io.github.hiro.lime;
 import android.content.res.XModuleResources;
 
 import android.os.Environment;
+import android.view.View;
+
 import androidx.annotation.NonNull;
 import de.robv.android.xposed.IXposedHookInitPackageResources;
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -126,8 +128,21 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                 }
             });
         }
-      //    resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_albums", xModuleResources.fwd(R.drawable.empty_drawable));
+        if (limeOptions.removeSearchBar.checked) {
+            resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "main_tab_search_bar", new XC_LayoutInflated() {
+                @Override
+                public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
+                    liparam.view.setVisibility(View.GONE);
+                }
+            });
+        }
 
+        if (limeOptions.removeNaviAlbum.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_albums", xModuleResources.fwd(R.drawable.empty_drawable));
+                 }
+        if (limeOptions.removeNaviOpenchat.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_openchat", xModuleResources.fwd(R.drawable.empty_drawable));
+        }
         if (limeOptions.RemoveVoiceRecord.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_normal", xModuleResources.fwd(R.drawable.empty_drawable));
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_pressed", xModuleResources.fwd(R.drawable.empty_drawable));

@@ -158,4 +158,7 @@
     <string name="canceled_message">Change notification talk for canceled messages</string>
     <string name="canceled_message_txt">This is a canceled message</string>
     <string name="hide_canceled_message">Hide notification talk for canceled messages</string>
+    <string name="removeSearchBar">Remove the search bar</string>
+    <string name="removeNaviOpenchat">Remove the open chat icon in the chat list</string>
+    <string name="removeNaviAlbum">Remove the album icon in the chat list</string>
 </resources>

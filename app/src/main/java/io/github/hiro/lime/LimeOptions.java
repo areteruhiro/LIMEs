@@ -1,6 +1,7 @@
 package io.github.hiro.lime;
 
 public class LimeOptions {
+
     public class Option {
         public final String name;
         public int id;
@@ -23,6 +24,13 @@ public class LimeOptions {
     public Option removeRecommendation = new Option("remove_recommendation", R.string.switch_remove_recommendation, true);
     public Option removePremiumRecommendation = new Option("remove_premium_recommendation", R.string.switch_remove_premium_recommendation, true);
     public Option removeServiceLabels = new Option("remove_service_labels", R.string.switch_remove_service_labels, false);
+
+
+    public Option removeSearchBar = new Option("removeSearchBar", R.string.removeSearchBar, true);
+    public Option removeNaviAlbum = new Option("removeNaviAlbum", R.string.removeNaviAlbum, true);
+    public Option removeNaviOpenchat = new Option("removeNaviOpenchat", R.string.removeNaviOpenchat, false);
+
+
     public Option removeReplyMute = new Option("remove_reply_mute", R.string.switch_remove_reply_mute, true);
     public Option redirectWebView = new Option("redirect_webview", R.string.switch_redirect_webview, true);
     public Option openInBrowser = new Option("open_in_browser", R.string.switch_open_in_browser, false);
@@ -71,6 +79,9 @@ public class LimeOptions {
             removeAllServices,
             removeServiceLabels,
             RemoveNotification,
+            removeNaviOpenchat,
+            removeNaviAlbum,
+            removeSearchBar,
             removeReplyMute,
             redirectWebView,
             openInBrowser,
