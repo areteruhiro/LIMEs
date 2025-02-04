@@ -67,6 +67,7 @@ public class ReadChecker implements IHook {
     private String currentGroupId = null;
 
     private static final int MAX_RETRY_COUNT = 3; // 最大リトライ回数
+
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.ReadChecker.checked) return;
@@ -192,6 +193,7 @@ public class ReadChecker implements IHook {
         return noGroup;
     }
 
+
     private void addButton(Activity activity, Context moduleContext) {
         // ファイルパスを取得
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
@@ -316,7 +318,6 @@ public class ReadChecker implements IHook {
         ViewGroup layout = activity.findViewById(android.R.id.content);
         layout.addView(imageButton);
     }
-
     private boolean copyImageFile(Context moduleContext, String imageName, File destinationFile) {
         try (InputStream in = moduleContext.getResources().openRawResource(
                 moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));
@@ -703,31 +704,23 @@ public class ReadChecker implements IHook {
 
         } catch (Resources.NotFoundException e) {
             throw new RuntimeException(e);
-        } catch (InterruptedException e) {
-            // 割り込みが発生した場合の処理
-            Thread.currentThread().interrupt(); // 割り込み状態を再設定
-            //  System.out.println("Database operation was interrupted");
         }
     }
 
-    private String queryDatabaseWithRetry(SQLiteDatabase db, String query, String... params) throws InterruptedException {
+
+    private String queryDatabaseWithRetry(SQLiteDatabase db, String query, String... params) {
         final int RETRY_DELAY_MS = 100;
 
         while (true) {
             try {
-                // 割り込みが発生したかどうかをチェック
-                if (Thread.currentThread().isInterrupted()) {
-                    throw new InterruptedException("Thread was interrupted");
-                }
-
                 return queryDatabase(db, query, params);
             } catch (SQLiteDatabaseLockedException e) {
+
                 try {
                     Thread.sleep(RETRY_DELAY_MS);
                 } catch (InterruptedException ie) {
-                    // 割り込みが発生した場合、スレッドの割り込み状態を再設定し、例外をスロー
                     Thread.currentThread().interrupt();
-                    throw ie;
+                    throw new RuntimeException("Thread interrupted while waiting for database", ie);
                 }
             }
         }
