@@ -24,7 +24,7 @@ public class Constants {
     static  HookTarget NOTIFICATION_READ_HOOK = new HookTarget("qd1.b", "invokeSuspend");
     static  HookTarget REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
     static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
-    //無効にする
+    //BackEventCompat
     static HookTarget RemoveVoiceRecord_Hook_a = new HookTarget("af0.e", "run");
     //有効から無効
 //    static HookTarget RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
@@ -81,7 +81,21 @@ public class Constants {
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
 //            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
-        }
+    } else if (versionName.equals("15.1.0")) {
+        USER_AGENT_HOOK = new HookTarget("qi1.c", "j");
+        WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
+        MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
+        MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
+        Archive = new HookTarget("LB.S", "invokeSuspend");
+        NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
+        REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
+        RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
+        RemoveVoiceRecord_Hook_a = new HookTarget("q.k", "run");
+//            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
+//            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
+    }
+
+
     }
 
     public static class HookTarget {
