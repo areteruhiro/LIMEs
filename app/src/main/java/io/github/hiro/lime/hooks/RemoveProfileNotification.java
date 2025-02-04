@@ -58,7 +58,7 @@ public class RemoveProfileNotification implements IHook {
                             String resourceString = resources.getString(resourceId);
 
                             // リソースIDとその文字列をXposedのログに出力
-                            XposedBridge.log("Resource ID: " + resourceId + ", String: " + resourceString);
+                          //  XposedBridge.log("Resource ID: " + resourceId + ", String: " + resourceString);
 
                             // 2131622292のリソースIDに対して空の文字列を返す
                             if (resourceId == 2132088628) {
