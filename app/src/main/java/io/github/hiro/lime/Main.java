@@ -133,7 +133,21 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                 }
             });
         }
+        if (limeOptions.RemoveNotification.checked) {
+            resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "home_list_row_friend_profile_update_carousel", new XC_LayoutInflated() {
+                @Override
+                public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
+                    liparam.view.setVisibility(View.GONE);
+                }
+            });
 
+            resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "home_list_row_friend_profile_update_carousel_item", new XC_LayoutInflated() {
+                @Override
+                public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
+                    liparam.view.setVisibility(View.GONE);
+                }
+            });
+        }
         if (limeOptions.removeNaviAlbum.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_albums", xModuleResources.fwd(R.drawable.empty_drawable));
                  }
