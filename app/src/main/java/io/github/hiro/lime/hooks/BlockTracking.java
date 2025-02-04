@@ -29,7 +29,6 @@ public class BlockTracking implements IHook {
                 "me1.hd", "me1.jd",  "me1.Lb", "me1.Nb"
         };
         String[] methodsToHook = {"read", "write"};
-        // Hook 'read' and 'write' methods for each specified class
         for (String className : classesToHook) {
             for (String methodName : methodsToHook) {
                 XposedBridge.hookAllMethods(
@@ -59,8 +58,7 @@ public class BlockTracking implements IHook {
                     }
             );
         }
-        // Hook specific method in 'jp.naver.line.android.thrift.client.impl.LegacyTalkServiceClientImpl'
-        XposedBridge.hookAllMethods(
+         XposedBridge.hookAllMethods(
                 loadPackageParam.classLoader.loadClass("jp.naver.line.android.thrift.client.impl.LegacyTalkServiceClientImpl"),
                 "F2",
                 new XC_MethodHook() {

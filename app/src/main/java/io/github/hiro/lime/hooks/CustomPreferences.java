@@ -21,7 +21,6 @@ public class CustomPreferences {
 
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), SETTINGS_DIR);
         if (!dir.exists() && !dir.mkdirs()) {
-            // 最初のディレクトリの作成に失敗した場合
             dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
         }
         settingsFile = new File(dir, SETTINGS_FILE);
@@ -29,20 +28,28 @@ public class CustomPreferences {
 
     public void saveSetting(String key, String value) {
         Properties properties = new Properties();
+
         try (FileInputStream fis = new FileInputStream(settingsFile)) {
             properties.load(fis);
         } catch (IOException e) {
-            // ファイルが存在しない場合、新規作成する
+
         }
 
         try (FileOutputStream fos = new FileOutputStream(settingsFile)) {
             properties.setProperty(key, value);
             properties.store(fos, null);
         } catch (IOException e) {
-            e.printStackTrace();
+            if (settingsFile.exists()) {
+                settingsFile.delete();
+            }
+            try {
+                properties.setProperty(key, value);
+                properties.store(new FileOutputStream(settingsFile), null);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
         }
     }
-
     public String getSetting(String key, String defaultValue) {
         Properties properties = new Properties();
         try (FileInputStream fis = new FileInputStream(settingsFile)) {

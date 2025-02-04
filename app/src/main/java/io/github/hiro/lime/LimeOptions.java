@@ -58,7 +58,7 @@ public class LimeOptions {
 
     public Option AgeCheckSkip = new Option("AgeCheckSkip", R.string.AgeCheckSkip, false);
     public Option hide_canceled_message = new Option("hide_canceled_message", R.string.hide_canceled_message, false);
-    public Option RemoveNotification = new Option("RemoveNotification", R.string.removeNotification, false);
+    public Option RemoveNotification = new Option("RemoveProfileNotification", R.string.removeNotification, false);
     public Option DarkColor = new Option("DarkColor", R.string.DarkColor, false);
     public Option NoMuteMessage = new Option("NoMuteMessage", R.string.NoMuteMessage, false);
     public Option MuteGroup = new Option("Disabled_Group_notification", R.string.MuteGroup, false);

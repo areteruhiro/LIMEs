@@ -2,7 +2,6 @@ package io.github.hiro.lime;
 
 import android.content.res.XModuleResources;
 
-import android.os.Environment;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -15,8 +14,6 @@ import de.robv.android.xposed.callbacks.XC_InitPackageResources;
 import de.robv.android.xposed.callbacks.XC_LayoutInflated;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.hooks.*;
-
-import java.io.File;
 
 public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResources, IXposedHookZygoteInit {
 
@@ -54,7 +51,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new DarkColor(),
             new KeepUnreadLSpatch(),
             new AutomaticBackup(),
-            new RemoveNotification(),
+            new RemoveProfileNotification(),
             new Disabled_Group_notification(),
             new PhotoAddNotification(),
             new RemoveVoiceRecord(),

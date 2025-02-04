@@ -140,10 +140,10 @@ public class PhotoAddNotification implements IHook {
             if (notification.extras != null) {
                 Bundle extras = notification.extras;
                 //XposedBridge.log("Notification Extras:");
-                for (String key : extras.keySet()) {
-                    Object value = extras.get(key);
-                    //XposedBridge.log("  " + key + ": " + (value != null ? value.toString() : "null"));
-                }
+//                for (String key : extras.keySet()) {
+//                    Object value = extras.get(key);
+//                    //XposedBridge.log("  " + key + ": " + (value != null ? value.toString() : "null"));
+//                }
                 if (extras.containsKey("line.sticker.url")) {
                     String stickerUrl = extras.getString("line.sticker.url");
                     if (stickerUrl != null) {

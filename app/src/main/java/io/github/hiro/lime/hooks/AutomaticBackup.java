@@ -72,8 +72,7 @@ public class AutomaticBackup implements IHook {
             try (FileChannel destinationWithTimestamp = new FileOutputStream(backupFileWithTimestamp).getChannel()) {
                 destinationWithTimestamp.transferFrom(source, 0, source.size());
             }
-            showToast(appContext,moduleContext.getResources().getString(R.string.Talk_Auto_Back_up_Success)); // トーストをUIスレッドで表示
-
+            showToast(appContext,moduleContext.getResources().getString(R.string.Talk_Auto_Back_up_Success));
         } catch (IOException ignored) {
             showToast(appContext, moduleContext.getResources().getString(R.string.Talk_Auto_Back_up_Error));
         }

@@ -900,17 +900,13 @@ public class EmbedOptions implements IHook {
         layout.addView(readCheckerVerticalInput);
         layout.addView(saveButton);
         layout.addView(resetButton);
-        // ScrollView を作成
         ScrollView scrollView = new ScrollView(context);
         scrollView.addView(layout);
 
-// ダイアログを作成
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(moduleContext.getResources().getString(R.string.edit_margin_settings));
         builder.setView(scrollView); // ScrollView をダイアログのビューとして設定
         builder.setNegativeButton(moduleContext.getResources().getString(R.string.cancel), null);
-
-// アクティビティがまだ有効であるか確認
         if (context instanceof Activity && !((Activity) context).isFinishing()) {
             builder.show();
         }

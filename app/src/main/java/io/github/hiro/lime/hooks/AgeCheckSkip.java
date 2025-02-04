@@ -46,8 +46,6 @@ public class AgeCheckSkip implements IHook {
                     builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
                     SQLiteDatabase.OpenParams dbParams1 = builder1.build();
                     SQLiteDatabase db3 = SQLiteDatabase.openDatabase(dbFile3, dbParams1);
-
-                    // 既に "AGE_VERIFICATION_RESULT" が存在するか確認
                     String query = "SELECT * FROM key_value_text WHERE key = ?";
                     Cursor cursor = db3.rawQuery(query, new String[]{"AGE_VERIFICATION_RESULT"});
 
@@ -67,9 +65,8 @@ public class AgeCheckSkip implements IHook {
                     } else {
                        return;
                     }
-
-                    cursor.close(); // カーソルを閉じる
-                    db3.close(); // データベースを閉じる
+                    cursor.close();
+                    db3.close();
 
                 }
             }
