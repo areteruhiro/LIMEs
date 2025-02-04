@@ -67,7 +67,6 @@ public class ReadChecker implements IHook {
     private String currentGroupId = null;
 
     private static final int MAX_RETRY_COUNT = 3; // 最大リトライ回数
-
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.ReadChecker.checked) return;
@@ -111,7 +110,7 @@ public class ReadChecker implements IHook {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 String chatId = (String) param.getResult();
-                //XposedBridge.log(chatId);
+                XposedBridge.log(chatId);
                 if (isGroupExists(chatId)) {
                     shouldHookOnCreate = true;
                     currentGroupId = chatId;
@@ -133,7 +132,7 @@ public class ReadChecker implements IHook {
                         Context systemContext = (Context) XposedHelpers.callMethod(param.thisObject, "getApplicationContext");
                         moduleContext = systemContext.createPackageContext("io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
                     } catch (Exception e) {
-                        //XposedBridge.log("Failed to get module context: " + e.getMessage());
+                        XposedBridge.log("Failed to get module context: " + e.getMessage());
                     }
                 }
             }
@@ -142,7 +141,7 @@ public class ReadChecker implements IHook {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 if (moduleContext == null) {
-                    //XposedBridge.log("Module context is null. Skipping hook.");
+                    XposedBridge.log("Module context is null. Skipping hook.");
                     return;
                 }
 
@@ -164,7 +163,7 @@ public class ReadChecker implements IHook {
 
     private boolean isGroupExists(String groupId) {
         if (limeDatabase == null) {
-            //XposedBridge.log("Database is not initialized.");
+            XposedBridge.log("Database is not initialized.");
             return false;
         }
         String query = "SELECT 1 FROM read_message WHERE group_id = ?";
@@ -177,7 +176,7 @@ public class ReadChecker implements IHook {
 
     private boolean isNoGroup(String groupId) {
         if (limeDatabase == null) {
-            //XposedBridge.log("Database is not initialized.");
+            XposedBridge.log("Database is not initialized.");
             return true;
         }
         String query = "SELECT group_name FROM read_message WHERE group_id = ?";
@@ -318,6 +317,7 @@ public class ReadChecker implements IHook {
         ViewGroup layout = activity.findViewById(android.R.id.content);
         layout.addView(imageButton);
     }
+
     private boolean copyImageFile(Context moduleContext, String imageName, File destinationFile) {
         try (InputStream in = moduleContext.getResources().openRawResource(
                 moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));
@@ -333,6 +333,8 @@ public class ReadChecker implements IHook {
             return false;
         }
     }
+    
+
     private int dpToPx(@NonNull Context context, float dp) {
         float density = context.getResources().getDisplayMetrics().density;
         return Math.round(dp * density);
@@ -496,7 +498,7 @@ public class ReadChecker implements IHook {
 
             if (userNameStr != null) {
                 // //("取得したuser_name: " + userNameStr);
-                //XposedBridge.log("取得したSent_User: " + SentUser);
+                XposedBridge.log("取得したSent_User: " + SentUser);
 
                 // user_name の値をトリミングして "null" かどうかを確認
                 String trimmedUserName = userNameStr.trim();
@@ -511,15 +513,15 @@ public class ReadChecker implements IHook {
                             // SentUser を mid として使用し、contacts テーブルからユーザー名を再取得
                             if (SentUser != null) {
                                 String newUserName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
-                                //XposedBridge.log("再取得したnewUserName: " + newUserName);
+                                XposedBridge.log("再取得したnewUserName: " + newUserName);
 
                                 if (newUserName != null && !newUserName.equals("null")) {
                                     // 新しいユーザー名を反映
                                     userNameStr = "-" + newUserName + " [" + trimmedUserName.substring(bracketIndex + 1);
-                                    //XposedBridge.log("更新後のuser_name: " + userNameStr);
+                                    XposedBridge.log("更新後のuser_name: " + userNameStr);
                                 }
                             } else {
-                                //XposedBridge.log("SentUserがnullです。");
+                                XposedBridge.log("SentUserがnullです。");
                             }
                         }
                     }
@@ -634,6 +636,12 @@ public class ReadChecker implements IHook {
     private void fetchDataAndSave(SQLiteDatabase db3, SQLiteDatabase db4, String paramValue, Context context, Context moduleContext) {
         //("fetchDataAndSave");
 
+        if (paramValue == null) {
+            XposedBridge.log("paramValueがnullです。");
+            return;
+        }
+
+
         String serverId = null;
         String SentUser = null;
 
@@ -698,8 +706,7 @@ public class ReadChecker implements IHook {
             String finalContent = (content != null && !content.isEmpty() && !content.equals("null"))
                     ? content
                     : (!mediaDescription.isEmpty() ? mediaDescription : "No content:" + serverId);
-
-            //("セーブメゾットに渡したよ" + serverId + ", Sent_User: " + SentUser);
+            XposedBridge.log("セーブメゾットに渡したよ。");
             saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, user_name, timeFormatted, context);
 
         } catch (Resources.NotFoundException e) {
@@ -785,9 +792,9 @@ public class ReadChecker implements IHook {
         if (oldDbFile.exists()) {
             boolean deleted = oldDbFile.delete();
             if (deleted) {
-                //XposedBridge.log("Old database file lime_data.db deleted.");
+                XposedBridge.log("Old database file lime_data.db deleted.");
             } else {
-                //XposedBridge.log("Failed to delete old database file lime_data.db.");
+                XposedBridge.log("Failed to delete old database file lime_data.db.");
             }
         }
         File dbFile = new File(context.getFilesDir(), "lime_checked_data.db");
@@ -820,8 +827,7 @@ public class ReadChecker implements IHook {
         content = (content == null) ? "null" : content;
         user_name = (user_name == null) ? "null" : user_name;
         timeFormatted = (timeFormatted == null) ? "null" : timeFormatted;
-
-        //("セーブメゾットまで処理されたよ: serverId=" + serverId + ", Sent_User=" + SentUser);
+        XposedBridge.log("セーブメゾットまで処理されたよ。");
 
         Cursor cursor = null;
         try {
@@ -932,7 +938,7 @@ public class ReadChecker implements IHook {
                 limeDatabase.endTransaction();
             }
         } else {
-            //XposedBridge.log("Record already exists, skipping insertion: server_id=" + serverId + ", Sent_User=" + SentUser);
+            XposedBridge.log("Record already exists, skipping insertion: server_id=" + serverId + ", Sent_User=" + SentUser);
         }
 
         if (cursor != null) {
