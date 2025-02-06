@@ -439,7 +439,7 @@ public class EmbedOptions implements IHook {
                         ScrollView scrollView = new ScrollView(context);
                         scrollView.addView(layout);
                         AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                                .setTitle(R.string.options_title+ " (" + LIMEs_versionName + ")");
+                                .setTitle("LIMEs" +" (" + LIMEs_versionName + ")");
                         builder.setView(scrollView);
                         builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
                             @Override
