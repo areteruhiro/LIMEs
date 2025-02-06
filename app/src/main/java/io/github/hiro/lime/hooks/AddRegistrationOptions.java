@@ -4,11 +4,8 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Environment;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.ViewGroup;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -16,19 +13,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.nio.channels.FileChannel;
-import java.util.ArrayList;
-import java.util.List;
-
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
-import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 import io.github.hiro.lime.R;
@@ -49,10 +35,7 @@ public class AddRegistrationOptions implements IHook {
                         ViewGroup viewGroup = (ViewGroup) ((ViewGroup) param.args[0]).getChildAt(0);
                         Activity activity = (Activity) viewGroup.getContext();
                         Utils.addModuleAssetPath(activity);
-                        Context appContext = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
-                                XposedHelpers.findClass("android.app.ActivityThread", null),
-                                "currentActivityThread"
-                        ), "getSystemContext");
+
                         SharedPreferences prefs = activity.getSharedPreferences(Constants.MODULE_NAME + "-options", Context.MODE_PRIVATE);
 
                         FrameLayout frameLayout = new FrameLayout(activity);
@@ -98,132 +81,80 @@ public class AddRegistrationOptions implements IHook {
                         linearLayout.addView(switchAndroidSecondary);
                         frameLayout.addView(linearLayout);
                         viewGroup.addView(frameLayout);
-                        // Restoreボタンの作成
-                        Button restoreButton = new Button(activity);
-                        restoreButton.setText("Test");
-                        linearLayout.addView(restoreButton);
-                        restoreButton.setOnClickListener(v -> {
-
-                                    File databasesDir = appContext.getDatabasePath("database").getParentFile(); // データベースディレクトリを取得
-                                    File sourceDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/test");
-
-// データベースディレクトリの中身を削除
-                                    if (databasesDir.exists() && databasesDir.isDirectory()) {
-                                        File[] dbFiles = databasesDir.listFiles();
-                                        if (dbFiles != null) {
-                                            for (File dbFile : dbFiles) {
-                                                dbFile.delete(); // 各ファイルを削除
-                                            }
-                                        }
-                                    }
-
-// ソースディレクトリが存在するか確認
-                                    if (sourceDir.exists() && sourceDir.isDirectory()) {
-                                        File[] filesToCopy = sourceDir.listFiles();
-                                        if (filesToCopy != null) {
-                                            for (File file : filesToCopy) {
-                                                File destFile = new File(databasesDir, file.getName());
-                                                try {
-                                                    copyFile(file, destFile); // ファイルをコピー
-                                                } catch (IOException e) {
-                                                    e.printStackTrace();
-                                                    // エラーハンドリング
-                                                }
-                                            }
-                                        } else {
-                                            // コピーするファイルがない場合の処理
-                                        }
-                                    } else {
-                                        // ソースディレクトリが存在しない場合の処理
-                                    }
-// Restoreボタンをレイアウトに追加
-
-                                }
-
-                        );
                     }
-                    private void copyFile(File sourceFile, File destFile) throws IOException {
-                        try (InputStream in = new FileInputStream(sourceFile);
-                             OutputStream out = new FileOutputStream(destFile)) {
-                            byte[] buffer = new byte[1024];
-                            int length;
-                            while ((length = in.read(buffer)) > 0) {
-                                out.write(buffer, 0, length);
-                            }
-                        }
-                    }
+                }
+        );
+    }
 
-                    private void showSpoofVersionIdDialog(Activity activity, SharedPreferences prefs) {
-                        AlertDialog.Builder builder = new AlertDialog.Builder(activity)
-                                .setTitle(R.string.options_title);
+    private void showSpoofVersionIdDialog(Activity activity, SharedPreferences prefs) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity)
+                .setTitle(R.string.options_title);
 
-                        LinearLayout layout = new LinearLayout(activity);
-                        layout.setOrientation(LinearLayout.VERTICAL);
-                        layout.setPadding(Utils.dpToPx(20, activity), Utils.dpToPx(20, activity), Utils.dpToPx(20, activity), Utils.dpToPx(20, activity));
+        LinearLayout layout = new LinearLayout(activity);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(Utils.dpToPx(20, activity), Utils.dpToPx(20, activity), Utils.dpToPx(20, activity), Utils.dpToPx(20, activity));
 
-                        TextView textView = new TextView(activity);
-                        textView.setText(R.string.spoof_version_id_risk);
-                        layout.addView(textView);
+        TextView textView = new TextView(activity);
+        textView.setText(R.string.spoof_version_id_risk);
+        layout.addView(textView);
 
-                        EditText editTextDeviceName = new EditText(activity);
-                        editTextDeviceName.setHint(R.string.spoof_device_name);
-                        editTextDeviceName.setText(prefs.getString("device_name", "ANDROID"));
-                        layout.addView(editTextDeviceName);
+        EditText editTextDeviceName = new EditText(activity);
+        editTextDeviceName.setHint(R.string.spoof_device_name);
+        editTextDeviceName.setText(prefs.getString("device_name", "ANDROID"));
+        layout.addView(editTextDeviceName);
 
-                        EditText editTextOsName = new EditText(activity);
-                        editTextOsName.setHint(R.string.spoof_os_name);
-                        editTextOsName.setText(prefs.getString("os_name", "Android OS"));
-                        layout.addView(editTextOsName);
+        EditText editTextOsName = new EditText(activity);
+        editTextOsName.setHint(R.string.spoof_os_name);
+        editTextOsName.setText(prefs.getString("os_name", "Android OS"));
+        layout.addView(editTextOsName);
 
-                        EditText editTextOsVersion = new EditText(activity);
-                        editTextOsVersion.setHint(R.string.spoof_os_version);
-                        editTextOsVersion.setText(prefs.getString("os_version", "14"));
-                        layout.addView(editTextOsVersion);
+        EditText editTextOsVersion = new EditText(activity);
+        editTextOsVersion.setHint(R.string.spoof_os_version);
+        editTextOsVersion.setText(prefs.getString("os_version", "14"));
+        layout.addView(editTextOsVersion);
 
-                        EditText editTextAndroidVersion = new EditText(activity);
-                        editTextAndroidVersion.setHint(R.string.spoof_android_version);
-                        editTextAndroidVersion.setText(prefs.getString("android_version", "14.16.0"));
-                        layout.addView(editTextAndroidVersion);
+        EditText editTextAndroidVersion = new EditText(activity);
+        editTextAndroidVersion.setHint(R.string.spoof_android_version);
+        editTextAndroidVersion.setText(prefs.getString("android_version", "14.16.0"));
+        layout.addView(editTextAndroidVersion);
 
-                        builder.setView(layout);
-                        builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
-                            prefs.edit()
-                                    .putBoolean("android_secondary", true)
-                                    .putString("device_name", editTextDeviceName.getText().toString()) // device_nameを保存
-                                    .putString("os_name", editTextOsName.getText().toString())
-                                    .putString("os_version", editTextOsVersion.getText().toString())
-                                    .putString("android_version", editTextAndroidVersion.getText().toString())
-                                    .apply();
+        builder.setView(layout);
+        builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
+            prefs.edit()
+                    .putBoolean("android_secondary", true)
+                    .putString("device_name", editTextDeviceName.getText().toString()) // device_nameを保存
+                    .putString("os_name", editTextOsName.getText().toString())
+                    .putString("os_version", editTextOsVersion.getText().toString())
+                    .putString("android_version", editTextAndroidVersion.getText().toString())
+                    .apply();
 
-                            switchAndroidSecondary.setChecked(true);
+            switchAndroidSecondary.setChecked(true);
 
-                            Toast.makeText(activity.getApplicationContext(), activity.getString(R.string.need_refresh), Toast.LENGTH_SHORT).show();
-                            activity.finish();
-                        });
+            Toast.makeText(activity.getApplicationContext(), activity.getString(R.string.need_refresh), Toast.LENGTH_SHORT).show();
+            activity.finish();
+        });
 
-                        builder.setNegativeButton(R.string.negative_button, null);
-                        builder.show();
-                    }
+        builder.setNegativeButton(R.string.negative_button, null);
+        builder.show();
+    }
 
 
-                    private void showSpoofAndroidIdDialog(Activity activity, SharedPreferences prefs) {
-                        AlertDialog.Builder builder = new AlertDialog.Builder(activity)
-                                .setTitle(R.string.options_title);
+    private void showSpoofAndroidIdDialog(Activity activity, SharedPreferences prefs) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(activity)
+                .setTitle(R.string.options_title);
 
-                        TextView textView = new TextView(activity);
-                        textView.setText(R.string.spoof_android_id_risk);
-                        textView.setPadding(Utils.dpToPx(20, activity), Utils.dpToPx(20, activity), Utils.dpToPx(20, activity), Utils.dpToPx(20, activity));
-                        builder.setView(textView);
+        TextView textView = new TextView(activity);
+        textView.setText(R.string.spoof_android_id_risk);
+        textView.setPadding(Utils.dpToPx(20, activity), Utils.dpToPx(20, activity), Utils.dpToPx(20, activity), Utils.dpToPx(20, activity));
+        builder.setView(textView);
 
-                        builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
-                            prefs.edit().putBoolean("spoof_android_id", true).apply();
-                            Toast.makeText(activity.getApplicationContext(), activity.getString(R.string.need_refresh), Toast.LENGTH_SHORT).show();
-                            activity.finish();
-                        });
+        builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
+            prefs.edit().putBoolean("spoof_android_id", true).apply();
+            Toast.makeText(activity.getApplicationContext(), activity.getString(R.string.need_refresh), Toast.LENGTH_SHORT).show();
+            activity.finish();
+        });
 
-                        builder.setNegativeButton(R.string.negative_button, null);
-                        builder.show();
-                    }
-                });
+        builder.setNegativeButton(R.string.negative_button, null);
+        builder.show();
     }
 }

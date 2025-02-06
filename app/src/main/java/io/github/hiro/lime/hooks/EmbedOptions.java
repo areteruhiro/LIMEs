@@ -50,7 +50,6 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import io.github.hiro.lime.BuildConfig;
 import io.github.hiro.lime.LimeOptions;
 import io.github.hiro.lime.Main;
 import io.github.hiro.lime.R;
@@ -279,16 +278,6 @@ public class EmbedOptions implements IHook {
                                 layout.addView(canceled_message_Button);
                             }
 
-                            Button Back_Up_data_Button = new Button(context);
-                            Back_Up_data_Button.setLayoutParams(buttonParams);
-                            Back_Up_data_Button.setText("FullBackUp");
-                            Back_Up_data_Button.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                    backupAllFiles(context);
-                                }
-                            });
-                            layout.addView(Back_Up_data_Button);
 
                             builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
                                 @Override
@@ -445,12 +434,11 @@ public class EmbedOptions implements IHook {
 
                             layout.addView(button);
                         }
-                        String LIMEs_versionName = BuildConfig.VERSION_NAME; // versionNameを取得
+
                         ScrollView scrollView = new ScrollView(context);
                         scrollView.addView(layout);
                         AlertDialog.Builder builder = new AlertDialog.Builder(context)
-
-                                .setTitle(R.string.options_title+ " (" + LIMEs_versionName + ")");
+                                .setTitle(R.string.options_title);
                         builder.setView(scrollView);
                         builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
                             @Override
@@ -486,7 +474,7 @@ public class EmbedOptions implements IHook {
 
                         AlertDialog dialog = builder.create();
                         Button button = new Button(context);
-                        button.setText(R.string.app_name );
+                        button.setText(R.string.app_name);
 
                         FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
                                 FrameLayout.LayoutParams.WRAP_CONTENT,
@@ -1007,59 +995,6 @@ public class EmbedOptions implements IHook {
             Toast.makeText(appContext,moduleContext.getResources().getString(R.string.Talk_Back_up_Error), Toast.LENGTH_SHORT).show();
         }
     }
-
-    private void backupAllFiles(Context appContext) {
-        // ユーザーにバックアップディレクトリ名を入力させる
-        AlertDialog.Builder builder = new AlertDialog.Builder(appContext);
-        builder.setTitle("バックアップディレクトリ名を入力してください");
-
-        final EditText input = new EditText(appContext);
-        builder.setView(input);
-
-        builder.setPositiveButton("OK", (dialog, which) -> {
-            String backupDirName = input.getText().toString().trim();
-            if (!backupDirName.isEmpty()) {
-                backupFiles(appContext, backupDirName);
-            } else {
-                Toast.makeText(appContext, "ディレクトリ名を入力してください", Toast.LENGTH_SHORT).show();
-            }
-        });
-        builder.setNegativeButton("キャンセル", (dialog, which) -> dialog.cancel());
-
-        builder.show();
-    }
-
-    private void backupFiles(Context appContext, String backupDirName) {
-        File databasesDir = appContext.getDatabasePath("database").getParentFile(); // データベースディレクトリを取得
-        File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/" + backupDirName);
-
-        if (!backupDir.exists()) {
-            if (!backupDir.mkdirs()) {
-                Toast.makeText(appContext, "バックアップディレクトリの作成に失敗しました", Toast.LENGTH_SHORT).show();
-                return;
-            }
-        }
-
-        File[] filesToBackup = databasesDir.listFiles(); // ディレクトリ内のすべてのファイルを取得
-
-        if (filesToBackup != null) {
-            for (File originalFile : filesToBackup) {
-                String backupFileNameWithTimestamp = originalFile.getName();
-                File backupFileWithTimestamp = new File(backupDir, backupFileNameWithTimestamp);
-
-                try (FileChannel source = new FileInputStream(originalFile).getChannel();
-                     FileChannel destination = new FileOutputStream(backupFileWithTimestamp).getChannel()) {
-                    destination.transferFrom(source, 0, source.size());
-                } catch (IOException e) {
-                    Toast.makeText(appContext, "バックアップ中にエラーが発生しました: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            }
-            Toast.makeText(appContext, "バックアップが完了しました", Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(appContext, "ファイルが見つかりませんでした", Toast.LENGTH_SHORT).show();
-        }
-    }
-
     private void restoreChatHistory(Context context,Context moduleContext) {
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
         File backupDbFile = new File(backupDir, "naver_line_backup.db");
