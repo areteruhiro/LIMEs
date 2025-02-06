@@ -50,6 +50,7 @@ import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
+import io.github.hiro.lime.BuildConfig;
 import io.github.hiro.lime.LimeOptions;
 import io.github.hiro.lime.Main;
 import io.github.hiro.lime.R;
@@ -434,11 +435,11 @@ public class EmbedOptions implements IHook {
 
                             layout.addView(button);
                         }
-
+                        String LIMEs_versionName = BuildConfig.VERSION_NAME; // versionNameを取得
                         ScrollView scrollView = new ScrollView(context);
                         scrollView.addView(layout);
                         AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                                .setTitle(R.string.options_title);
+                                .setTitle(R.string.options_title+ " (" + LIMEs_versionName + ")");
                         builder.setView(scrollView);
                         builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
                             @Override
