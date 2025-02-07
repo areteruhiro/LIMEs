@@ -43,7 +43,9 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Locale;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -100,6 +102,8 @@ public class EmbedOptions implements IHook {
                         layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
 
                         Switch switchRedirectWebView = null;
+                        Switch photoAddNotificationView = null; // PhotoAddNotification用のスイッチを追加
+
                         for (LimeOptions.Option option : limeOptions.options) {
                             final String name = option.name;
 
@@ -112,12 +116,13 @@ public class EmbedOptions implements IHook {
                             switchView.setText(option.id);
                             switchView.setChecked(option.checked);
 
-                            if (name.equals("redirect_webview"))
+                            if (name.equals("redirect_webview")) {
                                 switchRedirectWebView = switchView;
-                            else if (name.equals("open_in_browser")) {
+                            } else if (name.equals("open_in_browser")) {
                                 switchRedirectWebView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                    if (isChecked) switchView.setEnabled(true);
-                                    else {
+                                    if (isChecked) {
+                                        switchView.setEnabled(true);
+                                    } else {
                                         switchView.setChecked(false);
                                         switchView.setEnabled(false);
                                     }
@@ -125,9 +130,20 @@ public class EmbedOptions implements IHook {
                                 switchView.setEnabled(limeOptions.redirectWebView.checked);
                             }
 
+                            if (name.equals("PhotoAddNotification")) {
+                                photoAddNotificationView = switchView; // PhotoAddNotification用のスイッチを設定
+                            } else if (name.equals("GroupNotification") || name.equals("CansellNotification")) {
+                                switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                                    if (isChecked) {
+                                        switchView.setEnabled(true);
+                                    } else {
+                                        switchView.setChecked(false);
+                                        switchView.setEnabled(false);
+                                    }
+                                });
+                                switchView.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked()); // PhotoAddNotificationがオンの場合のみ有効にする
+                            }
                             layout.addView(switchView);
-
-
                         }
 
                         {
@@ -278,7 +294,19 @@ public class EmbedOptions implements IHook {
                                 });
                                 layout.addView(canceled_message_Button);
                             }
+                            if (limeOptions.CansellNotification.checked) {
 
+                                Button CansellNotification_Button = new Button(context);
+                                CansellNotification_Button.setLayoutParams(buttonParams);
+                                CansellNotification_Button.setText(moduleContext.getResources().getString(R.string.CansellNotification));
+                                CansellNotification_Button.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View v) {
+                                        CansellNotification(context, moduleContext);
+                                    }
+                                });
+                                layout.addView(CansellNotification_Button);
+                            }
 
                             builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
                                 @Override
@@ -516,9 +544,161 @@ public class EmbedOptions implements IHook {
         );
     }
 
+    public void CansellNotification(Context context, Context moduleContext) {
+        // フォルダのパスを設定
+        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/Setting");
 
+        // 最初のディレクトリを確認
+        if (!dir.exists()) {
+            // 次のディレクトリを確認
+            dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/LimeBackup/Setting");
 
+            if (!dir.exists()) {
+                // 内部ストレージを確認
+                dir = new File(context.getFilesDir(), "LimeBackup/Setting");
+            }
 
+            // 最終的にディレクトリを作成
+            if (!dir.exists() && !dir.mkdirs()) {
+                Toast.makeText(context, "Failed to create directory", Toast.LENGTH_SHORT).show();
+                return;
+            }
+        }
+
+        // ファイルのパスを設定
+        File file = new File(dir, "Notification_Setting.txt");
+
+        // 現在のペアを読み取る
+        List<String> existingPairs = new ArrayList<>();
+        if (file.exists()) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    existingPairs.add(line.trim());
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+                Toast.makeText(context, "ファイルの読み取りに失敗しました", Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        // 入力欄を表示するダイアログを作成
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("通知設定");
+
+        // レイアウトを作成
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+
+        // グループ名の入力欄
+        final EditText groupNameInput = new EditText(context);
+        groupNameInput.setHint("グループ名");
+        layout.addView(groupNameInput);
+
+        // ユーザー名の入力欄
+        final EditText userNameInput = new EditText(context);
+        userNameInput.setHint("ユーザー名");
+        layout.addView(userNameInput);
+
+        // 追加ボタン
+        Button addButton = new Button(context);
+        addButton.setText("追加");
+        layout.addView(addButton);
+
+        // 追加ボタンのクリックリスナー
+        addButton.setOnClickListener(v -> {
+            String groupName = groupNameInput.getText().toString();
+            String userName = userNameInput.getText().toString();
+            String newPair = "グループ名: " + groupName + ", ユーザー名: " + userName;
+
+            // 重複チェック
+            if (existingPairs.contains(newPair)) {
+                Toast.makeText(context, "このペアは既に存在します", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            // ファイルに保存
+            try {
+                FileWriter writer = new FileWriter(file, true); // trueを指定して追記モードにする
+                writer.write(newPair + "\n");
+                writer.close();
+                existingPairs.add(newPair);
+                Toast.makeText(context, "ペアを追加しました", Toast.LENGTH_SHORT).show();
+            } catch (IOException e) {
+                e.printStackTrace();
+                Toast.makeText(context, "ペアの追加に失敗しました", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        builder.setView(layout);
+
+        // 現在のペアを表示し、削除できるダイアログ
+        builder.setNeutralButton("現在のペアを表示", (dialog, which) -> {
+            AlertDialog.Builder pairsBuilder = new AlertDialog.Builder(context);
+            pairsBuilder.setTitle("現在のペア");
+
+            // レイアウトを作成
+            LinearLayout pairsLayout = new LinearLayout(context);
+            pairsLayout.setOrientation(LinearLayout.VERTICAL);
+
+            for (String pair : existingPairs) {
+                // 各ペアの表示用レイアウト
+                LinearLayout pairLayout = new LinearLayout(context);
+                pairLayout.setOrientation(LinearLayout.HORIZONTAL);
+
+                // ペアのテキストビュー
+                TextView pairTextView = new TextView(context);
+                pairTextView.setText(pair);
+                pairLayout.addView(pairTextView);
+
+                // 削除ボタン
+                Button deleteButton = new Button(context);
+                deleteButton.setText("削除");
+                deleteButton.setOnClickListener(v -> {
+                    existingPairs.remove(pair);
+                    // ファイルを更新
+                    try {
+                        FileWriter writer = new FileWriter(file);
+                        for (String remainingPair : existingPairs) {
+                            writer.write(remainingPair + "\n");
+                        }
+                        writer.close();
+                        Toast.makeText(context, "ペアを削除しました", Toast.LENGTH_SHORT).show();
+                        pairsBuilder.setMessage("ペアが削除されました。");
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        Toast.makeText(context, "ペアの削除に失敗しました", Toast.LENGTH_SHORT).show();
+                    }
+                    // ダイアログを再表示
+                    pairsBuilder.setMessage(getCurrentPairsMessage(existingPairs));
+                });
+                pairLayout.addView(deleteButton);
+                pairsLayout.addView(pairLayout);
+            }
+
+            pairsBuilder.setView(pairsLayout);
+            pairsBuilder.setPositiveButton("閉じる", null);
+            pairsBuilder.show();
+        });
+
+        // キャンセルボタンの設定
+        builder.setNegativeButton("キャンセル", (dialog, which) -> dialog.cancel());
+
+        // ダイアログを表示
+        builder.show();
+    }
+
+    private String getCurrentPairsMessage(List<String> pairs) {
+        StringBuilder message = new StringBuilder();
+        if (pairs.isEmpty()) {
+            message.append("現在のペアはありません。");
+        } else {
+            for (String pair : pairs) {
+                message.append(pair).append("\n");
+            }
+        }
+        return message.toString();
+    }
 
 
     private void Cancel_Message_Button(Context context, Context moduleContext) {

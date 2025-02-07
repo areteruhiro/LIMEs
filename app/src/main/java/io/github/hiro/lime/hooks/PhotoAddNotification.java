@@ -84,7 +84,6 @@ public class PhotoAddNotification implements IHook {
 
     private void hookNotificationMethods(XC_LoadPackage.LoadPackageParam loadPackageParam,
                                          Context context, SQLiteDatabase db1, SQLiteDatabase db2) {
-
         Class<?> notificationManagerClass = XposedHelpers.findClass(
                 "android.app.NotificationManager", loadPackageParam.classLoader
         );
@@ -96,12 +95,27 @@ public class PhotoAddNotification implements IHook {
                         Notification notification = (Notification) param.args[2];
                         String tag = (String) param.args[0];
                         int ids = (int) param.args[1];
+
+                        if (limeOptions.CansellNotification.checked) {
+                            // Notification Extrasを取得
+                            Bundle extras = notification.extras;
+                            String userName = extras.getString("android.title");
+                            String groupName = extras.getString("android.subText");
+
+                            // Notification_Settingと照らし合わせる
+                            if (isMatchingSetting(userName, groupName)) {
+
+                            } else {
+                                // 異なる場合はnullを返して処理を終了
+                                param.setResult(null);
+                                return;
+                            }
+                        }
+
                         if (Objects.equals(notification.category, "call")) {
-                           // logAllNotificationDetails(tag, ids, notification, notification.tickerText != null ? notification.tickerText.toString() : null);
-
-
                             return;
                         }
+
                         if (limeOptions.GroupNotification.checked) {
                             handleNotificationHook(context, db1, db2, param, notification, true);
                         } else {
@@ -109,6 +123,7 @@ public class PhotoAddNotification implements IHook {
                                 param.setResult(null);
                                 return;
                             }
+                            //logAllNotificationDetails(tag, ids, notification, notification.tickerText != null ? notification.tickerText.toString() : null);
                             handleNotificationHook(context, db1, db2, param, notification, true);
                         }
                     }
@@ -398,7 +413,37 @@ public class PhotoAddNotification implements IHook {
         return null;
     }
 
+    private boolean isMatchingSetting(String userName, String groupName) {
+        // Notification_Setting.txtから設定を読み込む
+        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/Setting");
+        File file = new File(dir, "Notification_Setting.txt");
 
+        if (!file.exists()) {
+            return false; // ファイルが存在しない場合は一致しない
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                // 各行を解析
+                String[] parts = line.split(", ");
+                if (parts.length == 2) {
+                    String storedGroupName = parts[0].replace("グループ名: ", "").trim();
+                    String storedUserName = parts[1].replace("ユーザー名: ", "").trim();
+
+                    // 一致するか確認
+                    if (storedGroupName.equals(groupName) && storedUserName.equals(userName)) {
+                        return true; // 一致する場合
+                    }
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            // エラーハンドリング
+        }
+
+        return false; // 一致しない場合
+    }
     private void logAllNotificationDetails(String method, int ids, Notification notification, String tag) {
         XposedBridge.log(method + " called. ID: " + ids + (tag != null ? ", Tag: " + tag : ""));
         XposedBridge.log("Notification Icon: " + notification.icon);
