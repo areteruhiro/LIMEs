@@ -30,7 +30,7 @@ public class MainActivity extends Activity {
 
         SharedPreferences prefs;
         try {
-            prefs = getSharedPreferences("options", MODE_PRIVATE);
+            prefs = getSharedPreferences("options", MODE_WORLD_READABLE);
         } catch (SecurityException e) {
             showModuleNotEnabledAlert();
             return;

@@ -110,7 +110,7 @@ public class ReadChecker implements IHook {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 String chatId = (String) param.getResult();
-                XposedBridge.log(chatId);
+               //XposedBridge.log(chatId);
                 if (isGroupExists(chatId)) {
                     shouldHookOnCreate = true;
                     currentGroupId = chatId;
@@ -682,24 +682,34 @@ public class ReadChecker implements IHook {
             String media = queryDatabaseWithRetry(db3, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
             String mediaDescription = "";
 
-            switch (media) {
-                case "7":
-                    mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                    break;
-                case "1":
-                    mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                    break;
-                case "2":
-                    mediaDescription = moduleContext.getResources().getString(R.string.video);
-                    break;
-                default:
-                    mediaDescription = "";
-                    break;
+            if (media != null) {
+                switch (media) {
+                    case "7":
+                        mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                        break;
+                    case "1":
+                        mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                        break;
+                    case "2":
+                        mediaDescription = moduleContext.getResources().getString(R.string.video);
+                        break;
+                    default:
+                        mediaDescription = ""; // デフォルト値
+                        break;
+                }
+            } else {
+                mediaDescription = ""; // mediaがnullの場合のデフォルト値
             }
 
-            String finalContent = (content != null && !content.isEmpty() && !content.equals("null"))
-                    ? content
-                    : (!mediaDescription.isEmpty() ? mediaDescription : "No content:" + serverId);
+// finalContentの生成
+            String finalContent;
+            if (content != null && !content.isEmpty() && !content.equals("null")) {
+                finalContent = content; // contentが有効な場合
+            } else if (!mediaDescription.isEmpty()) {
+                finalContent = mediaDescription; // mediaDescriptionが有効な場合
+            } else {
+                finalContent = "No content:" + serverId; // どちらも無効な場合
+            }
 
             //("セーブメゾットに渡したよ" + serverId + ", Sent_User: " + SentUser);
             saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, user_name, timeFormatted, context,currentTime);
