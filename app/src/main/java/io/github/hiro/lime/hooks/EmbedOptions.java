@@ -59,8 +59,7 @@ import io.github.hiro.lime.Utils;
 public class EmbedOptions implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
-        if (Main.xModulePrefs.getBoolean("unembed_options", false)) return;
-
+        if (limeOptions.removeOption.checked) return;
         XposedBridge.hookAllMethods(
                 loadPackageParam.classLoader.loadClass("com.linecorp.line.settings.main.LineUserMainSettingsFragment"),
                 "onViewCreated",

@@ -6,9 +6,15 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.Typeface;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
 import android.text.InputType;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Base64;
@@ -20,24 +26,33 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
 
+import io.github.hiro.lime.hooks.CustomPreferences;
+
 public class MainActivity extends Activity {
     public LimeOptions limeOptions = new LimeOptions();
 
-    @Deprecated
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
+    @Deprecated @Override
 
-        SharedPreferences prefs;
+    protected void onCreate(Bundle savedInstanceState) { super.onCreate(savedInstanceState);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!Environment.isExternalStorageManager()) {
+                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                intent.setData(Uri.parse("package:" + getPackageName()));
+                startActivity(intent);
+            }
+        }
+
+        CustomPreferences customPrefs;
         try {
-            prefs = getSharedPreferences("options", MODE_WORLD_READABLE);
-        } catch (SecurityException e) {
+            customPrefs = new CustomPreferences();
+        } catch (PackageManager.NameNotFoundException e) {
             showModuleNotEnabledAlert();
             return;
         }
 
         for (LimeOptions.Option option : limeOptions.options) {
-            option.checked = prefs.getBoolean(option.name, option.checked);
+            option.checked = Boolean.parseBoolean(customPrefs.getSetting(option.name, String.valueOf(option.checked)));
         }
 
         LinearLayout layout = new LinearLayout(this);
@@ -47,29 +62,7 @@ public class MainActivity extends Activity {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(Utils.dpToPx(20, this), Utils.dpToPx(20, this), Utils.dpToPx(20, this), Utils.dpToPx(20, this));
 
-        Switch switchUnembedOptions = new Switch(this);
-        {
-            switchUnembedOptions.setText(getString(R.string.switch_unembed_options));
-            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT);
-            params.topMargin = Utils.dpToPx(20, this);
-            switchUnembedOptions.setLayoutParams(params);
-
-            switchUnembedOptions.setChecked(prefs.getBoolean("unembed_options", false));
-            switchUnembedOptions.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                prefs.edit().putBoolean("unembed_options", isChecked).apply();
-                if (isChecked) {
-                    for (int i = 1; i < layout.getChildCount(); ++i)
-                        layout.getChildAt(i).setVisibility(View.VISIBLE);
-                } else {
-                    for (int i = 1; i < layout.getChildCount(); ++i)
-                        layout.getChildAt(i).setVisibility(View.GONE);
-                }
-            });
-
-            layout.addView(switchUnembedOptions);
-        }
+// Removed switchUnembedOptions section
 
         Switch switchRedirectWebView = null;
         for (LimeOptions.Option option : limeOptions.options) {
@@ -85,25 +78,23 @@ public class MainActivity extends Activity {
 
             switchView.setChecked(option.checked);
             switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                prefs.edit().putBoolean(name, isChecked).apply();
+                customPrefs.saveSetting(name, String.valueOf(isChecked));
             });
 
-            if (name == "redirect_webview") switchRedirectWebView = switchView;
-            else if (name == "open_in_browser") {
+            if (name.equals("redirect_webview")) {
+                switchRedirectWebView = switchView;
+            } else if (name.equals("open_in_browser")) {
                 switchRedirectWebView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                    prefs.edit().putBoolean("redirect_webview", isChecked).apply();
-                    if (isChecked) switchView.setEnabled(true);
-                    else {
-                        switchView.setChecked(false);
-                        switchView.setEnabled(false);
-                    }
+                    customPrefs.saveSetting("redirect_webview", String.valueOf(isChecked));
+                    switchView.setEnabled(isChecked);
                 });
-                switchView.setEnabled(limeOptions.redirectWebView.checked);
+                switchView.setEnabled(Boolean.parseBoolean(customPrefs.getSetting("redirect_webview", "false")));
             }
 
             layout.addView(switchView);
         }
 
+// Modify Request Section
         {
             LinearLayout layoutModifyRequest = new LinearLayout(this);
             layoutModifyRequest.setLayoutParams(new LinearLayout.LayoutParams(
@@ -126,7 +117,7 @@ public class MainActivity extends Activity {
             editText.setHorizontallyScrolling(true);
             editText.setVerticalScrollBarEnabled(true);
             editText.setHorizontalScrollBarEnabled(true);
-            editText.setText(new String(Base64.decode(prefs.getString("encoded_js_modify_request", ""), Base64.NO_WRAP)));
+            editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP)));
 
             layoutModifyRequest.addView(editText);
 
@@ -140,29 +131,23 @@ public class MainActivity extends Activity {
 
             Button copyButton = new Button(this);
             copyButton.setText(R.string.button_copy);
-            copyButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    ClipData clip = ClipData.newPlainText("", editText.getText().toString());
-                    clipboard.setPrimaryClip(clip);
-                }
+            copyButton.setOnClickListener(v -> {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("", editText.getText().toString());
+                clipboard.setPrimaryClip(clip);
             });
 
             buttonLayout.addView(copyButton);
 
             Button pasteButton = new Button(this);
             pasteButton.setText(R.string.button_paste);
-            pasteButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    if (clipboard != null && clipboard.hasPrimaryClip()) {
-                        ClipData clip = clipboard.getPrimaryClip();
-                        if (clip != null && clip.getItemCount() > 0) {
-                            CharSequence pasteData = clip.getItemAt(0).getText();
-                            editText.setText(pasteData);
-                        }
+            pasteButton.setOnClickListener(v -> {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null && clipboard.hasPrimaryClip()) {
+                    ClipData clip = clipboard.getPrimaryClip();
+                    if (clip != null && clip.getItemCount() > 0) {
+                        CharSequence pasteData = clip.getItemAt(0).getText();
+                        editText.setText(pasteData);
                     }
                 }
             });
@@ -172,7 +157,6 @@ public class MainActivity extends Activity {
             layoutModifyRequest.addView(buttonLayout);
 
             ScrollView scrollView = new ScrollView(this);
-
             scrollView.addView(layoutModifyRequest);
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this)
@@ -180,20 +164,14 @@ public class MainActivity extends Activity {
 
             builder.setView(scrollView);
 
-            builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    prefs.edit().putString("encoded_js_modify_request", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP)).apply();
-                }
+            builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
+                customPrefs.saveSetting("encoded_js_modify_request", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
             });
 
             builder.setNegativeButton(R.string.negative_button, null);
 
-            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                @Override
-                public void onDismiss(DialogInterface dialog) {
-                    editText.setText(new String(Base64.decode(prefs.getString("encoded_js_modify_request", ""), Base64.NO_WRAP)));
-                }
+            builder.setOnDismissListener(dialog -> {
+                editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP)));
             });
 
             AlertDialog dialog = builder.create();
@@ -206,16 +184,12 @@ public class MainActivity extends Activity {
             button.setLayoutParams(params);
             button.setText(R.string.modify_request);
 
-            button.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    dialog.show();
-                }
-            });
+            button.setOnClickListener(view -> dialog.show());
 
             layout.addView(button);
         }
 
+// Modify Response Section
         {
             LinearLayout layoutModifyResponse = new LinearLayout(this);
             layoutModifyResponse.setLayoutParams(new LinearLayout.LayoutParams(
@@ -238,7 +212,7 @@ public class MainActivity extends Activity {
             editText.setHorizontallyScrolling(true);
             editText.setVerticalScrollBarEnabled(true);
             editText.setHorizontalScrollBarEnabled(true);
-            editText.setText(new String(Base64.decode(prefs.getString("encoded_js_modify_response", ""), Base64.NO_WRAP)));
+            editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP)));
 
             layoutModifyResponse.addView(editText);
 
@@ -252,29 +226,23 @@ public class MainActivity extends Activity {
 
             Button copyButton = new Button(this);
             copyButton.setText(R.string.button_copy);
-            copyButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    ClipData clip = ClipData.newPlainText("", editText.getText().toString());
-                    clipboard.setPrimaryClip(clip);
-                }
+            copyButton.setOnClickListener(v -> {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                ClipData clip = ClipData.newPlainText("", editText.getText().toString());
+                clipboard.setPrimaryClip(clip);
             });
 
             buttonLayout.addView(copyButton);
 
             Button pasteButton = new Button(this);
             pasteButton.setText(R.string.button_paste);
-            pasteButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                    if (clipboard != null && clipboard.hasPrimaryClip()) {
-                        ClipData clip = clipboard.getPrimaryClip();
-                        if (clip != null && clip.getItemCount() > 0) {
-                            CharSequence pasteData = clip.getItemAt(0).getText();
-                            editText.setText(pasteData);
-                        }
+            pasteButton.setOnClickListener(v -> {
+                ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (clipboard != null && clipboard.hasPrimaryClip()) {
+                    ClipData clip = clipboard.getPrimaryClip();
+                    if (clip != null && clip.getItemCount() > 0) {
+                        CharSequence pasteData = clip.getItemAt(0).getText();
+                        editText.setText(pasteData);
                     }
                 }
             });
@@ -284,7 +252,6 @@ public class MainActivity extends Activity {
             layoutModifyResponse.addView(buttonLayout);
 
             ScrollView scrollView = new ScrollView(this);
-
             scrollView.addView(layoutModifyResponse);
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this)
@@ -292,20 +259,14 @@ public class MainActivity extends Activity {
 
             builder.setView(scrollView);
 
-            builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                    prefs.edit().putString("encoded_js_modify_response", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP)).apply();
-                }
+            builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
+                customPrefs.saveSetting("encoded_js_modify_response", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
             });
 
             builder.setNegativeButton(R.string.negative_button, null);
 
-            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                @Override
-                public void onDismiss(DialogInterface dialog) {
-                    editText.setText(new String(Base64.decode(prefs.getString("encoded_js_modify_response", ""), Base64.NO_WRAP)));
-                }
+            builder.setOnDismissListener(dialog -> {
+                editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP)));
             });
 
             AlertDialog dialog = builder.create();
@@ -318,19 +279,9 @@ public class MainActivity extends Activity {
             button.setLayoutParams(params);
             button.setText(R.string.modify_response);
 
-            button.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View view) {
-                    dialog.show();
-                }
-            });
+            button.setOnClickListener(view -> dialog.show());
 
             layout.addView(button);
-        }
-
-        if (!switchUnembedOptions.isChecked()) {
-            for (int i = 1; i < layout.getChildCount(); ++i)
-                layout.getChildAt(i).setVisibility(View.GONE);
         }
 
         ScrollView scrollView = new ScrollView(this);
@@ -353,4 +304,5 @@ public class MainActivity extends Activity {
                 .setCancelable(false)
                 .show();
     }
+
 }

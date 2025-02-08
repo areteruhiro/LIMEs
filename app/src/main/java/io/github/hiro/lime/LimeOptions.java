@@ -13,6 +13,7 @@ public class LimeOptions {
             this.checked = checked;
         }
     }
+    public Option removeOption = new Option("removeOption", R.string.switch_unembed_options, false);
 
     public Option removeVoom = new Option("remove_voom", R.string.switch_remove_voom, true);
     public Option removeWallet = new Option("remove_wallet", R.string.switch_remove_wallet, true);
@@ -67,6 +68,7 @@ public class LimeOptions {
     public Option RemoveVoiceRecord = new Option("RemoveVoiceRecord", R.string.RemoveVoiceRecord, false);
     public Option LINELabOnly = new Option("LINELabOnly", R.string.LINELabOnly, false);
     public Option[] options = {
+            removeOption,
             removeVoom,
             removeWallet,
             removeNewsOrCall,

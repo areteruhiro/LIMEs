@@ -82,21 +82,13 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
         xModulePrefs = new XSharedPreferences(Constants.MODULE_NAME, "options");
         xModulePrefs.reload();
 
-        if (xModulePrefs.getBoolean("unembed_options", false)) {
-            xPrefs = xModulePrefs;
-            XposedBridge.log("Using package preferences");
 
-            for (LimeOptions.Option option : limeOptions.options) {
-                option.checked = xPrefs.getBoolean(option.name, option.checked);
-            }
-
-        } else {
             xPrefs = xModulePrefs;
             XposedBridge.log("Using module preferences");
             for (LimeOptions.Option option : limeOptions.options) {
                 option.checked = Boolean.parseBoolean(customPreferences.getSetting(option.name, String.valueOf(option.checked)));
             }
-        }
+
         for (IHook hook : hooks) {
             hook.hook(limeOptions, loadPackageParam);
         }
