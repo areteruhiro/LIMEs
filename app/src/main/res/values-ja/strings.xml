@@ -155,6 +155,7 @@
     <string name="removeSearchBar">検索バーを削除する</string>
     <string name="removeNaviOpenchat">チャットリスト内でのオープンチャットアイコンを削除する</string>
     <string name="removeNaviAlbum">チャットリスト内でのアルバムアイコンを削除する</string>
+    <string name="CansellNotification">特定のユーザー名、グループ名のみ以外の通知を無効化</string>
 
 
 </resources>

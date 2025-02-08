@@ -42,7 +42,7 @@ public class LimeOptions {
     public Option removeKeepUnread = new Option("remove_keep_unread", R.string.switch_remove_keep_unread, false);
     public Option KeepUnreadLSpatch = new Option("Keep_UnreadLSpatch", R.string.switch_KeepUnreadLSpatch, false);
     public Option blockTracking = new Option("block_tracking", R.string.switch_block_tracking, false);
-
+    public Option CansellNotification = new Option("CansellNotification", R.string.CansellNotification, false);
     public Option BlockUpdateProfileNotification = new Option("BlockUpdateProfileNotification", R.string.switch_BlockUpdateProfileNotification, false);
 
     public Option stopVersionCheck = new Option("stop_version_check", R.string.switch_stop_version_check, false);
@@ -102,9 +102,10 @@ public class LimeOptions {
             DialTone,
             DarkColor,
             MuteGroup,
-            PhotoAddNotification,GroupNotification,
+            PhotoAddNotification,GroupNotification,CansellNotification,
             RemoveVoiceRecord,
             AgeCheckSkip,
+
 
     };
 
