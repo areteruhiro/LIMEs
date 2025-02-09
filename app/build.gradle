@@ -10,7 +10,7 @@ android {
         minSdk 22
         targetSdk 35
         versionCode 116160
-        versionName "1.17.5.beta"
+        versionName "1.17.6.beta"
         multiDexEnabled false
         proguardFiles += 'proguard-rules.pro'
         buildConfigField 'String', 'HOOK_TARGET_VERSION', '"141910383"'
@@ -62,7 +62,9 @@ android {
 }
 
 dependencies {
-   // implementation 'com.android.support:customtabs:23.0.0'
+    implementation 'androidx.fragment:fragment:1.8.5'
+
+    // implementation 'com.android.support:customtabs:23.0.0'
     compileOnly 'de.robv.android.xposed:api:82'
     implementation 'org.mozilla:rhino:1.7.15'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.0'

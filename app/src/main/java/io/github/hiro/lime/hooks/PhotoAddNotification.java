@@ -1,19 +1,32 @@
 package io.github.hiro.lime.hooks;
 
+import static android.content.ContentValues.TAG;
 import static io.github.hiro.lime.Main.limeOptions;
 
+import android.app.AndroidAppHelper;
 import android.app.Application;
 import android.app.Notification;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.os.Parcelable;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -36,8 +49,12 @@ import io.github.hiro.lime.LimeOptions;
 public class PhotoAddNotification implements IHook {
 
     private static final int MAX_RETRIES = 20;
-
+    private static final String COPY_ACTION = "io.github.hiro.lime.COPY_TEXT";
+    private static final String TAG = "LimeModule";
+    private boolean isReceiverRegistered = false;
     private static final long RETRY_DELAY = 1000;
+    private static boolean isHandlingNotification = false;
+    private static final Set<String> processedNotifications = new HashSet<>();
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
@@ -101,12 +118,11 @@ public class PhotoAddNotification implements IHook {
                             Bundle extras = notification.extras;
                             String userName = extras.getString("android.title");
                             String groupName = extras.getString("android.subText");
-
-                            // Notification_Settingと照らし合わせる
+                            
                             if (isMatchingSetting(userName, groupName)) {
 
                             } else {
-                                // 異なる場合はnullを返して処理を終了
+                               
                                 param.setResult(null);
                                 return;
                             }
@@ -117,25 +133,22 @@ public class PhotoAddNotification implements IHook {
                         }
 
                         if (limeOptions.GroupNotification.checked) {
-                            handleNotificationHook(context, db1, db2, param, notification, true);
+                            handleNotificationHook(context, db1, db2, param, notification, true, loadPackageParam);
                         } else {
                             if (param.args[0] == null) {
                                 param.setResult(null);
                                 return;
                             }
                             //logAllNotificationDetails(tag, ids, notification, notification.tickerText != null ? notification.tickerText.toString() : null);
-                            handleNotificationHook(context, db1, db2, param, notification, true);
+                            handleNotificationHook(context, db1, db2, param, notification, true, loadPackageParam);
                         }
                     }
                 });
 
     }
 
-    private static boolean isHandlingNotification = false;
-    private static final Set<String> processedNotifications = new HashSet<>();
 
-    private void handleNotificationHook(Context context, SQLiteDatabase db1, SQLiteDatabase db2, XC_MethodHook.MethodHookParam param, Notification notification, boolean hasTag) {
-
+    private void handleNotificationHook(Context context, SQLiteDatabase db1, SQLiteDatabase db2, XC_MethodHook.MethodHookParam param, Notification notification, boolean hasTag, XC_LoadPackage.LoadPackageParam loadPackageParam) {
         if (isHandlingNotification) {
             return;
         }
@@ -150,6 +163,7 @@ public class PhotoAddNotification implements IHook {
 
             String originalText = getNotificationText(originalNotification);
             Notification newNotification = originalNotification;
+
 
             if (title == null) {
                 return;
@@ -173,7 +187,8 @@ public class PhotoAddNotification implements IHook {
                 }
             }
 
-            if (originalText != null && (originalText.contains("写真を送信しました") || originalText.contains("sent a photo") || originalText.contains("傳送了照片"))) {
+            if (originalText != null && (originalText.contains("写真を送信しました")
+                    || originalText.contains("sent a photo") || originalText.contains("傳送了照片"))) {
 
                 Bundle extras = notification.extras;
 
@@ -251,8 +266,28 @@ public class PhotoAddNotification implements IHook {
             }
 
             param.setResult(null);
+            if (limeOptions.AddCopyAction.checked) {
+                if (!isReceiverRegistered) {
+                    //Log.d(TAG, "Attempting to register receiver");
+                    registerReceiver(loadPackageParam);
+                    isReceiverRegistered = true;
+                }
 
+                CharSequence message = extractMessageContent(originalNotification);
+                //Log.d(TAG, "Extracted message: " + (message != null ? message : "NULL"));
 
+                if (message != null) {
+                    PendingIntent pendingIntent = createPendingIntent(context, message);
+                    if (pendingIntent == null) {
+                        Log.e(TAG, "Failed to create PendingIntent");
+                        return;
+                    }
+
+                    newNotification = addCopyAction(context, newNotification, originalText, pendingIntent);
+                    param.args[2] = newNotification;
+                    //Log.d(TAG, "Notification modified successfully");
+                }
+            }
             int randomNotificationId = (int) System.currentTimeMillis();
             NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
             if (notificationManager != null) {
@@ -265,11 +300,13 @@ public class PhotoAddNotification implements IHook {
             }
 
             param.setResult(null);
-
+        } catch (Exception e) {
+            Log.e(TAG, "Critical error in notification processing", e);
         } finally {
             isHandlingNotification = false;
         }
     }
+
 
     private Bitmap loadBitmapFromFile(File file) {
         if (!file.exists()) {
@@ -309,18 +346,18 @@ public class PhotoAddNotification implements IHook {
 
     private Notification createNotificationWithImageFromBitmap(Context context, Notification original, Bitmap bitmap, String originalText) {
         Notification.BigPictureStyle bigPictureStyle = new Notification.BigPictureStyle()
-                .bigPicture(bitmap) // メインの画像
-                .bigLargeIcon(bitmap) // 画像表示領域を広げる
-                .setSummaryText(originalText); // テキストを設定
+                .bigPicture(bitmap)
+                .bigLargeIcon(bitmap) 
+                .setSummaryText(originalText);
 
         Notification.Builder builder = Notification.Builder.recoverBuilder(context, original)
-                .setStyle(bigPictureStyle); // BigPictureStyle を適用
+                .setStyle(bigPictureStyle); 
 
         return builder.build();
     }
 
     private File getFileWithId(String chatId, String id) {
-        // Xposedログ: メソッド開始
+    
         //XposedBridge.log("getFileWithId: Searching for file with id: " + id + " in chat: " + chatId);
 
         File messagesDir = new File(Environment.getExternalStorageDirectory(),
@@ -443,6 +480,162 @@ public class PhotoAddNotification implements IHook {
         }
 
         return false; // 一致しない場合
+    }
+
+    private CharSequence extractMessageContent(Notification notification) {
+        try {
+            Bundle extras = notification.extras;
+            //Log.d(TAG, "Notification extras keys: " + extras.keySet().toString());
+            CharSequence message = extras.getCharSequence("android.line.metadata.MESSAGE_CONTENT");
+            if (message != null) {
+                //Log.d(TAG, "Found LINE specific message content");
+                return message;
+            }
+            Parcelable[] messages = extras.getParcelableArray("android.line.metadata.MESSAGES");
+            if (messages != null && messages.length > 0) {
+                //Log.d(TAG, "Processing group notification with " + messages.length + " messages");
+                Bundle firstMessage = (Bundle) messages[0];
+                return firstMessage.getCharSequence("content");
+            }
+            return extras.getCharSequence(Notification.EXTRA_TEXT);
+        } catch (Exception e) {
+            Log.e(TAG, "Error extracting message content", e);
+            return null;
+        }
+    }
+
+    private Context resolveContext(XC_MethodHook.MethodHookParam param) {
+        try {
+            Context context = AndroidAppHelper.currentApplication();
+            if (context == null) {
+                //Log.d(TAG, "Falling back to alternative context resolution");
+                context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
+            }
+            return context;
+        } catch (Exception e) {
+            Log.e(TAG, "Context resolution failed", e);
+            return null;
+        }
+    }
+
+    private PendingIntent createPendingIntent(Context context, CharSequence message) {
+        try {
+            Intent copyIntent = new Intent(COPY_ACTION);
+            copyIntent.putExtra("text_to_copy", message.toString());
+            copyIntent.setPackage(context.getPackageName());
+
+            //Log.d(TAG, "Creating PendingIntent with flags: "
+                   // + "FLAG_UPDATE_CURRENT|FLAG_IMMUTABLE");
+
+            return PendingIntent.getBroadcast(
+                    context,
+                    0,
+                    copyIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
+            );
+        } catch (Exception e) {
+            Log.e(TAG, "PendingIntent creation failed", e);
+            return null;
+        }
+    }
+
+    private Notification addCopyAction(Context context, Notification original, String text, PendingIntent pendingIntent) {
+        try {
+            Notification.Builder builder = Notification.Builder.recoverBuilder(context, original)
+                    .addAction(new Notification.Action.Builder(
+                            null,
+                            "Copy Text",
+                            pendingIntent
+                    ).build());
+
+            return builder.build();
+        } catch (Exception e) {
+            Log.e("CopyFeature", "Failed to add copy action", e);
+            return original; 
+        }
+    }
+
+    private void registerReceiver(XC_LoadPackage.LoadPackageParam lpparam) {
+        try {
+            Context context = AndroidAppHelper.currentApplication();
+            if (context == null) {
+                Log.e(TAG, "Context is null during receiver registration");
+                return;
+            }
+
+            IntentFilter filter = new IntentFilter(COPY_ACTION);
+            filter.setPriority(IntentFilter.SYSTEM_HIGH_PRIORITY);
+
+            //Log.d(TAG, "Registering receiver with filter: " + COPY_ACTION);
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                context.registerReceiver(
+                        new CopyTextReceiver(),
+                        filter,
+                        Context.RECEIVER_NOT_EXPORTED
+                );
+            } else {
+                context.registerReceiver(
+                        new CopyTextReceiver(),
+                        filter
+                );
+            }
+            //Log.d(TAG, "Receiver registration successful");
+        } catch (Exception e) {
+            Log.e(TAG, "Receiver registration failed", e);
+        }
+    }
+
+    public static class CopyTextReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            //Log.d(TAG, "=== BroadcastReceiver triggered ===");
+            //Log.d(TAG, "Action: " + intent.getAction());
+            //Log.d(TAG, "Package: " + intent.getPackage());
+            //Log.d(TAG, "Extras: " + intent.getExtras());
+
+            try {
+                if (!COPY_ACTION.equals(intent.getAction())) {
+                    //Log.d(TAG, "Ignoring unrelated action");
+                    return;
+                }
+
+                final String textToCopy = intent.getStringExtra("text_to_copy");
+                if (textToCopy == null || textToCopy.isEmpty()) {
+                    Log.e(TAG, "Empty text received");
+                    return;
+                }
+
+                //Log.d(TAG, "Attempting to copy text: " + textToCopy);
+
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    try {
+                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                        if (clipboard == null) {
+                            Log.e(TAG, "Clipboard service unavailable");
+                            return;
+                        }
+
+                        //Log.d(TAG, "Clipboard service obtained");
+
+                        ClipData clip = ClipData.newPlainText("LINE Message", textToCopy);
+                        clipboard.setPrimaryClip(clip);
+
+                        //Log.d(TAG, "Clipboard operation completed");
+                        Toast.makeText(context, "✓ Copied to clipboard", Toast.LENGTH_SHORT).show();
+
+                    } catch (SecurityException e) {
+                        Log.e(TAG, "Security exception: " + e.getMessage());
+                    } catch (Exception e) {
+                        Log.e(TAG, "Unexpected error in UI thread", e);
+                    }
+                });
+
+            } catch (Exception e) {
+                Log.e(TAG, "Global error in receiver", e);
+            }
+        }
+
     }
     private void logAllNotificationDetails(String method, int ids, Notification notification, String tag) {
         XposedBridge.log(method + " called. ID: " + ids + (tag != null ? ", Tag: " + tag : ""));

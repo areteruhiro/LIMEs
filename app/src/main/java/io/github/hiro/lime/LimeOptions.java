@@ -66,6 +66,9 @@ public class LimeOptions {
     public Option PhotoAddNotification = new Option("PhotoAddNotification", R.string.PhotoAddNotification, false);
     public Option GroupNotification = new Option("GroupNotification", R.string.GroupNotification, false);
     public Option RemoveVoiceRecord = new Option("RemoveVoiceRecord", R.string.RemoveVoiceRecord, false);
+    public Option AddCopyAction = new Option("AddCopyAction", R.string.AddCopyAction, false);
+    public Option CallOpenApplication = new Option("CallOpenApplication", R.string.CallOpenApplication, true);
+
     public Option LINELabOnly = new Option("LINELabOnly", R.string.LINELabOnly, false);
     public Option[] options = {
             removeOption,
@@ -102,10 +105,10 @@ public class LimeOptions {
             DialTone,
             DarkColor,
             MuteGroup,
-            PhotoAddNotification,GroupNotification,CansellNotification,
+            PhotoAddNotification,GroupNotification,CansellNotification,AddCopyAction,
             RemoveVoiceRecord,
             AgeCheckSkip,
-
+            CallOpenApplication
 
     };
 

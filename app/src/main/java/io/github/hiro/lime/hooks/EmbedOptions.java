@@ -99,9 +99,11 @@ public class EmbedOptions implements IHook {
                                 LinearLayout.LayoutParams.MATCH_PARENT));
                         layout.setOrientation(LinearLayout.VERTICAL);
                         layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
-
                         Switch switchRedirectWebView = null;
-                        Switch photoAddNotificationView = null; // PhotoAddNotification用のスイッチを追加
+                        Switch photoAddNotificationView = null;
+                        Switch groupNotificationView = null;
+                        Switch cansellNotificationView = null;
+                        Switch addCopyActionView = null;
 
                         for (LimeOptions.Option option : limeOptions.options) {
                             final String name = option.name;
@@ -127,21 +129,45 @@ public class EmbedOptions implements IHook {
                                     }
                                 });
                                 switchView.setEnabled(limeOptions.redirectWebView.checked);
-                            }
+                            }  if (name.equals("PhotoAddNotification")) {
+                                photoAddNotificationView = switchView;
+                            } else if (name.equals("GroupNotification")) {
+                                photoAddNotificationView.setOnCheckedChangeListener((buttonView, isChecked) -> {
 
-                            if (name.equals("PhotoAddNotification")) {
-                                photoAddNotificationView = switchView; // PhotoAddNotification用のスイッチを設定
-                            } else if (name.equals("GroupNotification") || name.equals("CansellNotification")) {
-                                switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
                                     if (isChecked) {
                                         switchView.setEnabled(true);
+
                                     } else {
                                         switchView.setChecked(false);
                                         switchView.setEnabled(false);
                                     }
                                 });
-                                switchView.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked()); // PhotoAddNotificationがオンの場合のみ有効にする
+                            } else if (name.equals("CansellNotification")) {
+                                photoAddNotificationView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+
+                                    if (isChecked) {
+                                        switchView.setEnabled(true);
+
+                                    } else {
+                                        switchView.setChecked(false);
+                                        switchView.setEnabled(false);
+                                    }
+                                });
+                            } else if (name.equals("AddCopyAction")) {
+                                photoAddNotificationView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+
+                                    if (isChecked) {
+                                        switchView.setEnabled(true);
+
+                                    } else {
+                                        switchView.setChecked(false);
+                                        switchView.setEnabled(false);
+                                    }
+                                });
+                                switchView.setEnabled(limeOptions.PhotoAddNotification.checked);
+
                             }
+
                             layout.addView(switchView);
                         }
 

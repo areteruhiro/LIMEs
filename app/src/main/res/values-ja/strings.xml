@@ -98,7 +98,7 @@
     <string name="MuteGroup">登録しているグループ名の通知をオフにする</string>
     <string name="DarkColor">ナビゲーションのボタンの色を黒にする、ダークテーマをピュアダークにする</string>
     <string name="switch_BlockUpdateProfileNotification">プロフィールの更新を通知しない</string>
-    <string name="PhotoAddNotification">画像通知の際画像を添付します⚠3秒受信が遅延します</string>
+    <string name="PhotoAddNotification">LINE通知のカスタマイズ</string>
     <string name="Talk_Back_up">トーク履歴のバックアップを開始</string>
     <string name="Talk_Picture_Back_up">トーク画像フォルダのバックアップを開始</string>
     <string name="BackUp_Stat">バックアップを開始</string>
@@ -156,6 +156,8 @@
     <string name="removeNaviOpenchat">チャットリスト内でのオープンチャットアイコンを削除する</string>
     <string name="removeNaviAlbum">チャットリスト内でのアルバムアイコンを削除する</string>
     <string name="CansellNotification">特定のユーザー名、グループ名のみ以外の通知を無効化</string>
+    <string name="AddCopyAction">通知にコピーアクションを追加する</string>
+    <string name="CallOpenApplication">通話画面にLINEを開くボタンを作成</string>
 
 
 </resources>

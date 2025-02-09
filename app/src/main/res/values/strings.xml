@@ -162,4 +162,6 @@
     <string name="removeNaviOpenchat">Remove the open chat icon in the chat list</string>
     <string name="removeNaviAlbum">Remove the album icon in the chat list</string>
     <string name="CansellNotification">特定のユーザー名、グループ名のみ以外の通知を無効化</string>
+    <string name="AddCopyAction">通知にコピーアクションを追加する</string>
+    <string name="CallOpenApplication">通話画面にLINEを開くボタンを作成</string>
 </resources>
