@@ -25,23 +25,69 @@ import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
+import android.Manifest;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 
 import io.github.hiro.lime.hooks.CustomPreferences;
 
 public class MainActivity extends Activity {
     public LimeOptions limeOptions = new LimeOptions();
+    private static final int REQUEST_CODE = 100; // 権限リクエストの識別子
 
     @Deprecated @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
 
-    protected void onCreate(Bundle savedInstanceState) { super.onCreate(savedInstanceState);
-
+        // Android 11 (API 30) 以降の場合
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
+                // 全ファイルアクセス権限をリクエスト
                 Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
                 intent.setData(Uri.parse("package:" + getPackageName()));
                 startActivity(intent);
+            } else {
+                initializeApp(); // 権限がある場合の初期化処理
             }
         }
+        // Android 10 (API 29) 以前の場合
+        else {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                // ストレージ権限をリクエスト
+                ActivityCompat.requestPermissions(
+                        this,
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        REQUEST_CODE
+                );
+            } else {
+                initializeApp(); // 権限がある場合の初期化処理
+            }
+        }
+    }
+
+    // パーミッションリクエスト結果の処理
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CODE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                initializeApp();
+            } else {
+                // パーミッションが拒否された場合の処理
+                Toast.makeText(this, "ストレージアクセス権限が必要です", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+
+
+
+
+    private void initializeApp() {
+
 
         CustomPreferences customPrefs;
         try {
@@ -290,6 +336,8 @@ public class MainActivity extends Activity {
         ViewGroup rootView = findViewById(android.R.id.content);
         rootView.addView(scrollView);
     }
+
+
 
     private void showModuleNotEnabledAlert() {
         new AlertDialog.Builder(this)
