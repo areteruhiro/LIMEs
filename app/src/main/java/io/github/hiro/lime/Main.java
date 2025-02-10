@@ -60,10 +60,19 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     };
 
     @Override
-    public void initZygote(@NonNull StartupParam startupParam) throws Throwable {
+    public void initZygote(@NonNull StartupParam startupParam) {
         modulePath = startupParam.modulePath;
-        customPreferences = new CustomPreferences();
-       
+    }
+
+    private void initializePreferences() {
+        if (customPreferences == null) {
+            try {
+                customPreferences = new CustomPreferences();
+                createDefaultSettings();
+            } catch (Exception e) {
+                XposedBridge.log("Failed to initialize preferences: " + e);
+            }
+        }
     }
 
     private void createDefaultSettings() {
@@ -76,25 +85,27 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     }
 
     @Override
-    public void handleLoadPackage(@NonNull XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
-        if (!loadPackageParam.packageName.equals(Constants.PACKAGE_NAME)) return;
-        Constants.initializeHooks(loadPackageParam);
+    public void handleLoadPackage(@NonNull XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+        if (!lpparam.packageName.equals(Constants.PACKAGE_NAME)) return;
+        Constants.initializeHooks(lpparam);
+        initializePreferences();
 
         xModulePrefs = new XSharedPreferences(Constants.MODULE_NAME, "options");
         xModulePrefs.reload();
 
+        xPrefs = xModulePrefs;
+        XposedBridge.log("Using module preferences");
 
-            xPrefs = xModulePrefs;
-            XposedBridge.log("Using module preferences");
-            for (LimeOptions.Option option : limeOptions.options) {
-                option.checked = Boolean.parseBoolean(customPreferences.getSetting(option.name, String.valueOf(option.checked)));
-            }
+        for (LimeOptions.Option option : limeOptions.options) {
+            option.checked = Boolean.parseBoolean(
+                    customPreferences.getSetting(option.name, String.valueOf(option.checked))
+            );
+        }
 
         for (IHook hook : hooks) {
-            hook.hook(limeOptions, loadPackageParam);
+            hook.hook(limeOptions, lpparam);
         }
     }
-
     @Override
     public void handleInitPackageResources(@NonNull XC_InitPackageResources.InitPackageResourcesParam resparam) throws Throwable {
         if (!resparam.packageName.equals(Constants.PACKAGE_NAME)) return;
