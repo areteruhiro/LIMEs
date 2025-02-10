@@ -790,7 +790,8 @@ public class ReadChecker implements IHook {
                 //XposedBridge.log("Failed to delete old database file lime_data.db.");
             }
         }
-        File dbFile = new File(context.getFilesDir(), "lime_checked_data.db");
+        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+        File dbFile = new File(dir, "lime_checked_data.db");
         limeDatabase = SQLiteDatabase.openOrCreateDatabase(dbFile, null);
 
         // ID カラムを追加し、自動インクリメントさせる
