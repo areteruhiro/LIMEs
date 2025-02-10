@@ -161,7 +161,23 @@
     <string name="removeSearchBar">Remove the search bar</string>
     <string name="removeNaviOpenchat">Remove the open chat icon in the chat list</string>
     <string name="removeNaviAlbum">Remove the album icon in the chat list</string>
-    <string name="CansellNotification">特定のユーザー名、グループ名のみ以外の通知を無効化</string>
-    <string name="AddCopyAction">通知にコピーアクションを追加する</string>
-    <string name="CallOpenApplication">通話画面にLINEを開くボタンを作成</string>
+    <string name="CansellNotification">Disable notifications except for specific usernames and group names</string>
+    <string name="AddCopyAction">Add copy action to notifications</string>
+    <string name="CallOpenApplication">Create a button to open LINE on the call screen</string>
+    <string name="save_failed">Failed to save settings</string>
+    <string name="NotiFication_Setting">Notification settings</string>
+    <string name="GroupName">Group name</string>
+    <string name="Add">Add</string>
+    <string name="User_name">Username</string>
+    <string name="Aleady_Pair">Already created</string>
+    <string name="Add_Pair">Pair created</string>
+    <string name="Add_Error_Pair">Failed to add pair</string>
+    <string name="Registering_Pair">Registered pairs</string>
+    <string name="Delete_Pair">Delete</string>
+    <string name="Deleted_Pair">Deleted</string>
+    <string name="Error_Deleted_Pair">Failed to delete</string>
+    <string name="Close">Close</string>
+    <string name="Cansel">Cancel</string>
+    <string name="No_Pair">There are no current pairs Pair created</string>
+    <string name="Error_Create_setting_Button">Failed to create button</string>
 </resources>

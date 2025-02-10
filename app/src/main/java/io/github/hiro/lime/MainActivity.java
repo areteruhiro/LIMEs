@@ -101,14 +101,20 @@ public class MainActivity extends Activity {
             option.checked = Boolean.parseBoolean(customPrefs.getSetting(option.name, String.valueOf(option.checked)));
         }
 
+        // ScrollViewの作成と設定
+        ScrollView scrollView = new ScrollView(this);
+        // スクロールビュー自体のサイズを親いっぱいに設定
+        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
+        // LinearLayoutの設定変更（高さをWRAP_CONTENTに）
         LinearLayout layout = new LinearLayout(this);
         layout.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT));
+                LinearLayout.LayoutParams.WRAP_CONTENT)); // ここを変更
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(Utils.dpToPx(20, this), Utils.dpToPx(20, this), Utils.dpToPx(20, this), Utils.dpToPx(20, this));
-
-// Removed switchUnembedOptions section
 
         Switch switchRedirectWebView = null;
         for (LimeOptions.Option option : limeOptions.options) {
@@ -202,7 +208,7 @@ public class MainActivity extends Activity {
 
             layoutModifyRequest.addView(buttonLayout);
 
-            ScrollView scrollView = new ScrollView(this);
+
             scrollView.addView(layoutModifyRequest);
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this)
@@ -297,7 +303,6 @@ public class MainActivity extends Activity {
 
             layoutModifyResponse.addView(buttonLayout);
 
-            ScrollView scrollView = new ScrollView(this);
             scrollView.addView(layoutModifyResponse);
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this)
@@ -330,7 +335,6 @@ public class MainActivity extends Activity {
             layout.addView(button);
         }
 
-        ScrollView scrollView = new ScrollView(this);
         scrollView.addView(layout);
 
         ViewGroup rootView = findViewById(android.R.id.content);

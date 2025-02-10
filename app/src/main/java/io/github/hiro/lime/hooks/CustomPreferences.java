@@ -25,30 +25,36 @@ public class CustomPreferences {
         }
         settingsFile = new File(dir, SETTINGS_FILE);
     }
-
-    public void saveSetting(String key, String value) {
+    public boolean saveSetting(String key, String value) { // 戻り値をbooleanに変更
         Properties properties = new Properties();
+        boolean success = false;
 
         try (FileInputStream fis = new FileInputStream(settingsFile)) {
             properties.load(fis);
         } catch (IOException e) {
-
+            // ファイルが存在しない場合は新規作成
         }
 
         try (FileOutputStream fos = new FileOutputStream(settingsFile)) {
             properties.setProperty(key, value);
             properties.store(fos, null);
+            success = true;
         } catch (IOException e) {
-            if (settingsFile.exists()) {
-                settingsFile.delete();
-            }
             try {
+                if (settingsFile.exists()) {
+                    settingsFile.delete();
+                }
                 properties.setProperty(key, value);
-                properties.store(new FileOutputStream(settingsFile), null);
+                try (FileOutputStream retryFos = new FileOutputStream(settingsFile)) {
+                    properties.store(retryFos, null);
+                    success = true;
+                }
             } catch (IOException ex) {
                 ex.printStackTrace();
+                success = false;
             }
         }
+        return success; // 保存結果を返す
     }
     public String getSetting(String key, String defaultValue) {
         Properties properties = new Properties();

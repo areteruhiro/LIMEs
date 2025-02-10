@@ -147,5 +147,24 @@
     <string name="removeNaviOpenchat">刪除聊天清單中的開啟聊天圖標</string>
     <string name="removeNaviAlbum">移除聊天清單中的相簿圖標</string>
     <string name="removeSearchBar">刪除搜尋欄</string>
+    <string name="CallOpenApplication">在通話畫面上創建打開LINE的按鈕</string>
+    <string name="save_failed">保存設置失敗</string>
+    <string name="NotiFication_Setting">通知設置</string>
+    <string name="GroupName">群組名稱</string>
+    <string name="Add">添加</string>
+    <string name="User_name">用戶名</string>
+    <string name="Aleady_Pair">已經創建</string>
+    <string name="Add_Pair">已創建配對</string>
+    <string name="Add_Error_Pair">添加配對失敗</string>
+    <string name="Registering_Pair">註冊中的配對</string>
+    <string name="Delete_Pair">刪除</string>
+    <string name="Deleted_Pair">已刪除</string>
+    <string name="CansellNotification">禁用除特定用戶名和群組名以外的通知</string>
+    <string name="AddCopyAction">在通知中添加複製動作</string>
+    <string name="Error_Deleted_Pair">刪除失敗</string>
+    <string name="Close">關閉</string>
+    <string name="Cansel">取消</string>
+    <string name="No_Pair">目前沒有配對</string>
+    <string name="Error_Create_setting_Button">創建按鈕失敗</string>
 
 </resources>
