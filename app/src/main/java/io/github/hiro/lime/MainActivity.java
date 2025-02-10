@@ -36,40 +36,35 @@ import io.github.hiro.lime.hooks.CustomPreferences;
 
 public class MainActivity extends Activity {
     public LimeOptions limeOptions = new LimeOptions();
-    private static final int REQUEST_CODE = 100; // 権限リクエストの識別子
+    private static final int REQUEST_CODE = 100;
 
-    @Deprecated @Override
+    @Deprecated
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Android 11 (API 30) 以降の場合
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
-                // 全ファイルアクセス権限をリクエスト
                 Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
                 intent.setData(Uri.parse("package:" + getPackageName()));
                 startActivity(intent);
             } else {
-                initializeApp(); // 権限がある場合の初期化処理
+                initializeApp();
             }
-        }
-        // Android 10 (API 29) 以前の場合
-        else {
+        } else {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     != PackageManager.PERMISSION_GRANTED) {
-                // ストレージ権限をリクエスト
                 ActivityCompat.requestPermissions(
                         this,
                         new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                         REQUEST_CODE
                 );
             } else {
-                initializeApp(); // 権限がある場合の初期化処理
+                initializeApp();
             }
         }
     }
 
-    // パーミッションリクエスト結果の処理
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -83,12 +78,7 @@ public class MainActivity extends Activity {
         }
     }
 
-
-
-
     private void initializeApp() {
-
-
         CustomPreferences customPrefs;
         try {
             customPrefs = new CustomPreferences();
@@ -101,20 +91,17 @@ public class MainActivity extends Activity {
             option.checked = Boolean.parseBoolean(customPrefs.getSetting(option.name, String.valueOf(option.checked)));
         }
 
-        // ScrollViewの作成と設定
-        ScrollView scrollView = new ScrollView(this);
-        // スクロールビュー自体のサイズを親いっぱいに設定
-        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
+        ScrollView mainScrollView = new ScrollView(this);
+        mainScrollView.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // LinearLayoutの設定変更（高さをWRAP_CONTENTに）
-        LinearLayout layout = new LinearLayout(this);
-        layout.setLayoutParams(new LinearLayout.LayoutParams(
+        LinearLayout mainLayout = new LinearLayout(this);
+        mainLayout.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT)); // ここを変更
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(Utils.dpToPx(20, this), Utils.dpToPx(20, this), Utils.dpToPx(20, this), Utils.dpToPx(20, this));
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
+        mainLayout.setPadding(Utils.dpToPx(20, this), Utils.dpToPx(20, this), Utils.dpToPx(20, this), Utils.dpToPx(20, this));
 
         Switch switchRedirectWebView = null;
         for (LimeOptions.Option option : limeOptions.options) {
@@ -143,10 +130,10 @@ public class MainActivity extends Activity {
                 switchView.setEnabled(Boolean.parseBoolean(customPrefs.getSetting("redirect_webview", "false")));
             }
 
-            layout.addView(switchView);
+            mainLayout.addView(switchView);
         }
 
-// Modify Request Section
+        // Modify Request Section
         {
             LinearLayout layoutModifyRequest = new LinearLayout(this);
             layoutModifyRequest.setLayoutParams(new LinearLayout.LayoutParams(
@@ -205,26 +192,21 @@ public class MainActivity extends Activity {
             });
 
             buttonLayout.addView(pasteButton);
-
             layoutModifyRequest.addView(buttonLayout);
 
-
-            scrollView.addView(layoutModifyRequest);
+            ScrollView dialogScrollView = new ScrollView(this);
+            dialogScrollView.addView(layoutModifyRequest);
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                    .setTitle(R.string.modify_request);
-
-            builder.setView(scrollView);
-
-            builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
-                customPrefs.saveSetting("encoded_js_modify_request", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
-            });
-
-            builder.setNegativeButton(R.string.negative_button, null);
-
-            builder.setOnDismissListener(dialog -> {
-                editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP)));
-            });
+                    .setTitle(R.string.modify_request)
+                    .setView(dialogScrollView)
+                    .setPositiveButton(R.string.positive_button, (dialog, which) -> {
+                        customPrefs.saveSetting("encoded_js_modify_request", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
+                    })
+                    .setNegativeButton(R.string.negative_button, null)
+                    .setOnDismissListener(dialog -> {
+                        editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP)));
+                    });
 
             AlertDialog dialog = builder.create();
 
@@ -235,13 +217,12 @@ public class MainActivity extends Activity {
             params.topMargin = Utils.dpToPx(20, this);
             button.setLayoutParams(params);
             button.setText(R.string.modify_request);
-
             button.setOnClickListener(view -> dialog.show());
 
-            layout.addView(button);
+            mainLayout.addView(button);
         }
 
-// Modify Response Section
+        // Modify Response Section
         {
             LinearLayout layoutModifyResponse = new LinearLayout(this);
             layoutModifyResponse.setLayoutParams(new LinearLayout.LayoutParams(
@@ -300,25 +281,21 @@ public class MainActivity extends Activity {
             });
 
             buttonLayout.addView(pasteButton);
-
             layoutModifyResponse.addView(buttonLayout);
 
-            scrollView.addView(layoutModifyResponse);
+            ScrollView dialogScrollView = new ScrollView(this);
+            dialogScrollView.addView(layoutModifyResponse);
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this)
-                    .setTitle(R.string.modify_response);
-
-            builder.setView(scrollView);
-
-            builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
-                customPrefs.saveSetting("encoded_js_modify_response", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
-            });
-
-            builder.setNegativeButton(R.string.negative_button, null);
-
-            builder.setOnDismissListener(dialog -> {
-                editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP)));
-            });
+                    .setTitle(R.string.modify_response)
+                    .setView(dialogScrollView)
+                    .setPositiveButton(R.string.positive_button, (dialog, which) -> {
+                        customPrefs.saveSetting("encoded_js_modify_response", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
+                    })
+                    .setNegativeButton(R.string.negative_button, null)
+                .setOnDismissListener(dialog -> {
+                    editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP)));
+                });
 
             AlertDialog dialog = builder.create();
 
@@ -329,32 +306,23 @@ public class MainActivity extends Activity {
             params.topMargin = Utils.dpToPx(20, this);
             button.setLayoutParams(params);
             button.setText(R.string.modify_response);
-
             button.setOnClickListener(view -> dialog.show());
 
-            layout.addView(button);
+            mainLayout.addView(button);
         }
 
-        scrollView.addView(layout);
+        mainScrollView.addView(mainLayout);
 
         ViewGroup rootView = findViewById(android.R.id.content);
-        rootView.addView(scrollView);
+        rootView.addView(mainScrollView);
     }
-
-
 
     private void showModuleNotEnabledAlert() {
         new AlertDialog.Builder(this)
                 .setTitle(getString(R.string.module_not_enabled_title))
                 .setMessage(getString(R.string.module_not_enabled_text))
-                .setPositiveButton(getString(R.string.positive_button), new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialog, int which) {
-                        finishAndRemoveTask();
-                    }
-                })
+                .setPositiveButton(getString(R.string.positive_button), (dialog, which) -> finishAndRemoveTask())
                 .setCancelable(false)
                 .show();
     }
-
 }
