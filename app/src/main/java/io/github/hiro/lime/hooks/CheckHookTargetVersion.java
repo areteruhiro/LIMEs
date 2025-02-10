@@ -26,10 +26,13 @@ public class CheckHookTargetVersion implements IHook {
 
                         String versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
                         String versionNameStr = String.valueOf(versionName);
-                        if (!versionNameStr.equals("14.19.1")&&
-                                !versionNameStr.equals("14.21.1") &&
-                                !versionNameStr.equals("15.0.0")&&
-                                !versionNameStr.equals("15.1.0")) {
+                        if (
+!versionNameStr.equals("14.19.1")&&
+!versionNameStr.equals("14.21.1") &&
+!versionNameStr.equals("15.0.0")&&
+!versionNameStr.equals("15.1.0")) &&
+!versionNameStr.equals("15.1.1"))&&
+!versionNameStr.equals("15.1.2")) { 
                             Utils.addModuleAssetPath(context);
                             Toast.makeText(context.getApplicationContext(), context.getString(R.string.incompatible_version), Toast.LENGTH_SHORT).show();
                         }
