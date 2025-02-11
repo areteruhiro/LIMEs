@@ -490,92 +490,98 @@ public class UnsentRec implements IHook {
         }
     }
     private void canceled_message(XC_LoadPackage.LoadPackageParam loadPackageParam, Context context, SQLiteDatabase db1, SQLiteDatabase db2, Context moduleContext) {
-        Class<?> chatHistoryRequestClass = XposedHelpers.findClass("com.linecorp.line.chat.request.ChatHistoryRequest", loadPackageParam.classLoader);
-        XposedHelpers.findAndHookMethod(chatHistoryRequestClass, "getChatId", new XC_MethodHook() {
+        XposedHelpers.findAndHookMethod("com.linecorp.line.chatlist.view.fragment.ChatListPageFragment", loadPackageParam.classLoader, "onCreateView", LayoutInflater.class, ViewGroup.class, android.os.Bundle.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                String chatId = (String) param.getResult();
-                String canceledContent = getCanceledContentFromFile(context, moduleContext);
 
-                // チェックボックスの状態を確認
-                if (limeOptions.hide_canceled_message.checked) {
+                Class<?> chatHistoryRequestClass = XposedHelpers.findClass("com.linecorp.line.chat.request.ChatHistoryRequest", loadPackageParam.classLoader);
+                XposedHelpers.findAndHookMethod(chatHistoryRequestClass, "getChatId", new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        String chatId = (String) param.getResult();
+                        String canceledContent = getCanceledContentFromFile(context, moduleContext);
 
-                    // content と server_id, chat_id を取得 (複数レコードを想定)
-                    Cursor cursor = db1.rawQuery("SELECT content, server_id, chat_id, parameter FROM chat_history WHERE chat_id=?", new String[]{chatId});
-                    if (cursor != null) {
-                        try {
-                            while (cursor.moveToNext()) {
-                                String content = cursor.getString(0);
-                                String serverId = cursor.getString(1);
-                                String currentChatId = cursor.getString(2);
-                                String parameter = cursor.getString(3); // parameter カラムを取得
+                        // チェックボックスの状態を確認
+                        if (limeOptions.hide_canceled_message.checked) {
 
-                                XposedBridge.log("Content: " + content);
-                                XposedBridge.log("Server ID: " + serverId);
-                                XposedBridge.log("Current Chat ID: " + currentChatId);
-                                XposedBridge.log("Parameter: " + parameter); // parameter をログに出力
+                            // content と server_id, chat_id を取得 (複数レコードを想定)
+                            Cursor cursor = db1.rawQuery("SELECT content, server_id, chat_id, parameter FROM chat_history WHERE chat_id=?", new String[]{chatId});
+                            if (cursor != null) {
+                                try {
+                                    while (cursor.moveToNext()) {
+                                        String content = cursor.getString(0);
+                                        String serverId = cursor.getString(1);
+                                        String currentChatId = cursor.getString(2);
+                                        String parameter = cursor.getString(3); // parameter カラムを取得
 
-                                // parameter が「LIMEsUnsend」の場合のみ処理
-                                if ("LIMEsUnsend".equals(parameter)) {
-                                    if (currentChatId != null && !currentChatId.startsWith("/")) {
-                                        // chat_id の先頭に "/" を付ける
-                                        String updatedChatId = "/" + currentChatId;
+//                                        XposedBridge.log("Content: " + content);
+//                                        XposedBridge.log("Server ID: " + serverId);
+//                                        XposedBridge.log("Current Chat ID: " + currentChatId);
+//                                        XposedBridge.log("Parameter: " + parameter); // parameter をログに出力
 
-                                        // 更新クエリを実行 (parameter が「LIMEsUnsend」の場合のみ)
-                                        db1.execSQL("UPDATE chat_history SET chat_id=? WHERE chat_id=? AND server_id=? AND parameter=?",
-                                                new Object[]{updatedChatId, currentChatId, serverId, parameter});
-                                        XposedBridge.log("Updated Chat ID: " + updatedChatId);
+                                        // parameter が「LIMEsUnsend」の場合のみ処理
+                                        if ("LIMEsUnsend".equals(parameter)) {
+                                            if (currentChatId != null && !currentChatId.startsWith("/")) {
+                                                // chat_id の先頭に "/" を付ける
+                                                String updatedChatId = "/" + currentChatId;
+
+                                                // 更新クエリを実行 (parameter が「LIMEsUnsend」の場合のみ)
+                                                db1.execSQL("UPDATE chat_history SET chat_id=? WHERE chat_id=? AND server_id=? AND parameter=?",
+                                                        new Object[]{updatedChatId, currentChatId, serverId, parameter});
+                                                XposedBridge.log("Updated Chat ID: " + updatedChatId);
+                                            }
+                                        }
                                     }
+                                } finally {
+                                    cursor.close();
                                 }
+                            } else {
+
                             }
-                        } finally {
-                            cursor.close();
-                        }
-                    } else {
+                        } else {
 
-                    }
-                } else {
+                            // hide_canceled_message.checked が false の場合
+                            String chatId1 = "/" + (String) param.getResult();
+                            Cursor cursor = db1.rawQuery("SELECT content, server_id, chat_id, parameter FROM chat_history WHERE chat_id=?", new String[]{chatId1});
+                            if (cursor != null) {
+                                try {
+                                    while (cursor.moveToNext()) {
+                                        String content = cursor.getString(0);
+                                        String serverId = cursor.getString(1);
+                                        String currentChatId = cursor.getString(2);
+                                        String parameter = cursor.getString(3); // parameter カラムを取得
 
-                    // hide_canceled_message.checked が false の場合
-                    String chatId1 = "/" + (String) param.getResult();
-                    Cursor cursor = db1.rawQuery("SELECT content, server_id, chat_id, parameter FROM chat_history WHERE chat_id=?", new String[]{chatId1});
-                    if (cursor != null) {
-                        try {
-                            while (cursor.moveToNext()) {
-                                String content = cursor.getString(0);
-                                String serverId = cursor.getString(1);
-                                String currentChatId = cursor.getString(2);
-                                String parameter = cursor.getString(3); // parameter カラムを取得
+                                        XposedBridge.log("Content: " + content);
+                                        XposedBridge.log("Server ID: " + serverId);
+                                        XposedBridge.log("Current Chat ID: " + currentChatId);
+                                        XposedBridge.log("Parameter: " + parameter); // parameter をログに出力
 
-                                XposedBridge.log("Content: " + content);
-                                XposedBridge.log("Server ID: " + serverId);
-                                XposedBridge.log("Current Chat ID: " + currentChatId);
-                                XposedBridge.log("Parameter: " + parameter); // parameter をログに出力
+                                        // parameter が「LIMEsUnsend」の場合のみ処理
+                                        if ("LIMEsUnsend".equals(parameter)) {
+                                            if (currentChatId != null && currentChatId.startsWith("/")) {
+                                                // chat_id から "/" を除外する
+                                                String updatedChatId = currentChatId.substring(1);
 
-                                // parameter が「LIMEsUnsend」の場合のみ処理
-                                if ("LIMEsUnsend".equals(parameter)) {
-                                    if (currentChatId != null && currentChatId.startsWith("/")) {
-                                        // chat_id から "/" を除外する
-                                        String updatedChatId = currentChatId.substring(1);
-
-                                        // 更新クエリを実行 (parameter が「LIMEsUnsend」の場合のみ)
-                                        db1.execSQL("UPDATE chat_history SET chat_id=? WHERE chat_id=? AND server_id=? AND parameter=?",
-                                                new Object[]{updatedChatId, currentChatId, serverId, parameter});
-                                        XposedBridge.log("Updated Chat ID: " + updatedChatId);
+                                                // 更新クエリを実行 (parameter が「LIMEsUnsend」の場合のみ)
+                                                db1.execSQL("UPDATE chat_history SET chat_id=? WHERE chat_id=? AND server_id=? AND parameter=?",
+                                                        new Object[]{updatedChatId, currentChatId, serverId, parameter});
+                                                XposedBridge.log("Updated Chat ID: " + updatedChatId);
+                                            }
+                                        }
                                     }
+                                } finally {
+                                    cursor.close();
                                 }
+                            } else {
+                                XposedBridge.log("No rows found for chat_id: " + chatId);
                             }
-                        } finally {
-                            cursor.close();
                         }
-                    } else {
-                        XposedBridge.log("No rows found for chat_id: " + chatId);
                     }
-                }
+                });
             }
+
         });
     }
-
     private void updateMessageAsCanceled(SQLiteDatabase db1, String serverId, Context context, Context moduleContext) {
         // canceledContent をファイルから取得
         String canceledContent = getCanceledContentFromFile(context, moduleContext);
@@ -617,7 +623,7 @@ public class UnsentRec implements IHook {
                 values.put("type", "1");
                 values.put("chat_id", chatId);
                 values.put("from_mid", fromMid);
-                values.put("content", canceledContent); // ファイルから取得した内容に変更
+                values.put("content", canceledContent);
                 values.put("created_time", createdTime);
                 values.put("delivered_time", deliveredTime);
                 values.put("status", status);

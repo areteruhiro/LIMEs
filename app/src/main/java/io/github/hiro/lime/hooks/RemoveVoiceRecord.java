@@ -36,7 +36,7 @@ public class RemoveVoiceRecord implements IHook {
                                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                                     shouldProceed[0] = true;
                                     isDelayActive[0] = false;
-                                    XposedBridge.log("shouldProceed reset to true after 5 seconds");
+                                   // XposedBridge.log("shouldProceed reset to true after 5 seconds");
                                 }, 1000);
 
                             } else if (resourceId == 2132083032) {
