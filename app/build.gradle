@@ -14,6 +14,8 @@ android {
         multiDexEnabled true
         proguardFiles += 'proguard-rules.pro'
         buildConfigField 'String', 'HOOK_TARGET_VERSION', '"141910383"'
+        sourceCompatibility = '13'
+        targetCompatibility = '13'
     }
 
     signingConfigs {

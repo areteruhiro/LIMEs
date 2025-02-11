@@ -21,6 +21,7 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Environment;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -40,6 +41,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.text.SimpleDateFormat;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -67,6 +69,7 @@ public class ReadChecker implements IHook {
     private String currentGroupId = null;
 
     private static final int MAX_RETRY_COUNT = 3; // 最大リトライ回数
+
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.ReadChecker.checked) return;
@@ -333,6 +336,7 @@ public class ReadChecker implements IHook {
             return false;
         }
     }
+
     private int dpToPx(@NonNull Context context, float dp) {
         float density = context.getResources().getDisplayMetrics().density;
         return Math.round(dp * density);
@@ -763,11 +767,11 @@ public class ReadChecker implements IHook {
             return matcher.group(1);
 
 
-        } else {;
+        } else {
+            ;
             return null;
         }
     }
-
 
 
     private String queryDatabase(SQLiteDatabase db, String query, String... selectionArgs) {
@@ -814,131 +818,123 @@ public class ReadChecker implements IHook {
         //("Database initialized and read_message table created with ID column.");
     }
 
-
-    private void saveData(String SendUser, String groupId, String serverId, String SentUser, String groupName, String finalContent, String user_name, String timeFormatted, Context context) {
-
-        SendUser = (SendUser == null) ? "null" : SendUser;
-        groupId = (groupId == null) ? "null" : groupId;
-        serverId = (serverId == null) ? "null" : serverId;
-        SentUser = (SentUser == null) ? "null" : SentUser;
-        groupName = (groupName == null) ? "null" : groupName;
-        finalContent = (finalContent == null) ? "null" : finalContent;
-        user_name = (user_name == null) ? "null" : user_name;
-        timeFormatted = (timeFormatted == null) ? "null" : timeFormatted;
-
-
-        //("セーブメゾットまで処理されたよ: serverId=" + serverId + ", Sent_User=" + SentUser);
-
-        Cursor cursor = null;
-        try {
-            String checkQuery = "SELECT COUNT(*), user_name FROM read_message WHERE server_id=? AND Sent_User=?";
-            cursor = limeDatabase.rawQuery(checkQuery, new String[]{serverId, SentUser});
-
-            if (cursor.moveToFirst()) {
-                int count = cursor.getInt(0);
-                String existingUserName = cursor.getString(1);
-                String currentTime = getCurrentTime();
-
-
-                    //("insertNewRecordにデータを渡したよ");
-                    insertNewRecord(SendUser, groupId, serverId, SentUser, groupName, finalContent, "-" + user_name + " [" + currentTime + "]", timeFormatted);
-                }
-
-        } catch (Exception e) {
-            // 例外が発生した場合にログを出力
-            //("saveDataでエラーが発生しました: " + e.getMessage());
-        } finally {
-
-            if (cursor != null) {
-                cursor.close();
-            }
-        }
-    }
-
-
     private String getCurrentTime() {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
         return sdf.format(new Date());
     }
 
-    private void insertNewRecord(String SendUser , String groupId, String serverId, String SentUser , String groupName, String finalContent, String user_name, String timeFormatted) {
 
-        insertRecord(SendUser , groupId, serverId, SentUser , groupName, finalContent, user_name, timeFormatted);
+    private void saveData(String SendUser, String groupId, String serverId, String SentUser,
+                          String groupName, String finalContent, String user_name,
+                          String timeFormatted, Context context) {
+        final String currentTime = getCurrentTime();
+        final String formattedUserName = (user_name != null)
+                ? "-" + user_name + " [" + currentTime + "]"
+                : null;
+        try (Cursor cursor = limeDatabase.rawQuery
+                (
+                "SELECT COUNT(*) FROM read_message WHERE server_id=? AND user_name=?",
+                new String[]{serverId, user_name}
 
-        String selectQuery = "SELECT server_id, Sent_User, Send_User, group_name, content, created_time FROM read_message WHERE group_id = ? AND server_id != ?";
-        Cursor cursor = null;
+                )) {
+            if (cursor.moveToFirst() && cursor.getInt(0) == 0) {
+                insertNewRecord(
+                        SendUser,          
+                        groupId,           
+                        serverId,          
+                        SentUser,          
+                        groupName,         
+                        finalContent,      
+                        formattedUserName, 
+                        timeFormatted      
+                );
+            }
+        } catch (SQLException ignored) {
+        }
+    }
 
+
+    private void insertNewRecord(String SendUser, String groupId, String serverId,
+                                 String SentUser, String groupName, String finalContent,
+                                 String user_name, String timeFormatted) {
         try {
-            cursor = limeDatabase.rawQuery(selectQuery, new String[]{groupId, serverId});
+            limeDatabase.beginTransaction();
+            insertRecord(SendUser, groupId, serverId, SentUser, groupName,
+                    finalContent, user_name, timeFormatted);
+            copyRelatedRecords(groupId, serverId, SentUser, user_name);
 
+            limeDatabase.setTransactionSuccessful();
+        } finally {
+            limeDatabase.endTransaction();
+        }
+    }
+
+    private void copyRelatedRecords(String groupId, String sourceServerId,
+                                    String SentUser, String user_name) {
+        final String selectQuery =
+                "SELECT server_id, Sent_User, Send_User, group_name, content, created_time " +
+                        "FROM read_message " +
+                        "WHERE group_id = ? AND server_id != ?";
+
+        try (Cursor cursor = limeDatabase.rawQuery(selectQuery, new String[]{groupId, sourceServerId})) {
             while (cursor.moveToNext()) {
-                String otherServerId = cursor.getString(0);
-                String otherSentUser  = cursor.getString(1);
-                String otherSendUser  = cursor.getString(2);
-                String otherGroupName = cursor.getString(3);
-                String otherContent = cursor.getString(4);
-                String othertimeFormatted = cursor.getString(5);
-
-                if (otherSentUser  != null && SentUser  != null && !otherSentUser .equals(SentUser )) {
-
-                    String checkQuery = "SELECT COUNT(*) FROM read_message WHERE user_name = ? AND server_id = ?";
-                    Cursor checkCursor = null;
-
-                    try {
-                        checkCursor = limeDatabase.rawQuery(checkQuery, new String[]{user_name, otherServerId});
-                        if (checkCursor.moveToFirst() && checkCursor.getInt(0) == 0) {
-                            // user_name と server_id の組み合わせが存在しない場合、新しいレコードを挿入
-                            insertRecord(otherSendUser , groupId, otherServerId, SentUser , otherGroupName, otherContent, user_name, othertimeFormatted);
-                            XposedBridge.log("Copied record inserted: server_id=" + otherServerId + ", Sent_User=" + SentUser );
-                        }
-                    } catch (Exception e) {
-                        XposedBridge.log("Error during checking for duplicates: " + e.getMessage());
-                        e.printStackTrace();
-                    } finally {
-                        if (checkCursor != null) {
-                            checkCursor.close();
-                        }
+                final String otherServerId = cursor.getString(0);
+                final String otherSentUser = cursor.getString(1);
+                final String otherSendUser = cursor.getString(2);
+                final String otherGroupName = cursor.getString(3);
+                final String otherContent = cursor.getString(4);
+                final String otherTime = cursor.getString(5);
+                if (!SentUser.equals(otherSentUser)) {
+                    if (!isRecordExists(otherServerId, user_name)) {
+                        insertRecord(
+                                otherSendUser,
+                                groupId,
+                                otherServerId,
+                                SentUser,
+                                otherGroupName,
+                                otherContent,
+                                user_name,
+                                otherTime
+                        );
                     }
                 }
             }
-        } catch (Exception e) {
-            XposedBridge.log("Error during copying records: " + e.getMessage());
-            e.printStackTrace();
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
         }
     }
-    private void insertRecord(String SendUser, String groupId, String serverId, String SentUser, String groupName, String finalContent, String user_name, String timeFormatted) {
-        String sendUserValue = (SendUser == null) ? "(null)" : SendUser;
-        String checkQuery = "SELECT COUNT(*) FROM read_message WHERE user_name = ? AND server_id = ?";
-        Cursor cursor = limeDatabase.rawQuery(checkQuery, new String[]{user_name, serverId});
+
+    private boolean isRecordExists(String serverId, String user_name) {
+        final String checkQuery =
+                "SELECT COUNT(*) FROM read_message WHERE server_id = ? AND user_name = ?";
+
+        try (Cursor cursor = limeDatabase.rawQuery(checkQuery, new String[]{serverId, user_name})) {
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(0) > 0;
+            }
+        }
+        return false;
+    }
+    private void insertRecord(String SendUser, String groupId, String serverId,
+                              String SentUser, String groupName, String finalContent,
+                              String user_name, String timeFormatted) {
+        final String insertQuery =
+                "INSERT OR IGNORE INTO read_message(" +
+                        "    group_id, server_id, Sent_User, Send_User, " +
+                        "    group_name, content, user_name, created_time" +
+                        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         try {
-            if (cursor != null && cursor.moveToFirst() && cursor.getInt(0) == 0) {
-                String insertQuery = "INSERT INTO read_message(group_id, server_id, Sent_User, Send_User, group_name, content, user_name, created_time) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            limeDatabase.execSQL(insertQuery, new Object[]{
+                    groupId,
+                    serverId,
+                    SentUser,
+                    SendUser,
+                    groupName,
+                    finalContent,
+                    user_name,
+                    timeFormatted
+            });
+        } catch (SQLException ignored) {
 
-                limeDatabase.beginTransaction();
-                limeDatabase.execSQL(insertQuery, new Object[]{
-                        groupId,
-                        serverId,
-                        SentUser,
-                        sendUserValue,
-                        groupName,
-                        finalContent,
-                        user_name,
-                        timeFormatted
-                });
-                limeDatabase.setTransactionSuccessful();
-            } else {
-            }
-        } catch (SQLException e) {
-        } finally {
-            limeDatabase.endTransaction();
-            if (cursor != null) cursor.close();
         }
-
     }
 }
