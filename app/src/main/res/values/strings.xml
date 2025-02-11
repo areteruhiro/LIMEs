@@ -164,7 +164,7 @@
     <string name="CansellNotification">Disable notifications except for specific usernames and group names</string>
     <string name="AddCopyAction">Add copy action to notifications</string>
     <string name="CallOpenApplication">Create a button to open LINE on the call screen</string>
-    <string name="save_failed">Failed to save settings</string>
+    <string name="save_failed">Failed to save settings. \\n Please delete settings.properties</string>
     <string name="NotiFication_Setting">Notification settings</string>
     <string name="GroupName">Group name</string>
     <string name="Add">Add</string>
