@@ -22,7 +22,7 @@
 アプリがクラッシュする→トラッキング通信をブロックするを無効にしてください <br>
 ・LIMEの設定ボタンが作成されない <br>
 ・設定が保存されない場合 <br>
-/storage/emulated/0/Download/LimeBackup/Setting/settings.properties
+/storage/emulated/0/Download/LimeBackup/Setting/settings.properties を削除
 
 ## トーク履歴のリストアについて
 
