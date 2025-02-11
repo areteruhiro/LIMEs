@@ -3,6 +3,6 @@
     <dimen name="main_bnb_button_height">106dp</dimen>
     <dimen name="main_bnb_button_width">80dp</dimen>
     <dimen name="gnav_icon_offset">21dp</dimen>
-    <dimen name="dummy">10dp</dimen>
+    <dimen name="dummy">0dp</dimen>
     <dimen name="home_tab_v3_service_icon_size">45dp</dimen>
 </resources>

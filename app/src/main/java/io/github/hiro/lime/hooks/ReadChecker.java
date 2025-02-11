@@ -677,18 +677,22 @@ public class ReadChecker implements IHook {
 
             String timeFormatted = formatMessageTime(timeEpochStr);
 
-            String media = queryDatabaseWithRetry(db3, "SELECT parameter FROM chat_history WHERE server_id=?", serverId);
+            String media = queryDatabaseWithRetry(db3, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
             String mediaDescription = "";
 
-// "IMAGE"、"video"、または "sticker" が含まれているかどうかをチェック
-            if (media != null) {
-                if (media.contains("IMAGE")) {
-                    mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                } else if (media.contains("video")) {
-                    mediaDescription = moduleContext.getResources().getString(R.string.video);
-                } else if (media.contains("STKPKGID")) {
+            switch (media) {
+                case "7":
                     mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                }
+                    break;
+                case "1":
+                    mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                    break;
+                case "2":
+                    mediaDescription = moduleContext.getResources().getString(R.string.video);
+                    break;
+                default:
+                    mediaDescription = "";
+                    break;
             }
 
 // どれも含まれていない場合は "NoGetMedia" を設定
