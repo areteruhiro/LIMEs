@@ -18,8 +18,11 @@
  
 
 
-## 確認済みのバグやエラー
+# 確認済みのバグやエラー
 アプリがクラッシュする→トラッキング通信をブロックするを無効にしてください
+・LIMEの設定ボタンが作成されない
+・設定が保存されない場合
+/storage/emulated/0/Download/LimeBackup/Setting/settings.properties
 
 ## トーク履歴のリストアについて
 
