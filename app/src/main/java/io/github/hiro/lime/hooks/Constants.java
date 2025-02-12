@@ -87,22 +87,22 @@ public class Constants {
         MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
         MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
         Archive = new HookTarget("LB.S", "invokeSuspend");
-        NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
+        NOTIFICATION_READ_HOOK = new HookTarget("Ki1.f", "invokeSuspend");
         REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
         RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
-        RemoveVoiceRecord_Hook_a = new HookTarget("q.k", "run");
-//            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
+        RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+//        null cannot be cast to non-null type androidx.activity.result.ActivityResultCallback<O of androidx.activity.result.ActivityResultRegistry.dispatchResult>
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
         } else if (versionName.equals("15.1.1")) {
             USER_AGENT_HOOK = new HookTarget("qi1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
-            Archive = new HookTarget("LB.S", "invokeSuspend");
-            NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
+            Archive = new HookTarget("LB.U", "invokeSuspend");
+            NOTIFICATION_READ_HOOK = new HookTarget("Ki1.f", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
-            RemoveVoiceRecord_Hook_a = new HookTarget("q.k", "run");
+            RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
 //            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
 
@@ -111,11 +111,11 @@ public class Constants {
         WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
         MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
         MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
-        Archive = new HookTarget("LB.S", "invokeSuspend");
-        NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
+        Archive = new HookTarget("LB.U", "invokeSuspend");
+        NOTIFICATION_READ_HOOK = new HookTarget("Ki1.f", "invokeSuspend");
         REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
         RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
-        RemoveVoiceRecord_Hook_a = new HookTarget("q.k", "run");
+        RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
 //            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
     }
