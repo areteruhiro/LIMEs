@@ -58,6 +58,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new AgeCheckSkip(),
             new CallOpenApplication(),
             new SettingCrash(),
+            new BlockCheck()
     };
 
     @Override

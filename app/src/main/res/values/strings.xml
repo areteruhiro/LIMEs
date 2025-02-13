@@ -181,4 +181,5 @@
     <string name="No_Pair">There are no current pairs Pair created</string>
     <string name="Error_Create_setting_Button">Failed to create button</string>
     <string name="DarkkModSync">Sync Pure Dark Mode with the device\'s dark mode</string>
+    <string name="UserBlocked">It may have been blocked</string>
 </resources>
