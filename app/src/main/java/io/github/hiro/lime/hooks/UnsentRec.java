@@ -464,7 +464,7 @@ public class UnsentRec implements IHook {
                             break;
                     }
                 }
-                XposedBridge.log("S" + serverId);
+               // XposedBridge.log("S" + serverId);
                 // 新しいメソッドを呼び出して、メッセージを取り消し済みとして更新
 
                 String logEntry = (timeFormatted != null ? timeFormatted : "No Time: ")

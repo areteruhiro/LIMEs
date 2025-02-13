@@ -380,6 +380,21 @@ public class EmbedOptions implements IHook {
                                     layout.addView(CansellNotification_Button);
                                 }
 
+                                if (limeOptions.BlockCheck.checked) {
+
+                                    Button BlockCheck_Button = new Button(context);
+                                    BlockCheck_Button.setLayoutParams(buttonParams);
+                                    BlockCheck_Button.setText(moduleContext.getResources().getString(R.string.BlockCheck));
+                                    BlockCheck_Button.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            Blocklist(context, moduleContext);
+                                        }
+                                    });
+                                    layout.addView(BlockCheck_Button);
+                                }
+
+
                                 builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
@@ -1277,7 +1292,83 @@ public class EmbedOptions implements IHook {
             Toast.makeText(appContext,moduleContext.getResources().getString(R.string.Talk_Back_up_Error), Toast.LENGTH_SHORT).show();
         }
     }
+
+    private void Blocklist(Context context, Context moduleContext) {
+        SQLiteDatabase blockListDb = null;
+        SQLiteDatabase contactDb = null;
+
+        // データベースを開く
+        blockListDb = context.openOrCreateDatabase("events", Context.MODE_PRIVATE, null);
+        contactDb = context.openOrCreateDatabase("contact", Context.MODE_PRIVATE, null);
+
+        // SQLクエリを実行して、すべてのレコードを取得
+        Cursor cursor = blockListDb.rawQuery("SELECT contact_mid, year, month, day FROM contact_calendar_event", null);
+
+        // プロファイル名のリストを作成
+        List<String> profileNames = new ArrayList<>();
+
+        // カーソルが有効かどうかを確認
+        if (cursor != null) {
+            // カーソルをループして、各レコードを処理
+            while (cursor.moveToNext()) {
+                String contactMid = cursor.getString(cursor.getColumnIndex("contact_mid"));
+                String year = cursor.getString(cursor.getColumnIndex("year"));
+                String month = cursor.getString(cursor.getColumnIndex("month"));
+                String day = cursor.getString(cursor.getColumnIndex("day"));
+
+                // year, month, day がすべて null の場合
+                if (year == null && month == null && day == null) {
+                    // contactMidを使ってprofile_nameを取得
+                    Cursor nameCursor = contactDb.rawQuery("SELECT profile_name FROM contacts WHERE mid=?", new String[]{contactMid});
+
+                    // 名前を取得してリストに追加
+                    if (nameCursor != null) {
+                        while (nameCursor.moveToNext()) {
+                            String profileName = nameCursor.getString(nameCursor.getColumnIndex("profile_name"));
+                            profileNames.add(profileName); // リストに追加
+                        }
+                        // カーソルを閉じる
+                        nameCursor.close();
+                    }
+                }
+            }
+            // カーソルを閉じる
+            cursor.close();
+        }
+
+        // データベースを閉じる
+        if (blockListDb != null) {
+            blockListDb.close();
+        }
+        if (contactDb != null) {
+            contactDb.close();
+        }
+
+        // プロファイル名のリストが空でない場合、ポップアップを表示
+        if (!profileNames.isEmpty()) {
+            showProfileNamesDialog(context, profileNames);
+        } else {
+            XposedBridge.log("No profile names found.");
+        }
+    }
+
+    // プロファイル名を表示するダイアログを作成
+    private void showProfileNamesDialog(Context context, List<String> profileNames) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Profile Names");
+
+        // リストを文字列配列に変換
+        String[] namesArray = profileNames.toArray(new String[0]);
+
+        // リストをダイアログに設定
+        builder.setItems(namesArray, null);
+
+        // ダイアログを表示
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
     private void restoreChatHistory(Context context,Context moduleContext) {
+
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
         File backupDbFile = new File(backupDir, "naver_line_backup.db");
 
