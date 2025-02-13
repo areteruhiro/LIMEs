@@ -63,6 +63,13 @@ public class DarkColor implements IHook {
             }
             String resourceName = getViewResourceName(view);
           //  //XposedBridge.log("Resource Name: " + resourceName);
+            XposedBridge.log("Resource Name: " + resourceName);
+
+            // voipを含む場合は変更しない
+            if (resourceName.contains("voip")) {
+               // XposedBridge.log("Skipping background Color Change for Resource Name: " + resourceName);
+                return;
+            }
 
             Drawable background = view.getBackground();
 
