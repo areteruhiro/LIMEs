@@ -47,6 +47,12 @@ public class DarkColor implements IHook {
                 TextView textView = (TextView) view;
                 int currentTextColor = textView.getCurrentTextColor();
                 String resourceName = getViewResourceName(view); // リソース名を取得
+                // voipを含む場合は変更しない
+                if (resourceName.contains("voip")) {
+                    // XposedBridge.log("Skipping background Color Change for Resource Name: " + resourceName);
+                    return;
+                }
+
                 if (currentTextColor == Color.parseColor("#111111")) {
                     textView.setTextColor(Color.parseColor("#FFFFFF"));
 //XposedBridge.log("Changed Text Color of Resource Name: " + resourceName + " to #FFFFFF");
