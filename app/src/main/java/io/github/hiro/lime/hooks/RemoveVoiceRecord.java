@@ -57,6 +57,7 @@ public class RemoveVoiceRecord implements IHook {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+
                         if (shouldProceed[0]) {
                             param.setResult(null);
                         }

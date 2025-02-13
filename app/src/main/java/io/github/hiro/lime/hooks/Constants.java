@@ -25,7 +25,10 @@ public class Constants {
     static  HookTarget REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
     static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
     //BackEventCompat
-    static HookTarget RemoveVoiceRecord_Hook_a = new HookTarget("af0.e", "run");
+    static HookTarget  RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+
+    static HookTarget  SettingCrash_Hook = new HookTarget("pe0.p0", "A0");
+    static HookTarget  SettingCrash_Hook_Sub = new HookTarget("ie0.j", "");
     //有効から無効
 //    static HookTarget RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
 ////無効から有効
@@ -79,6 +82,8 @@ public class Constants {
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+            SettingCrash_Hook = new HookTarget("pe0.p0", "A0");
+            SettingCrash_Hook_Sub = new HookTarget("ie0.j", "");
 //            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
     } else if (versionName.equals("15.1.0")) {
@@ -91,6 +96,8 @@ public class Constants {
             REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+             SettingCrash_Hook = new HookTarget("af0.o0", "B0");
+            SettingCrash_Hook_Sub = new HookTarget("Te0.j", "");
 //        null cannot be cast to non-null type androidx.activity.result.ActivityResultCallback<O of androidx.activity.result.ActivityResultRegistry.dispatchResult>
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
         } else if (versionName.equals("15.1.1")) {
@@ -103,6 +110,8 @@ public class Constants {
             REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+            SettingCrash_Hook = new HookTarget("af0.o0", "B0");
+            SettingCrash_Hook_Sub = new HookTarget("Te0.j", "");
 //            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
 
@@ -116,6 +125,8 @@ public class Constants {
         REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
         RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
         RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+        SettingCrash_Hook = new HookTarget("af0.o0", "B0");
+        SettingCrash_Hook_Sub = new HookTarget("Te0.j", "");
 //            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
     }

@@ -56,8 +56,8 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new PhotoAddNotification(),
             new RemoveVoiceRecord(),
             new AgeCheckSkip(),
-           new CallOpenApplication(),
-
+            new CallOpenApplication(),
+new SettingCrash()
     };
 
     @Override
