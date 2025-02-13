@@ -35,8 +35,8 @@ public class SettingCrash implements IHook {
                         protected void beforeHookedMethod(MethodHookParam param) {
                             Object arg1 = param.args[0];
                             Object arg2 = param.args[1];
-                            XposedBridge.log("Arg1 type: " + arg1.getClass().getName());
-                            XposedBridge.log("Arg2 type: " + arg2.getClass().getName());
+//                            XposedBridge.log("Arg1 type: " + arg1.getClass().getName());
+//                            XposedBridge.log("Arg2 type: " + arg2.getClass().getName());
                         }
                     }
             );
