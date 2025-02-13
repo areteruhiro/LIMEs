@@ -4,7 +4,10 @@ import android.app.AndroidAppHelper;
 import android.app.Application;
 import android.content.Context;
 import android.media.MediaPlayer;
+import android.media.Ringtone;
+import android.media.RingtoneManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
 
@@ -22,7 +25,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 
 public class RingTone implements IHook {
-    private android.media.Ringtone ringtone = null;
+    private Ringtone ringtone = null;
     private boolean isPlaying = false;
     MediaPlayer mediaPlayer = null;
     @Override
@@ -33,21 +36,16 @@ public class RingTone implements IHook {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 Application appContext = (Application) param.thisObject;
-                if (appContext == null) {
-                    return;
-                }
-
+                if (appContext == null) return;
 
                 Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                         "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
+                // dial_toneの準備
                 String resourceNameA = "dial_tone";
                 int resourceIdA = moduleContext.getResources().getIdentifier(resourceNameA, "raw", "io.github.hiro.lime");
-
                 File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-                if (!ringtoneDir.exists()) {
-                    ringtoneDir.mkdirs();
-                }
+                if (!ringtoneDir.exists()) ringtoneDir.mkdirs();
                 File destFileA = new File(ringtoneDir, resourceNameA + ".wav");
 
                 if (!destFileA.exists()) {
@@ -77,11 +75,6 @@ public class RingTone implements IHook {
 
                                 String resourceName = "ringtone";
                                 int resourceId = moduleContext.getResources().getIdentifier(resourceName, "raw", "io.github.hiro.lime");
-
-                                File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-                                if (!ringtoneDir.exists()) {
-                                    ringtoneDir.mkdirs();
-                                }
                                 File destFile = new File(ringtoneDir, resourceName + ".wav");
 
                                 if (!destFile.exists()) {
@@ -100,21 +93,37 @@ public class RingTone implements IHook {
                                 if (paramValue.contains("type:NOTIFIED_RECEIVED_CALL,")) {
                                     XposedBridge.log(paramValue);
                                     if (context != null) {
-                                        // MediaPlayerが初期化されているか確認
+                                        if (isPlaying) {
+                                            Log.d("Xposed", "Already playing");
+                                            return;
+                                        }
+                                        Uri ringtoneUri = Uri.fromFile(destFile);
+                                        ringtone = RingtoneManager.getRingtone(context, ringtoneUri);
+
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                            if (ringtone != null) {
+
+                                                ringtone.setLooping(true);
+
+                                                ringtone.play();
+                                                isPlaying = true;
+                                            }
+                                        }
+
                                         if (mediaPlayer != null && mediaPlayer.isPlaying()) {
                                             Log.d("Xposed", "MediaPlayer is already playing. Not starting new playback.");
-                                            return; // すでに再生中の場合は新しい再生を開始しない
+                                            return;
                                         }
                                         if (mediaPlayer != null && mediaPlayer.isPlaying()) {
                                             return;
                                         }
-                                        Uri ringtoneUri = Uri.fromFile(destFile); 
                                         mediaPlayer = MediaPlayer.create(context, ringtoneUri);
-                                        mediaPlayer.setLooping(true); 
+                                        mediaPlayer.setLooping(true);
 
                                         if (mediaPlayer != null) {
                                             mediaPlayer.start();
                                             isPlaying = true;
+
                                         }
                                     }
                                 }
@@ -133,80 +142,104 @@ public class RingTone implements IHook {
                             Context context = AndroidAppHelper.currentApplication().getApplicationContext();
 
                             if (methodName.equals("getVoiceComplexityLevel")) {
+                                if (isPlaying) return;
+
+                                File destFile = new File(ringtoneDir, "ringtone.wav");
+                                Uri ringtoneUri = Uri.fromFile(destFile);
+                                ringtone = RingtoneManager.getRingtone(context, ringtoneUri);
+                                if (ringtone != null) {
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                        ringtone.setLooping(true);
+
+                                        ringtone.play();
+                                        isPlaying = true;
+                                    }
+                                }
                                 if (mediaPlayer != null && mediaPlayer.isPlaying()) {
                                     return;
-
                                 }
-                                XposedBridge.log("getVoiceComplexityLevel");
 
-                                File destFile = new File(ringtoneDir, "ringtone" + ".wav");
-                                Uri ringtoneUri = Uri.fromFile(destFile);
                                 mediaPlayer = MediaPlayer.create(context, ringtoneUri);
                                 mediaPlayer.setLooping(true);
                                 mediaPlayer.start();
                                 isPlaying = true;
                                 return;
                             }
-                            if (method.getName().equals("setServerConfig")) {
+
+                            if (methodName.equals("getVoiceComplexityLevel")) {
+
+
+
+                                }
+                            if (method.getName().equals("setServerConfig") || method.getName().equals("stop")) {
+                                if (ringtone != null && isPlaying) {
+                                    ringtone.stop();
+                                    ringtone = null;
+                                    isPlaying = false;
+                                }
                                 if (mediaPlayer != null && mediaPlayer.isPlaying()) {
                                     mediaPlayer.stop();
-                                    mediaPlayer.release(); 
-                                    mediaPlayer = null; 
+                                    mediaPlayer.release();
+                                    mediaPlayer = null;
                                 }
-                            }
 
-                            if (method.getName().equals("stop")) {
-                                if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                                    mediaPlayer.stop();
-                                    mediaPlayer.release(); 
-                                    mediaPlayer = null; 
-                                }
-                            }
-
-                            if( param.args != null && param.args.length > 0) {
+                            if (param.args != null && param.args.length > 0) {
                                 Object arg0 = param.args[0];
-                            if (method.getName().equals("ACTIVATED") )
-                                if ("ACTIVATED".equals(arg0)) {
+                                if (method.getName().equals("ACTIVATED") && "ACTIVATED".equals(arg0)) {
+                                    if (ringtone != null && isPlaying) {
+                                        ringtone.stop();
+                                        ringtone = null;
+                                        isPlaying = false;
+                                    }
                                     if (mediaPlayer != null && mediaPlayer.isPlaying()) {
                                         mediaPlayer.stop();
-                                        mediaPlayer.release(); 
-                                        mediaPlayer = null; 
+                                        mediaPlayer.release();
+                                        mediaPlayer = null;
                                     }
-                                }
                             }
                             if (method.getName().equals("processToneEvent")) {
-
                                 if (limeOptions.DialTone.checked) {
-                                    Log.d("Xposed", "MuteTone is enabled. Suppressing tone event.");
+                                    Log.d("Xposed", "Suppressing tone event");
                                     param.setResult(null);
                                     return;
                                 }
-                                if (limeOptions.MuteTone.checked) {
-                                    if (method.getName().equals("setTonePlayer")) {
-                                        param.setResult(null);
-                                    }
+                                if (limeOptions.MuteTone.checked && method.getName().equals("setTonePlayer")) {
+                                    param.setResult(null);
                                 }
 
-
-                                // 音楽が再生中の場合、MediaPlayerの再生を抑制
-                                if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                                    Log.d("Xposed", "音楽が再生中のため、MediaPlayerの再生を抑制します。");
-                                    return; // ここで何もしないことで再生を抑制
+                                if (isPlaying) {
+                                    Log.d("Xposed", "Suppressing playback");
+                                    return;
                                 }
 
+                                if (param.args != null && param.args.length > 0) {
 
-
-                                if( param.args != null && param.args.length > 0) {
-                                    Object arg0 = param.args[0];
                                     if (arg0.toString().contains("START")) {
                                         if (appContext != null) {
+
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                            if (ringtone != null && isPlaying) {
+                                                ringtone.stop();
+                                                ringtone = null;
+                                            }
+                                            Uri ringtoneUriA = Uri.fromFile(destFileA);
+                                            ringtone = RingtoneManager.getRingtone(appContext, ringtoneUriA);
+
+                                                if (ringtone != null) {
+
+                                                    ringtone.setLooping(true);
+                                                }
+                                                ringtone.play();
+                                                isPlaying = true;
+                                            }
+
                                             if (mediaPlayer != null) {
                                                 if (mediaPlayer.isPlaying()) {
                                                     Log.d("Xposed", "MediaPlayer is already playing. Stopping playback.");
                                                     mediaPlayer.stop();
                                                 }
-                                                mediaPlayer.release(); 
-                                                mediaPlayer = null; 
+                                                mediaPlayer.release();
+                                                mediaPlayer = null;
                                             }
                                         }
 
@@ -218,30 +251,14 @@ public class RingTone implements IHook {
                                             Log.d("Xposed", "Playing media.");
                                             mediaPlayer.start();
                                         }
+
+                                        }
+                                        }
                                     }
                                 }
                             }
-
-
-//
-//                            // 引数の値を取得してログに出力
-//                            StringBuilder argsLog = new StringBuilder("Method: " + methodName + ", Arguments: ");
-//                            for (Object arg : param.args) {
-//                                argsLog.append(arg).append(", ");
-//                            }
-//
-//                            // 最後のカンマとスペースを削除
-//                            if (argsLog.length() > 0) {
-//                                argsLog.setLength(argsLog.length() - 2);
-//                            }
-//
-//                            // XposedBridge.logを使用してログ出力
-//                            XposedBridge.log(argsLog.toString());
                         }
-
                     });
-
-
                 }
             }
         });
