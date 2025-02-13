@@ -1,5 +1,8 @@
 package io.github.hiro.lime.hooks;
 
+import static io.github.hiro.lime.Main.limeOptions;
+
+import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
@@ -9,6 +12,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
@@ -36,6 +40,9 @@ public class DarkColor implements IHook {
     }
     private void checkAndChangeTextColor(View view) {
         try {
+            if (limeOptions.DarkModSync.checked) {
+                if (!isDarkModeEnabled(view)) return;
+            }
             if (view instanceof TextView) {
                 TextView textView = (TextView) view;
                 int currentTextColor = textView.getCurrentTextColor();
@@ -44,40 +51,43 @@ public class DarkColor implements IHook {
                     textView.setTextColor(Color.parseColor("#FFFFFF"));
 //XposedBridge.log("Changed Text Color of Resource Name: " + resourceName + " to #FFFFFF");
                 } else {
-//XposedBridge.log("Text Color of Resource Name: " + resourceName + " is not #111111 (Current: " + convertToHexColor(currentTextColor) + ")");
+//XposedBridge.log("Text Color of Resource Name: " + resourceName + " is not #111111 (Current: " + (currentTextColor) + ")");
                 }}
         } catch (Resources.NotFoundException ignored) {
         }
     }
     private void checkAndChangeBackgroundColor(View view) {
         try {
+            if (limeOptions.DarkModSync.checked) {
+                if (!isDarkModeEnabled(view)) return;
+            }
             String resourceName = getViewResourceName(view);
-          //  XposedBridge.log("Resource Name: " + resourceName);
+          //  //XposedBridge.log("Resource Name: " + resourceName);
 
             Drawable background = view.getBackground();
 
             if (background != null) {
-               // XposedBridge.log("Background Class Name: " + background.getClass().getName());
+               // //XposedBridge.log("Background Class Name: " + background.getClass().getName());
                 if (background instanceof ColorDrawable) {
                     int currentColor = ((ColorDrawable) background).getColor();
                     if (currentColor == Color.parseColor("#111111") ||
                             currentColor == Color.parseColor("#1A1A1A") ||
                             currentColor == Color.parseColor("#FFFFFF")) {
                         ((ColorDrawable) background).setColor(Color.parseColor("#000000"));
-    //XposedBridge.log("Changed Background Color of Resource Name: " + resourceName + " to #000000");
+    ////XposedBridge.log("Changed Background Color of Resource Name: " + resourceName + " to #000000");
                     } else {
-    //XposedBridge.log("Background Color of Resource Name: " + resourceName + " is not #111111, #1A1A1A, or #FFFFFF (Current: " + convertToHexColor(currentColor) + ")");
+    ////XposedBridge.log("Background Color of Resource Name: " + resourceName + " is not #111111, #1A1A1A, or #FFFFFF (Current: " + convertToHexColor(currentColor) + ")");
                     }
                 } else if (background instanceof BitmapDrawable) {
-//XposedBridge.log("BitmapDrawable background, cannot change color directly.");
+////XposedBridge.log("BitmapDrawable background, cannot change color directly.");
                 } else {
-//XposedBridge.log("Unknown background type for Resource Name: " + resourceName + ", Class Name: " + background.getClass().getName());
+////XposedBridge.log("Unknown background type for Resource Name: " + resourceName + ", Class Name: " + background.getClass().getName());
                 }
             } else {
-              //  XposedBridge.log("Background is null for Resource Name: " + resourceName);
+              //  //XposedBridge.log("Background is null for Resource Name: " + resourceName);
             }
         } catch (Resources.NotFoundException ignored) {
-       //     XposedBridge.log("Resource name not found for View ID: " + view.getId());
+       //     //XposedBridge.log("Resource name not found for View ID: " + view.getId());
         }
     }
 
@@ -93,7 +103,14 @@ public class DarkColor implements IHook {
         }
         return "no_id";
     }
+    private boolean isDarkModeEnabled(View view) {
+        Configuration configuration = view.getContext().getResources().getConfiguration();
+        int currentNightMode = configuration.uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return currentNightMode == Configuration.UI_MODE_NIGHT_YES;
+    }
+
 }
+
 
 
 

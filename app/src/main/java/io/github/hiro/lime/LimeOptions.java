@@ -68,7 +68,7 @@ public class LimeOptions {
     public Option RemoveVoiceRecord = new Option("RemoveVoiceRecord", R.string.RemoveVoiceRecord, false);
     public Option AddCopyAction = new Option("AddCopyAction", R.string.AddCopyAction, false);
     public Option CallOpenApplication = new Option("CallOpenApplication", R.string.CallOpenApplication, true);
-
+    public Option DarkModSync = new Option("DarkModSync", R.string.DarkkModSync, true);
     public Option LINELabOnly = new Option("LINELabOnly", R.string.LINELabOnly, false);
     public Option[] options = {
             removeOption,
@@ -103,7 +103,7 @@ public class LimeOptions {
             callTone,
             MuteTone,
             DialTone,
-            DarkColor,
+            DarkColor,DarkModSync,
             MuteGroup,
             PhotoAddNotification,GroupNotification,CansellNotification,AddCopyAction,
             RemoveVoiceRecord,

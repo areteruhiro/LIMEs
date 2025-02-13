@@ -174,6 +174,7 @@
     <string name="Close">閉じる</string>
     <string name="Cansel">キャンセル</string>
     <string name="No_Pair">現在のペアはありません</string>
+    <string name="DarkkModSync">ピュアダークモードを端末のダークモードと同期させる</string>
 
 
 </resources>

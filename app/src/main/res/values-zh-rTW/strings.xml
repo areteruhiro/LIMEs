@@ -166,5 +166,6 @@
     <string name="Cansel">取消</string>
     <string name="No_Pair">目前沒有配對</string>
     <string name="Error_Create_setting_Button">創建按鈕失敗</string>
+    <string name="DarkkModSync">將純黑暗模式與設備的黑暗模式同步</string>
 
 </resources>

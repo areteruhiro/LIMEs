@@ -109,11 +109,12 @@ public class EmbedOptions implements IHook {
                             Switch photoAddNotificationView = null;
                             Switch ReadCheckerView = null;
                             Switch preventUnsendMessageView = null;
-
+                            Switch DarkModeView = null;
                             List<Switch> webViewChildSwitches = new ArrayList<>();
                             List<Switch> photoNotificationChildSwitches = new ArrayList<>();
                             List<Switch> ReadCheckerSwitches = new ArrayList<>();
                             List<Switch> preventUnsendMessageSwitches = new ArrayList<>();
+                            List<Switch> DarkModeSwitches = new ArrayList<>();
                             for (LimeOptions.Option option : limeOptions.options) {
                                 final String name = option.name;
 
@@ -165,6 +166,15 @@ public class EmbedOptions implements IHook {
                                         });
                                         break;
 
+                                    case "DarkColor":
+                                        DarkModeView = switchView;
+                                        DarkModeView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                                            for (Switch child : DarkModeSwitches) {
+                                                child.setEnabled(isChecked);
+                                                if (!isChecked) child.setChecked(false);
+                                            }
+                                        });
+                                        break;
 
                                     case "open_in_browser":
                                         webViewChildSwitches.add(switchView);
@@ -188,6 +198,11 @@ public class EmbedOptions implements IHook {
                                     case "ReadCheckerChatdataDelete":
                                         ReadCheckerSwitches.add(switchView);
                                         switchView.setEnabled(ReadCheckerView != null && ReadCheckerView.isChecked());
+                                        break;
+
+                                    case "DarkModSync":
+                                        DarkModeSwitches.add(switchView);
+                                        switchView.setEnabled(DarkModeView != null && DarkModeView.isChecked());
                                         break;
 
                                 }

@@ -96,7 +96,7 @@ public class Constants {
             MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
             Archive = new HookTarget("LB.U", "invokeSuspend");
-            NOTIFICATION_READ_HOOK = new HookTarget("Ki1.f", "invokeSuspend");
+            NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
@@ -110,7 +110,7 @@ public class Constants {
             MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
             Archive = new HookTarget("LB.U", "invokeSuspend");
-            NOTIFICATION_READ_HOOK = new HookTarget("Ki1.f", "invokeSuspend");
+            NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
@@ -125,7 +125,7 @@ public class Constants {
         MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
         MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
         Archive = new HookTarget("LB.U", "invokeSuspend");
-        NOTIFICATION_READ_HOOK = new HookTarget("Ki1.f", "invokeSuspend");
+        NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
         REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
         RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
         RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
