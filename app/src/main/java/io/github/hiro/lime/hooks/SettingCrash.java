@@ -21,7 +21,7 @@ public class SettingCrash implements IHook {
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         try {
 
-            Class<?> te0jClass = XposedHelpers.findClass(Constants.SettingCrash_Hook.className, lpparam.classLoader);
+            Class<?> te0jClass = XposedHelpers.findClass(Constants.SettingCrash_Hook_Sub.className, lpparam.classLoader);
             Class<?> integerClass = Integer.class;
 
             XposedHelpers.findAndHookMethod(
