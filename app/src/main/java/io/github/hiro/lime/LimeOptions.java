@@ -69,6 +69,7 @@ public class LimeOptions {
     public Option AddCopyAction = new Option("AddCopyAction", R.string.AddCopyAction, false);
     public Option CallOpenApplication = new Option("CallOpenApplication", R.string.CallOpenApplication, true);
     public Option DarkModSync = new Option("DarkModSync", R.string.DarkkModSync, true);
+    public Option BlockCheck = new Option("BlockCheck", R.string.BlockCheck, true);
     public Option LINELabOnly = new Option("LINELabOnly", R.string.LINELabOnly, false);
     public Option[] options = {
             removeOption,
@@ -108,7 +109,8 @@ public class LimeOptions {
             PhotoAddNotification,GroupNotification,CansellNotification,AddCopyAction,
             RemoveVoiceRecord,
             AgeCheckSkip,
-            CallOpenApplication
+            CallOpenApplication,
+            BlockCheck
 
     };
 

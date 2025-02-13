@@ -167,6 +167,7 @@
     <string name="No_Pair">目前沒有配對</string>
     <string name="Error_Create_setting_Button">創建按鈕失敗</string>
     <string name="DarkkModSync">將純黑暗模式與設備的黑暗模式同步</string>
-    <string name="UserBlocked">ブロックされた可能性があります</string>
+    <string name="UserBlocked">可能已被封鎖</string>
+    <string name="BlockCheck">區塊監控[可能有誤檢知]</string>
 
 </resources>

@@ -175,7 +175,8 @@
     <string name="Cansel">キャンセル</string>
     <string name="No_Pair">現在のペアはありません</string>
     <string name="DarkkModSync">ピュアダークモードを端末のダークモードと同期させる</string>
-    <string name="UserBlocked">可能已被封鎖</string>
+    <string name="UserBlocked">ブロック可能性有</string>
+    <string name="BlockCheck">ブロック監視[誤検知可能性有]</string>
 
 
 </resources>
