@@ -183,4 +183,6 @@
     <string name="DarkkModSync">Sync Pure Dark Mode with the device\'s dark mode</string>
     <string name="UserBlocked">It may have been blocked</string>
     <string name="BlockCheck">Block monitoring [possible false detection]</string>
+    <string name="SettingClick">LsPatch用設定のホームボタンを開く</string>
+    <string name="UnsendFix">動画送信中にタスクを切るとチャットリストが表示されないのを修正(動作が遅くなります)</string>
 </resources>

@@ -169,5 +169,6 @@
     <string name="DarkkModSync">將純黑暗模式與設備的黑暗模式同步</string>
     <string name="UserBlocked">可能已被封鎖</string>
     <string name="BlockCheck">區塊監控[可能有誤檢知]</string>
+    <string name="UnsendFix">動画送信中にタスクを切るとチャットリストが表示されないのを修正(動作が遅くなります)</string>
 
 </resources>

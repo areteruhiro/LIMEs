@@ -70,7 +70,8 @@ public class LimeOptions {
     public Option CallOpenApplication = new Option("CallOpenApplication", R.string.CallOpenApplication, true);
     public Option DarkModSync = new Option("DarkModSync", R.string.DarkkModSync, true);
     public Option BlockCheck = new Option("BlockCheck", R.string.BlockCheck, true);
-    public Option LINELabOnly = new Option("LINELabOnly", R.string.LINELabOnly, false);
+    public Option SettingClick = new Option("SettingClick", R.string.SettingClick, false);
+    public Option UnsendFix = new Option("UnsendFix", R.string.UnsendFix, false);
     public Option[] options = {
             removeOption,
             removeVoom,
@@ -92,7 +93,7 @@ public class LimeOptions {
             redirectWebView,
             openInBrowser,
             preventMarkAsRead,
-            preventUnsendMessage,hide_canceled_message,
+            preventUnsendMessage,hide_canceled_message,UnsendFix,
             sendMuteMessage,
             Archived,
             ReadChecker,MySendMessage,ReadCheckerChatdataDelete,
@@ -110,7 +111,7 @@ public class LimeOptions {
             RemoveVoiceRecord,
             AgeCheckSkip,
             CallOpenApplication,
-            BlockCheck
+            BlockCheck,SettingClick
 
     };
 

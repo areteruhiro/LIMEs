@@ -19,6 +19,7 @@ public class SettingCrash implements IHook {
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+        if (!limeOptions.SettingClick.checked) return;
         try {
 
             Class<?> te0jClass = XposedHelpers.findClass(Constants.SettingCrash_Hook_Sub.className, lpparam.classLoader);

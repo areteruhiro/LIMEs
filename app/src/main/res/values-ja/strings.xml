@@ -177,6 +177,7 @@
     <string name="DarkkModSync">ピュアダークモードを端末のダークモードと同期させる</string>
     <string name="UserBlocked">ブロック可能性有</string>
     <string name="BlockCheck">ブロック監視[誤検知可能性有]</string>
+    <string name="UnsendFix">動画送信中にタスクを切るとチャットリストが表示されないのを修正(動作が遅くなります)</string>
 
 
 </resources>
