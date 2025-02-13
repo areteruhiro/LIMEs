@@ -21,7 +21,7 @@ public class RedirectWebView implements IHook {
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
-        if (!limeOptions.redirectWebView.checked) return;
+        //if (!limeOptions.redirectWebView.checked) return;
 
         XposedHelpers.findAndHookMethod(
                 loadPackageParam.classLoader.loadClass("jp.naver.line.android.activity.iab.InAppBrowserActivity"),
@@ -49,17 +49,17 @@ public class RedirectWebView implements IHook {
 
                             Uri uri = Uri.parse(currentUrl);
 
-                            if (limeOptions.openInBrowser.checked) {
+//                            if (limeOptions.openInBrowser.checked) {
                                 Intent intent = new Intent(Intent.ACTION_VIEW);
                                 intent.setData(uri);
                                 intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                                 activity.startActivity(intent);
-                            } else {
-                                CustomTabsIntent tabsIntent = new CustomTabsIntent.Builder()
-                                        .setShowTitle(true)
-                                        .build();
-                                tabsIntent.launchUrl(activity, uri);
-                            }
+//                            } else {
+//                                CustomTabsIntent tabsIntent = new CustomTabsIntent.Builder()
+//                                        .setShowTitle(true)
+//                                        .build();
+//                                tabsIntent.launchUrl(activity, uri);
+//                            }
 
                             activity.finish();
                         }
