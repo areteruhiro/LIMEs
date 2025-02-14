@@ -156,12 +156,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
         if (limeOptions.RemoveVoiceRecord.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_normal", xModuleResources.fwd(R.drawable.empty_drawable));
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_pressed", xModuleResources.fwd(R.drawable.empty_drawable));
-            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_ic_alert_x", xModuleResources.fwd(R.drawable.empty_drawable));
-            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_ic_alert_overlay_x", xModuleResources.fwd(R.drawable.empty_drawable));
-            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_chatroom_layer_x", xModuleResources.fwd(R.drawable.empty_drawable));
-            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chatroom_layer_x", xModuleResources.fwd(R.drawable.empty_drawable));
-            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chatroom_layer_x_oa", xModuleResources.fwd(R.drawable.empty_drawable));
-
+        
         }
         if (limeOptions.removeServiceLabels.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "home_tab_v3_service_icon_size", xModuleResources.fwd(R.dimen.home_tab_v3_service_icon_size));
