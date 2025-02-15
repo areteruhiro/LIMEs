@@ -30,11 +30,11 @@ public class DarkColor implements IHook {
         if (!limeOptions.DarkColor.checked) return;
 
 
-        // 既存のフックに再帰的処理を追加
         XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader,
                 "onAttachedToWindow", new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
+
                         applyDarkThemeRecursive((View) param.thisObject);
                     }
                 });
@@ -66,7 +66,9 @@ public class DarkColor implements IHook {
                     resName,
                     view.getContentDescription()
             );
-
+            if (limeOptions.DarkModSync.checked) {
+                if (!isDarkModeEnabled(view)) return;
+            }
             String contentDescription = String.valueOf(view.getContentDescription()); // null安全な変換
             if ("no_id".equals(resName) && "null".equals(contentDescription)) {
                 return;
