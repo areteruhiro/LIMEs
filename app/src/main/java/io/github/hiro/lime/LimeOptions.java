@@ -34,7 +34,7 @@ public class LimeOptions {
 
     public Option removeReplyMute = new Option("remove_reply_mute", R.string.switch_remove_reply_mute, true);
     public Option redirectWebView = new Option("redirect_webview", R.string.switch_redirect_webview, true);
-    public Option openInBrowser = new Option("open_in_browser", R.string.switch_open_in_browser, false);
+    public Option openInBrowser = new Option("open_in_browser", R.string.switch_open_in_browser, true);
     public Option preventMarkAsRead = new Option("prevent_mark_as_read", R.string.switch_prevent_mark_as_read, false);
     public Option preventUnsendMessage = new Option("prevent_unsend_message", R.string.switch_prevent_unsend_message, false);
     public Option sendMuteMessage = new Option("mute_message", R.string.switch_send_mute_message, false);
@@ -90,8 +90,8 @@ public class LimeOptions {
             removeNaviAlbum,
             removeSearchBar,
             removeReplyMute,
-            redirectWebView,
-            openInBrowser,
+//            redirectWebView,
+//            openInBrowser,
             preventMarkAsRead,
             preventUnsendMessage,
             sendMuteMessage,
