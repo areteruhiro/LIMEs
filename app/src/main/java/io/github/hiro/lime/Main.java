@@ -64,6 +64,14 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     @Override
     public void initZygote(@NonNull StartupParam startupParam) {
         modulePath = startupParam.modulePath;
+        if (customPreferences == null) {
+            try {
+                customPreferences = new CustomPreferences();
+                createDefaultSettings();
+            } catch (Exception e) {
+                XposedBridge.log("Failed to initialize preferences: " + e);
+            }
+        }
     }
 
     private void initializePreferences() {

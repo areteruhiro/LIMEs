@@ -34,12 +34,15 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -486,8 +489,6 @@ public class ReadChecker implements IHook {
             //("limeDatabaseがnullです。");
             return Collections.emptyList();
         }
-
-        // ID カラムで昇順ソートするクエリ
         String query = "SELECT user_name, ID, Sent_User FROM read_message WHERE server_id=? ORDER BY CAST(ID AS INTEGER) ASC";
         Cursor cursor = limeDatabase.rawQuery(query, new String[]{serverId});
         List<String> userNames = new ArrayList<>();
@@ -495,8 +496,8 @@ public class ReadChecker implements IHook {
 
         while (cursor.moveToNext()) {
             String userNameStr = cursor.getString(0);
-            int id = cursor.getInt(1); // ID を取得
-            String SentUser = cursor.getString(2); // Sent_User を取得
+            int id = cursor.getInt(1);
+            String SentUser = cursor.getString(2);
 
             if (userNameStr != null) {
                 // //("取得したuser_name: " + userNameStr);
@@ -636,86 +637,81 @@ public class ReadChecker implements IHook {
     }
 
     private void fetchDataAndSave(SQLiteDatabase db3, SQLiteDatabase db4, String paramValue, Context context, Context moduleContext) {
-        //("fetchDataAndSave");
-
         String serverId = null;
         String SentUser = null;
 
         try {
             serverId = extractServerId(paramValue, context);
             SentUser = extractSentUser(paramValue);
-            if (serverId == null || SentUser == null) {
-                return;
-            }
-
-            // データベースが利用可能になるまで待機して再試行
+            if (serverId == null || SentUser == null) return;
             String SendUser = queryDatabaseWithRetry(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
-            if (SendUser == null) {
-                SendUser = "null";
-            }
-
             String groupId = queryDatabaseWithRetry(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
-            if (groupId == null) {
-                groupId = "null";
-            }
-
             String groupName = queryDatabaseWithRetry(db3, "SELECT name FROM groups WHERE id=?", groupId);
-            if (groupName == null) {
-                groupName = "null";
-            }
-
             String content = queryDatabaseWithRetry(db3, "SELECT content FROM chat_history WHERE server_id=?", serverId);
-            if (content == null) {
-                content = "null";
-            }
-
-            String user_name = queryDatabaseWithRetry(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
-            if (user_name == null) {
-                user_name = "null";
-            }
-
+            String name = queryDatabaseWithRetry(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
             String timeEpochStr = queryDatabaseWithRetry(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
-            if (timeEpochStr == null) {
-                timeEpochStr = "null";
-            }
-
-            String timeFormatted = formatMessageTime(timeEpochStr);
-
             String media = queryDatabaseWithRetry(db3, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
             String mediaDescription = "";
+            boolean mediaError = false;
 
-            switch (media) {
-                case "7":
-                    mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                    break;
-                case "1":
-                    mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                    break;
-                case "2":
-                    mediaDescription = moduleContext.getResources().getString(R.string.video);
-                    break;
-                default:
-                    mediaDescription = "";
-                    break;
+            if (media != null) {
+                switch (media) {
+                    case "7":
+                        mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                        break;
+                    case "1":
+                        mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                        break;
+                    case "2":
+                        mediaDescription = moduleContext.getResources().getString(R.string.video);
+                        break;
+                    default:
+                        mediaError = true;
+                        break;
+                }
+            } else {
+                mediaError = true;
             }
 
-// どれも含まれていない場合は "NoGetMedia" を設定
-            if (mediaDescription.isEmpty()) {
-                mediaDescription = "NoGetMedia";
+            if (mediaError) {
+                mediaDescription = "NoGetError";
+                createErrorFile(context, serverId, media); // エラーファイル作成
             }
 
-            String finalContent = (content != null && !content.isEmpty() && !content.equals("null"))
-                    ? content
-                    : mediaDescription;
-
-            //("セーブメゾットに渡したよ" + serverId + ", Sent_User: " + SentUser);
-            saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, user_name, timeFormatted, context);
+            String finalContent = determineFinalContent(content, mediaDescription);
+            String timeFormatted = formatMessageTime (timeEpochStr);
+            saveData(SendUser , groupId, serverId, SentUser , groupName, finalContent, name, timeFormatted, context);
 
         } catch (Resources.NotFoundException e) {
             throw new RuntimeException(e);
         }
     }
 
+    private String determineFinalContent(String content, String mediaDescription) {
+        if (content != null && !content.isEmpty() && !content.equals("null")) {
+            return content;
+        } else {
+            return mediaDescription;
+        }
+    }
+
+    private void createErrorFile(Context context, String serverId, String mediaValue) {
+        File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        File limeBackupDir = new File(downloadsDir, "LimeBackup");
+        if (!limeBackupDir.exists()) {
+            limeBackupDir.mkdirs();
+        }
+        File errorFile = new File(limeBackupDir, "no_get.txt");
+        try (FileWriter fw = new FileWriter(errorFile, true);
+             BufferedWriter bw = new BufferedWriter(fw);
+             PrintWriter pw = new PrintWriter(bw)) {
+            String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
+            String errorMsg = String.format(Locale.getDefault(), "[%s] ServerID: %s, Media Value: %s", timestamp, serverId, mediaValue);
+            pw.println(errorMsg);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private String queryDatabaseWithRetry(SQLiteDatabase db, String query, String... params) {
         final int RETRY_DELAY_MS = 100;
@@ -825,43 +821,42 @@ public class ReadChecker implements IHook {
 
 
     private void saveData(String SendUser, String groupId, String serverId, String SentUser,
-                          String groupName, String finalContent, String user_name,
+                          String groupName, String finalContent, String name,
                           String timeFormatted, Context context) {
         final String currentTime = getCurrentTime();
-        final String formattedUserName = (user_name != null)
-                ? "-" + user_name + " [" + currentTime + "]"
-                : null;
-        try (Cursor cursor = limeDatabase.rawQuery
-                (
-                "SELECT COUNT(*) FROM read_message WHERE server_id=? AND user_name=?",
-                new String[]{serverId, user_name}
 
-                )) {
+        // 修正箇所: nameがnullの場合のデフォルト値を設定
+        final String safeName = (name != null && !name.equals("null")) ? name : "Unknown";
+        final String formattedUserName = "-" + safeName + " [" + currentTime + "]";
+
+        try (Cursor cursor = limeDatabase.rawQuery(
+                "SELECT COUNT(*) FROM read_message WHERE server_id=? AND user_name=?",
+                new String[]{serverId, formattedUserName} // 検索条件もformattedUserNameに変更
+        )) {
             if (cursor.moveToFirst() && cursor.getInt(0) == 0) {
                 insertNewRecord(
-                        SendUser,          
-                        groupId,           
-                        serverId,          
-                        SentUser,          
-                        groupName,         
-                        finalContent,      
-                        formattedUserName, 
-                        timeFormatted      
+                        SendUser,
+                        groupId,
+                        serverId,
+                        SentUser,
+                        groupName,
+                        finalContent,
+                        formattedUserName, // フォーマット済みの値を渡す
+                        timeFormatted
                 );
             }
         } catch (SQLException ignored) {
         }
     }
 
-
     private void insertNewRecord(String SendUser, String groupId, String serverId,
                                  String SentUser, String groupName, String finalContent,
-                                 String user_name, String timeFormatted) {
+                                 String formattedUserName, String timeFormatted) {
         try {
             limeDatabase.beginTransaction();
             insertRecord(SendUser, groupId, serverId, SentUser, groupName,
-                    finalContent, user_name, timeFormatted);
-            copyRelatedRecords(groupId, serverId, SentUser, user_name);
+                    finalContent, formattedUserName, timeFormatted);
+            copyRelatedRecords(groupId, serverId, SentUser, formattedUserName);
 
             limeDatabase.setTransactionSuccessful();
         } finally {
@@ -884,8 +879,10 @@ public class ReadChecker implements IHook {
                 final String otherGroupName = cursor.getString(3);
                 final String otherContent = cursor.getString(4);
                 final String otherTime = cursor.getString(5);
+
                 if (!SentUser.equals(otherSentUser)) {
-                    if (!isRecordExists(otherServerId, user_name)) {
+                    String originalName = extractOriginalName(user_name);
+                    if (originalName != null && !isRecordExists(otherServerId, originalName)) {
                         insertRecord(
                                 otherSendUser,
                                 groupId,
@@ -902,16 +899,35 @@ public class ReadChecker implements IHook {
         }
     }
 
-    private boolean isRecordExists(String serverId, String user_name) {
-        final String checkQuery =
-                "SELECT COUNT(*) FROM read_message WHERE server_id = ? AND user_name = ?";
-
-        try (Cursor cursor = limeDatabase.rawQuery(checkQuery, new String[]{serverId, user_name})) {
-            if (cursor.moveToFirst()) {
-                return cursor.getInt(0) > 0;
-            }
+    private String extractOriginalName(String formattedUserName) {
+        if (formattedUserName == null || formattedUserName.isEmpty()) {
+            return null;
         }
-        return false;
+        Pattern pattern = Pattern.compile("-(.*?)\\s*\\[");
+        Matcher matcher = pattern.matcher(formattedUserName);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    private boolean isRecordExists(String serverId, String originalName) {
+        if (originalName == null) return false;
+
+        final String checkQuery =
+                "SELECT COUNT(*) FROM read_message " +
+                        "WHERE server_id = ? AND user_name LIKE ? ESCAPE '!'";
+
+        String escapedName = escapeForLike(originalName);
+        String namePattern = "%-" + escapedName + "%";
+
+        try (Cursor cursor = limeDatabase.rawQuery(checkQuery, new String[]{serverId, namePattern})) {
+            return cursor.moveToFirst() && cursor.getInt(0) > 0;
+        }
+    }
+
+    private String escapeForLike(String value) {
+        return value.replace("!", "!!")
+                .replace("%", "!%")
+                .replace("_", "!_")
+                .replace("[", "![");
     }
     private void insertRecord(String SendUser, String groupId, String serverId,
                               String SentUser, String groupName, String finalContent,
@@ -937,4 +953,5 @@ public class ReadChecker implements IHook {
 
         }
     }
+
 }

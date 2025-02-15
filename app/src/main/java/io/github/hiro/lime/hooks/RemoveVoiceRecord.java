@@ -17,40 +17,40 @@ public class RemoveVoiceRecord implements IHook {
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.RemoveVoiceRecord.checked) return;
         final boolean[] shouldProceed = {true};
-         final boolean[] isDelayActive = {false};
-            XposedHelpers.findAndHookMethod(
-                    "android.content.res.Resources",
-                    loadPackageParam.classLoader,
-                    "getString",
-                    int.class,
-                    new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                            int resourceId = (int) param.args[0];
+        final boolean[] isDelayActive = {false};
 
-                            if (resourceId == 2132085530) {
+        XposedHelpers.findAndHookMethod(
+                "android.content.res.Resources",
+                loadPackageParam.classLoader,
+                "getString",
+                int.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        int resourceId = (int) param.args[0];
+                        Resources resources = (Resources) param.thisObject;
+
+                        try {
+
+                            String resourceName = resources.getResourceName(resourceId);
+                            String entryName = resourceName.substring(resourceName.lastIndexOf('/') + 1);
+                            if ("chathistory_attach_dialog_label_file".equals(entryName)) {
                                 shouldProceed[0] = false;
                                 isDelayActive[0] = true;
-                               // XposedBridge.log("shouldProceed set to false");
-
                                 new Handler(Looper.getMainLooper()).postDelayed(() -> {
                                     shouldProceed[0] = true;
                                     isDelayActive[0] = false;
-                                   // XposedBridge.log("shouldProceed reset to true after 5 seconds");
                                 }, 1000);
-
-                            } else if (resourceId == 2132083032) {
+                            } else if ("access_chat_button_voicemessage".equals(entryName)) {
                                 if (!isDelayActive[0]) {
                                     shouldProceed[0] = true;
-                                 //   XposedBridge.log("true");
-//                                } else {
-//                                    XposedBridge.log("trueトリガーを無視（遅延中）");
-//                                }
                                 }
                             }
+                        } catch (Resources.NotFoundException ignored) {
                         }
                     }
-            );
+                }
+        );
         XposedBridge.hookAllMethods(
                 loadPackageParam.classLoader.loadClass(Constants.RemoveVoiceRecord_Hook_a.className),
                 "run",

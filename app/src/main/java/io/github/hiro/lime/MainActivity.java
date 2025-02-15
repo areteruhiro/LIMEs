@@ -49,7 +49,11 @@ public class MainActivity extends Activity {
                 intent.setData(Uri.parse("package:" + getPackageName()));
                 startActivity(intent);
             } else {
-                initializeApp();
+                try {
+                    initializeApp();
+                } catch (PackageManager.NameNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
             }
         } else {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -60,7 +64,11 @@ public class MainActivity extends Activity {
                         REQUEST_CODE
                 );
             } else {
-                initializeApp();
+                try {
+                    initializeApp();
+                } catch (PackageManager.NameNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
             }
         }
     }
@@ -70,7 +78,11 @@ public class MainActivity extends Activity {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                initializeApp();
+                try {
+                    initializeApp();
+                } catch (PackageManager.NameNotFoundException e) {
+                    throw new RuntimeException(e);
+                }
             } else {
                 // パーミッションが拒否された場合の処理
                 Toast.makeText(this, "ストレージアクセス権限が必要です", Toast.LENGTH_SHORT).show();
@@ -78,14 +90,9 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void initializeApp() {
+    private void initializeApp() throws PackageManager.NameNotFoundException {
         CustomPreferences customPrefs;
-        try {
-            customPrefs = new CustomPreferences();
-        } catch (PackageManager.NameNotFoundException e) {
-            showModuleNotEnabledAlert();
-            return;
-        }
+        customPrefs = new CustomPreferences();
 
         for (LimeOptions.Option option : limeOptions.options) {
             option.checked = Boolean.parseBoolean(customPrefs.getSetting(option.name, String.valueOf(option.checked)));

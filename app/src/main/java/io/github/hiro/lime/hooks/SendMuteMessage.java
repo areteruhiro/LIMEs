@@ -44,36 +44,55 @@ public class SendMuteMessage implements IHook {
                 "getString",
                 int.class,
                 new XC_MethodHook() {
-
-
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         if (isHandlingHook) {
                             return;
                         }
-
                         int resourceId = (int) param.args[0];
                         Resources resources = (Resources) param.thisObject;
-
                         try {
                             isHandlingHook = true;
-
-                            if (resourceId == 2132085513) {
-                                @SuppressLint("ResourceType") String replacement = resources.getString(2132085514);
-                                param.setResult(replacement);
-                            } else if (resourceId == 2132085514) {
-                                @SuppressLint("ResourceType") String replacement = resources.getString(2132085513);
-                                param.setResult(replacement);
+                            String resourceName;
+                            try {
+                                resourceName = resources.getResourceName(resourceId);
+                            } catch (Resources.NotFoundException ignored) {
+                                resourceName = "Not Found";
                             }
+
+                            String resourceString = resources.getString(resourceId);
+//                            XposedBridge.log("Resource ID: " + resourceId
+//                                    + ", Name: " + resourceName
+//                                    + ", String: " + resourceString);
+
+                            String entryName = resourceName.substring(resourceName.lastIndexOf('/') + 1);
+
+                            if ("chathistory_attach_local_contact".equals(entryName)) {
+                                String replacement = getStringByName(resources, "chathistory_attach_line_contact");
+                                if (replacement != null) {
+                                    param.setResult(replacement);
+                                 //   XposedBridge.log("Replaced: " + resourceName + " with " + replacement);
+                                }
+                            } else if ("chathistory_attach_line_contact".equals(entryName)) {
+                                String replacement = getStringByName(resources, "chathistory_attach_local_contact");
+                                if (replacement != null) {
+                                    param.setResult(replacement);
+                                }
+                            }
+
                         } finally {
                             isHandlingHook = false;
                         }
                     }
-
-
+                    private String getStringByName(Resources resources, String resourceEntryName) {
+                            int replacementId = resources.getIdentifier(resourceEntryName, "string", "jp.naver.line.android");
+                            if (replacementId != 0) {
+                                return resources.getString(replacementId);
+                            }
+                        return null;
+                    }
                 }
         );
-
 
         XposedBridge.hookAllMethods(
                 ListView.class,

@@ -1,6 +1,8 @@
 package io.github.hiro.lime.hooks;
 
 
+import static io.github.hiro.lime.Main.limeOptions;
+
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AndroidAppHelper;
@@ -10,11 +12,13 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
 import android.graphics.Typeface;
+import android.os.AsyncTask;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
@@ -24,8 +28,11 @@ import android.text.method.ScrollingMovementMethod;
 import android.util.Base64;
 import android.util.Log;
 import android.view.Gravity;
+import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -46,9 +53,12 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
@@ -56,7 +66,6 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.BuildConfig;
 import io.github.hiro.lime.LimeOptions;
-import io.github.hiro.lime.Main;
 import io.github.hiro.lime.R;
 import io.github.hiro.lime.Utils;
 
@@ -393,7 +402,33 @@ public class EmbedOptions implements IHook {
                                     });
                                     layout.addView(BlockCheck_Button);
                                 }
-
+                                if (limeOptions.preventUnsendMessage.checked) {
+                                    Button hide_canceled_message_Button = new Button(context);
+                                    hide_canceled_message_Button.setLayoutParams(buttonParams);
+                                    hide_canceled_message_Button.setText(moduleContext.getResources().getString(R.string.hide_canceled_message));
+                                    hide_canceled_message_Button.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            // 選択ダイアログの表示
+                                            new AlertDialog.Builder(context)
+                                                    .setTitle("メッセージ表示設定")
+                                                    .setMessage("操作を選択してください")
+                                                    .setPositiveButton("非表示にする", new DialogInterface.OnClickListener() {
+                                                        public void onClick(DialogInterface dialog, int which) {
+                                                            updateMessagesVisibility(context, true);
+                                                        }
+                                                    })
+                                                    .setNegativeButton("表示する", new DialogInterface.OnClickListener() {
+                                                        public void onClick(DialogInterface dialog, int which) {
+                                                            updateMessagesVisibility(context, false);
+                                                        }
+                                                    })
+                                                    .setIcon(android.R.drawable.ic_dialog_info)
+                                                    .show();
+                                        }
+                                    });
+                                    layout.addView(hide_canceled_message_Button);
+                                }
 
                                 builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
                                     @Override
@@ -1293,80 +1328,385 @@ public class EmbedOptions implements IHook {
         }
     }
 
+
+    private void updateMessagesVisibility(Context context, boolean hide) {
+        SQLiteDatabase db1 = null;
+        try {
+            db1 = context.openOrCreateDatabase("naver_line", Context.MODE_PRIVATE, null);
+
+            if (hide) {
+                db1.execSQL(
+                        "UPDATE chat_history " +
+                                "SET chat_id = '/' || chat_id " +
+                                "WHERE parameter = 'LIMEsUnsend' " +
+                                "AND chat_id NOT LIKE '/%'"
+                );
+                Toast.makeText(context, "非表示に設定しました", Toast.LENGTH_SHORT).show();
+            } else {
+                db1.execSQL(
+                        "UPDATE chat_history " +
+                                "SET chat_id = LTRIM(chat_id, '/') " +
+                                "WHERE parameter = 'LIMEsUnsend' " +
+                                "AND chat_id LIKE '/%'"
+                );
+                Toast.makeText(context, "表示するように設定しました", Toast.LENGTH_SHORT).show();
+            }
+        } catch (SQLException e) {
+            Log.e("DatabaseError", "Update failed: " + e.getMessage());
+            Toast.makeText(context, "設定の更新に失敗しました", Toast.LENGTH_SHORT).show();
+        } finally {
+            if (db1 != null) {
+                db1.close();
+            }
+        }
+    }
+
     private void Blocklist(Context context, Context moduleContext) {
-        SQLiteDatabase blockListDb = null;
-        SQLiteDatabase contactDb = null;
+        new ProfileManager().showProfileManagement(context,moduleContext);
+    }
+    private static class ProfileInfo {
+        final String contactMid;
+        final String profileName;
 
-        // データベースを開く
-        blockListDb = context.openOrCreateDatabase("events", Context.MODE_PRIVATE, null);
-        contactDb = context.openOrCreateDatabase("contact", Context.MODE_PRIVATE, null);
+        ProfileInfo(String contactMid, String profileName) {
+            this.contactMid = contactMid;
+            this.profileName = profileName;
+        }
+    }
 
-        // SQLクエリを実行して、すべてのレコードを取得
-        Cursor cursor = blockListDb.rawQuery("SELECT contact_mid, year, month, day FROM contact_calendar_event", null);
+    public class ProfileManager {
+        private HiddenProfileManager hiddenManager;
+        private AlertDialog currentDialog;
+        private Context moduleContext;
 
-        // プロファイル名のリストを作成
-        List<String> profileNames = new ArrayList<>();
+        public void showProfileManagement(Context context, Context moduleContext) {
+            this.moduleContext = moduleContext;
+            hiddenManager = new HiddenProfileManager(context);
 
-        // カーソルが有効かどうかを確認
-        if (cursor != null) {
-            // カーソルをループして、各レコードを処理
-            while (cursor.moveToNext()) {
-                String contactMid = cursor.getString(cursor.getColumnIndex("contact_mid"));
-                String year = cursor.getString(cursor.getColumnIndex("year"));
-                String month = cursor.getString(cursor.getColumnIndex("month"));
-                String day = cursor.getString(cursor.getColumnIndex("day"));
+            new AsyncTask<Void, Void, List<ProfileInfo>>() {
+                @Override
+                protected List<ProfileInfo> doInBackground(Void... voids) {
+                    return loadProfiles(context);
+                }
 
-                // year, month, day がすべて null の場合
-                if (year == null && month == null && day == null) {
-                    // contactMidを使ってprofile_nameを取得
-                    Cursor nameCursor = contactDb.rawQuery("SELECT profile_name FROM contacts WHERE mid=?", new String[]{contactMid});
-
-                    // 名前を取得してリストに追加
-                    if (nameCursor != null) {
-                        while (nameCursor.moveToNext()) {
-                            String profileName = nameCursor.getString(nameCursor.getColumnIndex("profile_name"));
-                            profileNames.add(profileName); // リストに追加
-                        }
-                        // カーソルを閉じる
-                        nameCursor.close();
+                @Override
+                protected void onPostExecute(List<ProfileInfo> profiles) {
+                    if (!profiles.isEmpty()) {
+                        showManagementDialog(context, profiles, moduleContext);
+                    } else {
+                        Toast.makeText(context, "表示可能なプロファイルがありません", Toast.LENGTH_SHORT).show();
                     }
                 }
+            }.execute();
+        }
+
+        private List<ProfileInfo> loadProfiles(Context context) {
+            Set<String> hidden = hiddenManager.getHiddenProfiles();
+            List<ProfileInfo> profiles = new ArrayList<>();
+
+            try (SQLiteDatabase blockListDb = context.openOrCreateDatabase("events", Context.MODE_PRIVATE, null);
+                 SQLiteDatabase contactDb = context.openOrCreateDatabase("contact", Context.MODE_PRIVATE, null);
+                 Cursor cursor = blockListDb.rawQuery(
+                         "SELECT contact_mid, year, month, day FROM contact_calendar_event", null)) {
+
+                while (cursor.moveToNext()) {
+                    if (isNullDate(cursor)) {
+                        String contactMid = cursor.getString(cursor.getColumnIndex("contact_mid"));
+                        if (!hidden.contains(contactMid)) {
+                            String profileName = getProfileName(contactDb, contactMid);
+                            profiles.add(new ProfileInfo(contactMid, profileName));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                XposedBridge.log("プロファイル読込エラー: " + e.getMessage());
             }
-            // カーソルを閉じる
-            cursor.close();
+            return profiles;
         }
 
-        // データベースを閉じる
-        if (blockListDb != null) {
-            blockListDb.close();
-        }
-        if (contactDb != null) {
-            contactDb.close();
+        private boolean isNullDate(Cursor cursor) {
+            return cursor.isNull(cursor.getColumnIndex("year")) &&
+                    cursor.isNull(cursor.getColumnIndex("month")) &&
+                    cursor.isNull(cursor.getColumnIndex("day"));
         }
 
-        // プロファイル名のリストが空でない場合、ポップアップを表示
-        if (!profileNames.isEmpty()) {
-            showProfileNamesDialog(context, profileNames);
-        } else {
-            XposedBridge.log("No profile names found.");
+        private String getProfileName(SQLiteDatabase db, String contactMid) {
+            try (Cursor cursor = db.rawQuery(
+                    "SELECT profile_name FROM contacts WHERE mid=?", new String[]{contactMid})) {
+                return cursor.moveToFirst() ? cursor.getString(0) : "Unknown";
+            }
+        }
+
+        private void showManagementDialog(Context context, List<ProfileInfo> profiles, Context moduleContext) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(context)
+                    .setTitle("プロファイル管理")
+                    .setNeutralButton("リセット", (dialog, which) -> showResetConfirmation(context, profiles))
+                    .setPositiveButton("再表示", (dialog, which) -> showRestoreDialog(context))
+                    .setNegativeButton("閉じる", null);
+
+            ScrollView scrollView = new ScrollView(context);
+            LinearLayout container = new LinearLayout(context);
+            container.setOrientation(LinearLayout.VERTICAL);
+            scrollView.addView(container);
+
+            for (ProfileInfo profile : profiles) {
+                container.addView(createProfileItem(context, profile, container));
+            }
+
+            builder.setView(scrollView);
+            currentDialog = builder.show();
+
+            // ダイアログサイズ調整
+            Window window = currentDialog.getWindow();
+            if (window != null) {
+                window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, 800);
+            }
+        }
+        private void showResetConfirmation(Context context, List<ProfileInfo> profiles) {
+            new AlertDialog.Builder(context)
+                    .setTitle("Confirm Reset")
+                    .setMessage("すべてのプロファイルを削除しますか？")
+                    .setPositiveButton("OK", (d, w) -> performResetOperation(context, profiles))
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        }
+        private LinearLayout createProfileItem(Context context, ProfileInfo profile, ViewGroup parent) {
+            LinearLayout layout = new LinearLayout(context);
+            layout.setOrientation(LinearLayout.HORIZONTAL);
+            layout.setPadding(32, 16, 32, 16);
+
+            TextView tv = new TextView(context);
+            tv.setText(profile.profileName);
+            tv.setLayoutParams(new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+            tv.setTextSize(16);
+
+            Button hideBtn = new Button(context);
+            hideBtn.setText("非表示");
+            hideBtn.setBackgroundColor(Color.parseColor("#FF9800")); // オレンジ色
+            hideBtn.setTextColor(Color.WHITE);
+            hideBtn.setOnClickListener(v -> {
+                hiddenManager.addHiddenProfile(profile.contactMid);
+                parent.removeView(layout);
+                Toast.makeText(context, profile.profileName + "を非表示にしました", Toast.LENGTH_SHORT).show();
+            });
+
+            layout.addView(tv);
+            layout.addView(hideBtn);
+            return layout;
+        }
+
+        private void showRestoreDialog(Context context) {
+            Set<String> hidden = hiddenManager.getHiddenProfiles();
+            if (hidden.isEmpty()) {
+                Toast.makeText(context, "非表示中のプロファイルはありません", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(context)
+                    .setTitle("非表示プロファイルの再表示");
+
+            ScrollView scrollView = new ScrollView(context);
+            LinearLayout container = new LinearLayout(context);
+            container.setOrientation(LinearLayout.VERTICAL);
+            scrollView.addView(container);
+
+            new AsyncTask<Void, Void, List<ProfileInfo>>() {
+                @Override
+                protected List<ProfileInfo> doInBackground(Void... voids) {
+                    return loadHiddenProfiles(context, hidden);
+                }
+
+                @Override
+                protected void onPostExecute(List<ProfileInfo> hiddenProfiles) {
+                    for (ProfileInfo profile : hiddenProfiles) {
+                        LinearLayout itemLayout = new LinearLayout(context);
+                        itemLayout.setOrientation(LinearLayout.HORIZONTAL);
+                        itemLayout.setPadding(32, 16, 32, 16);
+
+                        TextView tv = new TextView(context);
+                        tv.setText(profile.profileName);
+                        tv.setLayoutParams(new LinearLayout.LayoutParams(
+                                0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
+
+                        Button restoreBtn = new Button(context);
+                        restoreBtn.setText("再表示");
+                        restoreBtn.setBackgroundColor(Color.parseColor("#4CAF50")); // 緑色
+                        restoreBtn.setTextColor(Color.WHITE);
+                        restoreBtn.setOnClickListener(v -> {
+                            hiddenManager.removeHiddenProfile(profile.contactMid);
+                            container.removeView(itemLayout);
+                            Toast.makeText(context, profile.profileName + "を再表示しました", Toast.LENGTH_SHORT).show();
+                        });
+
+                        itemLayout.addView(tv);
+                        itemLayout.addView(restoreBtn);
+                        container.addView(itemLayout);
+                    }
+                }
+            }.execute();
+
+            builder.setView(scrollView);
+            builder.setNegativeButton("戻る", null);
+            builder.show();
+        }
+
+        private List<ProfileInfo> loadHiddenProfiles(Context context, Set<String> hiddenMids) {
+            List<ProfileInfo> profiles = new ArrayList<>();
+
+            try (SQLiteDatabase contactDb = context.openOrCreateDatabase("contact", Context.MODE_PRIVATE, null)) {
+                for (String contactMid : hiddenMids) {
+                    String profileName = getProfileName(contactDb, contactMid);
+                    profiles.add(new ProfileInfo(contactMid, profileName));
+                }
+            } catch (Exception e) {
+                XposedBridge.log("非表示プロファイル読込エラー: " + e.getMessage());
+            }
+            return profiles;
+        }
+
+        private void performResetOperation(Context context, List<ProfileInfo> profiles) {
+            new Thread(() -> {
+                SQLiteDatabase db = null;
+                try {
+                    db = context.openOrCreateDatabase("contact", Context.MODE_PRIVATE, null);
+                    final String targetPhrase = "[" + moduleContext.getResources().getString(R.string.UserBlocked) + "]";
+
+                    // 既存の値を取得
+                    List<String> originalValues = new ArrayList<>();
+                    try (Cursor cursor = db.rawQuery(
+                            "SELECT overridden_name FROM contacts WHERE overridden_name LIKE ?",
+                            new String[]{"%"+targetPhrase+"%"}
+                    )) {
+                        while (cursor.moveToNext()) {
+                            originalValues.add(cursor.getString(0));
+                        }
+                    }
+
+                    int affectedRows = 0;
+                    if (!originalValues.isEmpty()) {
+                        db.beginTransaction();
+                        try {
+                            ContentValues values = new ContentValues();
+                            for (String original : originalValues) {
+                                // 対象文字列を削除
+                                String updatedValue = original.replace(targetPhrase, "");
+
+                                // 更新値が変更されているか確認
+                                if (!original.equals(updatedValue)) {
+                                    values.clear();
+                                    values.put("overridden_name", updatedValue);
+
+                                    affectedRows += db.update(
+                                            "contacts",
+                                            values,
+                                            "overridden_name = ?",
+                                            new String[]{original}
+                                    );
+                                }
+                            }
+                            db.setTransactionSuccessful();
+                        } finally {
+                            db.endTransaction();
+                        }
+                    }
+                    final String message = affectedRows > 0 ?
+                            affectedRows + "件のレコードから文字列を削除しました" :
+                            "該当するレコードはありませんでした";
+
+                    new Handler(Looper.getMainLooper()).post(() -> {
+                        Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
+                        refreshProfileList(context, profiles, moduleContext);
+                    });
+
+                } catch (Exception e) {
+                    new Handler(Looper.getMainLooper()).post(() ->
+                            Toast.makeText(context, "エラー: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                } finally {
+                    if (db != null) {
+                        db.close();
+                    }
+                }
+            }).start();
+        }
+
+        private void refreshProfileList(Context context, List<ProfileInfo> profiles,Context moduleContext) {
+            List<ProfileInfo> newList = loadProfiles(context);
+            profiles.clear();
+            profiles.addAll(newList);
+                showManagementDialog(context, profiles, moduleContext);
+
         }
     }
 
-    // プロファイル名を表示するダイアログを作成
-    private void showProfileNamesDialog(Context context, List<String> profileNames) {
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle("Profile Names");
 
-        // リストを文字列配列に変換
-        String[] namesArray = profileNames.toArray(new String[0]);
+    private static class HiddenProfileManager {
+        private static final String HIDDEN_FILE = "hidden_profiles.txt";
+        private final File storageFile;
 
-        // リストをダイアログに設定
-        builder.setItems(namesArray, null);
+        public HiddenProfileManager(Context context) {
+            File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File limeDir = new File(downloadsDir, "LimeBackup/Setting");
 
-        // ダイアログを表示
-        AlertDialog dialog = builder.create();
-        dialog.show();
+            if (!limeDir.exists() && !limeDir.mkdirs()) {
+                throw new RuntimeException("ディレクトリ作成に失敗: " + limeDir.getAbsolutePath());
+            }
+
+            storageFile = new File(limeDir, HIDDEN_FILE);
+            if (!storageFile.exists()) {
+                try {
+                    storageFile.createNewFile();
+                } catch (IOException e) {
+                    XposedBridge.log("ファイル作成エラー: " + e.getMessage());
+                }
+            }
+        }
+
+        public void addHiddenProfile(String contactMid) {
+            new Thread(() -> {
+                try (FileWriter fw = new FileWriter(storageFile, true);
+                     BufferedWriter bw = new BufferedWriter(fw)) {
+                    bw.write(contactMid);
+                    bw.newLine();
+                } catch (IOException e) {
+                    XposedBridge.log("非設定追加エラー: " + e.getMessage());
+                }
+            }).start();
+        }
+
+        public Set<String> getHiddenProfiles() {
+            Set<String> hidden = Collections.synchronizedSet(new HashSet<>());
+            if (storageFile.exists()) {
+                try (BufferedReader br = new BufferedReader(new FileReader(storageFile))) {
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        hidden.add(line.trim());
+                    }
+                } catch (IOException e) {
+                    XposedBridge.log("非表示リスト読込エラー: " + e.getMessage());
+                }
+            }
+            return hidden;
+        }
+
+        public void removeHiddenProfile(String contactMid) {
+            new Thread(() -> {
+                Set<String> current = getHiddenProfiles();
+                if (current.remove(contactMid)) {
+                    try (FileWriter fw = new FileWriter(storageFile);
+                         BufferedWriter bw = new BufferedWriter(fw)) {
+                        for (String mid : current) {
+                            bw.write(mid);
+                            bw.newLine();
+                        }
+                    } catch (IOException e) {
+                        XposedBridge.log("非表示解除エラー: " + e.getMessage());
+                    }
+                }
+            }).start();
+        }
     }
+
     private void restoreChatHistory(Context context,Context moduleContext) {
 
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
@@ -1637,5 +1977,6 @@ public class EmbedOptions implements IHook {
             Toast.makeText(context, moduleContext.getResources().getString(R.string.Restore_Chat_Photo_Error), Toast.LENGTH_SHORT).show();
         }
     }
+
 
 }

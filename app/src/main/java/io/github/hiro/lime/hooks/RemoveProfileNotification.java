@@ -47,22 +47,20 @@ public class RemoveProfileNotification implements IHook {
                         if (isHandlingHook) {
                             return;
                         }
-
                         int resourceId = (int) param.args[0];
                         Resources resources = (Resources) param.thisObject;
-
                         try {
                             isHandlingHook = true;
 
-                            // リソースIDに基づいて文字列を取得
-                            String resourceString = resources.getString(resourceId);
-
-                            // リソースIDとその文字列をXposedのログに出力
-                          //  XposedBridge.log("Resource ID: " + resourceId + ", String: " + resourceString);
-
-                            // 2131622292のリソースIDに対して空の文字列を返す
-                            if (resourceId == 2132088628) {
-                                param.setResult(""); // 空の文字列を返す
+                            String resourceName;
+                            try {
+                                resourceName = resources.getResourceName(resourceId);
+                            } catch (Resources.NotFoundException e) {
+                                return;
+                            }
+                            String entryName = resourceName.substring(resourceName.lastIndexOf('/') + 1);
+                            if ("line_home_header_recentlyupdatedsection".equals(entryName)) {
+                                param.setResult(""); // 空文字列を返す
                             }
                         } finally {
                             isHandlingHook = false;

@@ -93,7 +93,7 @@ public class LimeOptions {
             redirectWebView,
             openInBrowser,
             preventMarkAsRead,
-            preventUnsendMessage,hide_canceled_message,UnsendFix,
+            preventUnsendMessage,
             sendMuteMessage,
             Archived,
             ReadChecker,MySendMessage,ReadCheckerChatdataDelete,
