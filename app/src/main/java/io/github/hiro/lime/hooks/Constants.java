@@ -10,24 +10,24 @@ public class Constants {
     public static  String MODULE_NAME = "io.github.hiro.lime";
 
     //TRADITIONAL_CHINESE
-    static  HookTarget USER_AGENT_HOOK = new HookTarget("Wc1.c", "h");
+    static  HookTarget USER_AGENT_HOOK = new  HookTarget("qi1.c", "j");
     //HANDLED_AND_RETURN_TRUE
-    static  HookTarget WEBVIEW_CLIENT_HOOK = new HookTarget("OK0.l", "onPageFinished");
+    static  HookTarget WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
     //NOTIFICATION_DISABLED
-    static  HookTarget MUTE_MESSAGE_HOOK = new HookTarget("Ob1.b", "H");
+    static  HookTarget MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
     //PROCESSING
-    static  HookTarget MARK_AS_READ_HOOK = new HookTarget("WM.c$d", "run");
+    static  HookTarget MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
 
     //ChatListViewModel
-    static  HookTarget Archive = new HookTarget("sB.Q", "invokeSuspend");
+    static  HookTarget Archive = new HookTarget("LB.W", "invokeSuspend");
     //StreamingFetchOperationHandler
-    static  HookTarget NOTIFICATION_READ_HOOK = new HookTarget("qd1.b", "invokeSuspend");
-    static  HookTarget REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
-    static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+    static  HookTarget NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
+    static  HookTarget REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
+    static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
     //BackEventCompat
     static HookTarget  RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
 
-    static HookTarget   SettingCrash_Hook = new HookTarget("Zb0.o0", "v0");
+    static HookTarget   SettingCrash_Hook = new HookTarget("af0.o0", "B0");
     static HookTarget   SettingCrash_Hook_Sub = new HookTarget("Sb0.j", "");
     //有効から無効
 //    static HookTarget RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
