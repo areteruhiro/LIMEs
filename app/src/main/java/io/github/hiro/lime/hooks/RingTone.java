@@ -3,6 +3,8 @@ package io.github.hiro.lime.hooks;
 import android.app.AndroidAppHelper;
 import android.app.Application;
 import android.content.Context;
+import android.media.AudioAttributes;
+import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.Ringtone;
 import android.media.RingtoneManager;
@@ -150,7 +152,6 @@ public class RingTone implements IHook {
                                         ringtone.setLooping(true);
                                         ringtone.play();
                                         isPlaying = true;
-                                        XposedBridge.log("Ringtone started playing from getVoiceComplexityLevel.");
                                         return;
                                     }
                                 }
@@ -163,7 +164,6 @@ public class RingTone implements IHook {
                                     mediaPlayer.setLooping(true);
                                     mediaPlayer.start();
                                     isPlaying = true;
-                                    XposedBridge.log("MediaPlayer started playing from getVoiceComplexityLevel.");
                                 }
                             }
 
@@ -172,17 +172,14 @@ public class RingTone implements IHook {
                                     ringtone.stop();
                                     ringtone = null;
                                     isPlaying = false;
-                                    XposedBridge.log("Ringtone stopped.");
                                 }
                                 if (mediaPlayer != null && mediaPlayer.isPlaying()) {
                                     mediaPlayer.stop();
                                     mediaPlayer.release();
                                     mediaPlayer = null;
-                                    XposedBridge.log("MediaPlayer stopped.");
                                 }
                                 if (method.getName().equals("processToneEvent")) {
                                     if (limeOptions.DialTone.checked) {
-                                        XposedBridge.log("Xposed" + "Suppressing tone event");
                                         param.setResult(null);
                                         return;
                                     }
@@ -191,7 +188,6 @@ public class RingTone implements IHook {
                                     }
 
                                     if (isPlaying) {
-                                        XposedBridge.log("Xposed" + "Suppressing playback");
                                         return;
                                     }
                                 }
@@ -199,91 +195,112 @@ public class RingTone implements IHook {
                                         Object arg0 = param.args[0];
                                         if (arg0.toString().contains("START")) {
                                             if (appContext != null) {
-                                                // Android P (API 28) 以上の場合
+
+                                                if (ringtone != null && isPlaying) {
+                                                    ringtone.stop();
+                                                    ringtone = null;
+                                                }
+                                                if (mediaPlayer != null) {
+                                                    if (mediaPlayer.isPlaying()) {
+                                                        mediaPlayer.stop();
+                                                    }
+                                                    mediaPlayer.release();
+                                                    mediaPlayer = null;
+                                                }
+
+                                                Uri ringtoneUriA = Uri.fromFile(destFileA);
+                                                AudioManager am = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
+
+                                                am.setStreamVolume(
+                                                        AudioManager.STREAM_ALARM,
+                                                        am.getStreamMaxVolume(AudioManager.STREAM_ALARM),
+                                                        AudioManager.FLAG_SHOW_UI
+                                                );
                                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                                    if (ringtone != null && isPlaying) {
-                                                        ringtone.stop();
-                                                        ringtone = null;
-                                                        XposedBridge.log("Ringtone stopped before starting new one.");
-                                                    }
-                                                    Uri ringtoneUriA = Uri.fromFile(destFileA);
                                                     ringtone = RingtoneManager.getRingtone(appContext, ringtoneUriA);
-
-                                                    if (ringtone != null) {
-                                                        ringtone.setLooping(true);
-                                                        ringtone.play();
-                                                        isPlaying = true;
-                                                        XposedBridge.log("Ringtone started playing from processToneEvent.");
-                                                    }
+                                                    AudioAttributes attributes = new AudioAttributes.Builder()
+                                                            .setUsage(AudioAttributes.USAGE_ALARM)
+                                                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                                            .build();
+                                                    ringtone.setAudioAttributes(attributes);
+                                                    ringtone.setLooping(true);
+                                                    ringtone.play();
                                                 } else {
-                                                    // Android P 未満の場合は MediaPlayer を使用
-                                                    if (mediaPlayer != null) {
-                                                        if (mediaPlayer.isPlaying()) {
-                                                            XposedBridge.log("Xposed"+ "MediaPlayer is already playing. Stopping playback.");
-                                                            mediaPlayer.stop();
-                                                            XposedBridge.log("MediaPlayer stopped before starting new one.");
-                                                        }
-                                                        mediaPlayer.release();
-                                                        mediaPlayer = null;
-                                                    }
-
-                                                    Uri ringtoneUriA = Uri.fromFile(destFileA);
-                                                    mediaPlayer = MediaPlayer.create(appContext, ringtoneUriA);
-                                                    if (mediaPlayer != null) {
+                                                    mediaPlayer = new MediaPlayer();
+                                                    try {
+                                                        mediaPlayer.setDataSource(appContext, ringtoneUriA);
+                                                        // ストリームタイプをアラームに設定
+                                                        mediaPlayer.setAudioStreamType(AudioManager.STREAM_ALARM);
                                                         mediaPlayer.setLooping(true);
-                                                        XposedBridge.log("Xposed"+ "Playing media.");
+                                                        mediaPlayer.prepare();
                                                         mediaPlayer.start();
-                                                        XposedBridge.log("MediaPlayer started playing from processToneEvent.");
+                                                    } catch (IOException e) {
+                                                        if (mediaPlayer != null) {
+                                                            mediaPlayer.release();
+                                                            mediaPlayer = null;
+                                                        }
                                                     }
                                                 }
-                                            }
+                                                isPlaying = true;
 
+                                            }
                                         }
                                     }
                                 }
 
-                                if (method.getName().equals("activate")) {
-                                    if (appContext != null) {
-                                        // Android P (API 28) 以上の場合
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                            if (ringtone != null && isPlaying) {
-                                                ringtone.stop();
-                                                ringtone = null;
-                                                XposedBridge.log("Ringtone stopped before starting new one.");
-                                            }
-                                            Uri ringtoneUriA = Uri.fromFile(destFileA);
-                                            ringtone = RingtoneManager.getRingtone(appContext, ringtoneUriA);
+                            if (method.getName().equals("activate")) {
+                                if (appContext != null) {
+                                    // 既存の再生を停止
+                                    if (ringtone != null && isPlaying) {
+                                        ringtone.stop();
+                                        ringtone = null;
+                                        XposedBridge.log("Ringtone stopped before starting new one.");
+                                    }
+                                    if (mediaPlayer != null) {
+                                        if (mediaPlayer.isPlaying()) {
+                                            mediaPlayer.stop();
+                                        }
+                                        mediaPlayer.release();
+                                        mediaPlayer = null;
+                                    }
 
-                                            if (ringtone != null) {
-                                                ringtone.setLooping(true);
-                                                ringtone.play();
-                                                isPlaying = true;
-                                                XposedBridge.log("Ringtone started playing from processToneEvent.");
-                                            }
-                                        } else {
-                                            // Android P 未満の場合は MediaPlayer を使用
+                                    Uri ringtoneUriA = Uri.fromFile(destFileA);
+                                    AudioManager am = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
+
+                                    am.setStreamVolume(
+                                            AudioManager.STREAM_ALARM,
+                                            am.getStreamMaxVolume(AudioManager.STREAM_ALARM),
+                                            AudioManager.FLAG_SHOW_UI
+                                    );
+
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                        ringtone = RingtoneManager.getRingtone(appContext, ringtoneUriA);
+
+                                        AudioAttributes attributes = new AudioAttributes.Builder()
+                                                .setUsage(AudioAttributes.USAGE_ALARM)
+                                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                                .build();
+                                        ringtone.setAudioAttributes(attributes);
+                                        ringtone.setLooping(true);
+                                        ringtone.play();
+                                    } else {
+                                        mediaPlayer = new MediaPlayer();
+                                        try {
+                                            mediaPlayer.setDataSource(appContext, ringtoneUriA);
+                                            mediaPlayer.setAudioStreamType(AudioManager.STREAM_ALARM);
+                                            mediaPlayer.setLooping(true);
+                                            mediaPlayer.prepare();
+                                            mediaPlayer.start();
+                                        } catch (IOException e) {
                                             if (mediaPlayer != null) {
-                                                if (mediaPlayer.isPlaying()) {
-                                                    XposedBridge.log("Xposed"+ "MediaPlayer is already playing. Stopping playback.");
-                                                    mediaPlayer.stop();
-                                                    XposedBridge.log("MediaPlayer stopped before starting new one.");
-                                                }
                                                 mediaPlayer.release();
                                                 mediaPlayer = null;
                                             }
-
-                                            Uri ringtoneUriA = Uri.fromFile(destFileA);
-                                            mediaPlayer = MediaPlayer.create(appContext, ringtoneUriA);
-                                            if (mediaPlayer != null) {
-                                                mediaPlayer.setLooping(true);
-                                                XposedBridge.log("Xposed"+ "Playing media.");
-                                                mediaPlayer.start();
-                                                XposedBridge.log("MediaPlayer started playing from processToneEvent.");
-                                            }
                                         }
                                     }
-
+                                    isPlaying = true;
                                 }
+                            }
                             if (param.args != null && param.args.length > 0) {
                                 Object arg0 = param.args[0];
                                 if (method.getName().equals("ACTIVATED") && "ACTIVATED".equals(arg0)) {
