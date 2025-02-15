@@ -61,7 +61,7 @@ public class Constants {
             SettingCrash_Hook = new HookTarget("Zb0.o0", "v0");
             SettingCrash_Hook_Sub = new HookTarget("Sb0.j", "");
 //            RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
-  //          RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
+            //          RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
         } else if (versionName.equals("14.21.1")) {
             USER_AGENT_HOOK = new HookTarget("vf1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("pN0.l", "onPageFinished");
@@ -74,8 +74,8 @@ public class Constants {
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
             SettingCrash_Hook = new HookTarget("Tc0.n0", "C0");
             SettingCrash_Hook_Sub = new HookTarget("Mc0.j", "");
-     //       RemoveVoiceRecord_Hook_b = new HookTarget("Fi1.j", "run");
-       //     RemoveVoiceRecord_Hook_c = new HookTarget("Fi1.j", "run");
+            //       RemoveVoiceRecord_Hook_b = new HookTarget("Fi1.j", "run");
+            //     RemoveVoiceRecord_Hook_c = new HookTarget("Fi1.j", "run");
         } else if (versionName.equals("15.0.0")) {
             USER_AGENT_HOOK = new HookTarget("Sg1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("FO0.l", "onPageFinished");
@@ -90,7 +90,7 @@ public class Constants {
             SettingCrash_Hook_Sub = new HookTarget("ie0.j", "");
 //            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
-    } else if (versionName.equals("15.1.0")) {
+        } else if (versionName.equals("15.1.0")) {
             USER_AGENT_HOOK = new HookTarget("qi1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
@@ -100,7 +100,7 @@ public class Constants {
             REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
-             SettingCrash_Hook = new HookTarget("af0.o0", "B0");
+            SettingCrash_Hook = new HookTarget("af0.o0", "B0");
             SettingCrash_Hook_Sub = new HookTarget("Te0.j", "");
 //        null cannot be cast to non-null type androidx.activity.result.ActivityResultCallback<O of androidx.activity.result.ActivityResultRegistry.dispatchResult>
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
@@ -119,22 +119,35 @@ public class Constants {
 //            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
 
-    } else if (versionName.equals("15.1.2")) {
-        USER_AGENT_HOOK = new HookTarget("qi1.c", "j");
-        WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
-        MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
-        MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
-        Archive = new HookTarget("LB.U", "invokeSuspend");
-        NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
-        REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
-        RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
-        RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
-        SettingCrash_Hook = new HookTarget("af0.o0", "B0");
-        SettingCrash_Hook_Sub = new HookTarget("Te0.j", "");
+        } else if (versionName.equals("15.1.2")) {
+            USER_AGENT_HOOK = new HookTarget("qi1.c", "j");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
+            MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
+            MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
+            Archive = new HookTarget("LB.U", "invokeSuspend");
+            NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
+            RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+            SettingCrash_Hook = new HookTarget("af0.o0", "B0");
+            SettingCrash_Hook_Sub = new HookTarget("Te0.j", "");
 //            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
-    }
 
+        } else if (versionName.equals("15.1.3")) {
+            USER_AGENT_HOOK = new HookTarget("qi1.c", "j");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
+            MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
+            MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
+            Archive = new HookTarget("LB.W", "invokeSuspend");
+            NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
+            RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+            SettingCrash_Hook = new HookTarget("af0.o0", "B0");
+            SettingCrash_Hook_Sub = new HookTarget("Te0.j", "");
+
+        }
     }
 
     public static class HookTarget {
