@@ -73,12 +73,15 @@ We are very grateful to the following people for making this possible:
 継続した開発時間の確保のため寄付のほどお願いいたします<br>
 Please donate to ensure continued development time.
 
-* [100円 PayPay](https://qr.paypay.ne.jp/p2p01_QCyKIpeN2IcnQlWL)<br>
+* [100円 PayPay](https://qr.paypay.ne.jp/p2p01_ubl01Ai8og514kXo)<br>
 * [300円
-PayPay](https://qr.paypay.ne.jp/p2p01_6x7eKC9MxsPGkdRS)<br>
+PayPay](https://qr.paypay.ne.jp/p2p01_R3ArtRGFheTBTId3)<br>
 
-* [Free yen
-PayPay](https://qr.paypay.ne.jp/p2p01_VSDjYW0Fq4jn2eHu)<br>
+* [Free yen 
+PayPay〜3/2](https://qr.paypay.ne.jp/p2p01_cAiX6AGzTTzmtxkZ)<br>
+
+*PayPay ID
+hiro_1114
 
 
 * [Amazon Gift Card](https://www.amazon.co.jp/gp/product/B004N3APGO) Send to (limebeta.dev@gmail.com)<br>
