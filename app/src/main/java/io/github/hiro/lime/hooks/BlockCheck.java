@@ -142,9 +142,9 @@ public class BlockCheck implements IHook {
 
         // Log the result
         if (rowsAffected > 0) {
-            XposedBridge.log("Successfully updated overridden_name for mid: " + mid);
+            //XposedBridge.log("Successfully updated overridden_name for mid: " + mid);
         } else {
-            XposedBridge.log("No record found to update for mid: " + mid);
+            //XposedBridge.log("No record found to update for mid: " + mid);
         }
     }
     private String queryDatabase(SQLiteDatabase db, String query, String... selectionArgs) {
