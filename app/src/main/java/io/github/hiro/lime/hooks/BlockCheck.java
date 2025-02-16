@@ -68,56 +68,56 @@ public class BlockCheck implements IHook {
                                         Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                                 "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
-                                        // Extract the operations part from the paramValue
-                                        String operationsPart = paramValue.split("operations:\\[")[1].split("\\]")[0];
-                                        String[] operations = operationsPart.split("Operation\\(");
 
-                                        for (String operation : operations) {
-                                            if (operation.trim().isEmpty()) continue;
+                                        String operationsPart = paramValue.split("operations:\\[")[1].split("\\]")[0];
+                                        String[] operations = operationsPart.split("\\)\\s*,?");
+                                        for (String op : operations) {
+                                            if (op.trim().isEmpty()) continue;
+                                            String operation = op.replaceFirst("^Operation\\(", "").trim();
+                                            operation = operation.replaceAll("\\)$", "");
                                             String revision = null;
                                             String createdTime = null;
                                             String type = null;
                                             String reqSeq = null;
                                             String param1 = null;
                                             String param2 = null;
-
-                                            // Split the operation string into parts
-                                            String[] parts = operation.split(",");
+                                            String[] parts = operation.split(",\\s*(?=revision:|createdTime:|type:|reqSeq:|param1:|param2:)");
                                             for (String part : parts) {
                                                 part = part.trim();
                                                 if (part.startsWith("revision:")) {
                                                     revision = part.substring("revision:".length()).trim();
                                                 } else if (part.startsWith("createdTime:")) {
                                                     createdTime = part.substring("createdTime:".length()).trim();
+                                                } else if (part.startsWith("type:")) {
+                                                    type = part.substring("type:".length()).trim();
                                                 } else if (part.startsWith("reqSeq:")) {
                                                     reqSeq = part.substring("reqSeq:".length()).trim();
                                                 } else if (part.startsWith("param1:")) {
                                                     param1 = part.substring("param1:".length()).trim();
                                                 } else if (part.startsWith("param2:")) {
                                                     param2 = part.substring("param2:".length()).trim();
-                                                } else if (part.startsWith("type:")) {
-                                                    type = part.substring("type:".length()).trim();
+                                                    int endIndex = param2.indexOf(']');
+                                                    if (endIndex != -1) {
+                                                        param2 = param2.substring(0, endIndex + 1);
+                                                    }
                                                 }
                                             }
-
                                             if ("NOTIFIED_CONTACT_CALENDAR_EVENT".equals(type)) {
                                                 XposedBridge.log("Revision: " + revision);
-                                                XposedBridge.log("Created Time: " + createdTime);
-                                                XposedBridge.log("Request Sequence: " + reqSeq);
-                                                XposedBridge.log("Param1: " + param1);
-                                                XposedBridge.log("Param2: " + param2);
-
-                                                String talkName = queryDatabase(db2, "SELECT profile_name FROM contacts WHERE mid=?", param1);
-
-                                                // Customize the output
-
-                                                    // Update the database with the custom message
-                                                    String customMessage = talkName+ "["+moduleContext.getResources().getString(R.string.UserBlocked) +"]"; // Custom message
-                                                    updateProfileName(db2, param1, customMessage);
-                                                    talkName = customMessage; // Set talkName to the custom message for logging
-
-
-                                                XposedBridge.log(talkName);
+//                                                XposedBridge.log("Created Time: " + createdTime);
+//                                                XposedBridge.log("Request Sequence: " + reqSeq);
+//                                                XposedBridge.log("Param1: " + param1);
+//                                                XposedBridge.log("Param2: " + param2);
+                                                if (param2 != null && param2.contains("\"HIDE\"")) {
+                                                    if (param1 != null) {
+                                                        String talkName = queryDatabase(db2, "SELECT profile_name FROM contacts WHERE mid=?", param1);
+                                                        if (talkName != null) {
+                                                            String customMessage = talkName + "[" + moduleContext.getResources().getString(R.string.UserBlocked) + "]";
+                                                            updateProfileName(db2, param1, customMessage);
+                                                            XposedBridge.log("Updated profile name to: " + customMessage);
+                                                        }
+                                                    }
+                                                }
                                             }
                                         }
                                     }

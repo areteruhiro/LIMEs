@@ -1391,13 +1391,10 @@ public class EmbedOptions implements IHook {
 
                 @Override
                 protected void onPostExecute(List<ProfileInfo> profiles) {
-                    if (!profiles.isEmpty()) {
-                        showManagementDialog(context, profiles, moduleContext);
-                    } else {
-                        Toast.makeText(context, "表示可能なプロファイルがありません", Toast.LENGTH_SHORT).show();
-                    }
+                    showManagementDialog(context, profiles, moduleContext);
                 }
             }.execute();
+
         }
 
         private List<ProfileInfo> loadProfiles(Context context) {
@@ -1447,20 +1444,40 @@ public class EmbedOptions implements IHook {
             ScrollView scrollView = new ScrollView(context);
             LinearLayout container = new LinearLayout(context);
             container.setOrientation(LinearLayout.VERTICAL);
+            int padding = dpToPx(context, 16);
+            container.setPadding(padding, padding, padding, padding);
             scrollView.addView(container);
 
-            for (ProfileInfo profile : profiles) {
-                container.addView(createProfileItem(context, profile, container));
+            if (profiles.isEmpty()) {
+                // 空状態表示用のビューを追加
+                TextView emptyView = new TextView(context);
+                emptyView.setText("表示可能なプロファイルがありません");
+                emptyView.setGravity(Gravity.CENTER);
+                emptyView.setTextSize(16);
+                container.addView(emptyView, new LinearLayout.LayoutParams(
+                        LinearLayout.LayoutParams.MATCH_PARENT,
+                        LinearLayout.LayoutParams.WRAP_CONTENT
+                ));
+            } else {
+                // 通常のプロファイルリストを追加
+                for (ProfileInfo profile : profiles) {
+                    container.addView(createProfileItem(context, profile, container));
+                }
             }
 
             builder.setView(scrollView);
             currentDialog = builder.show();
 
-            // ダイアログサイズ調整
+            // ダイアログサイズ調整（空状態でも同じサイズを維持）
             Window window = currentDialog.getWindow();
             if (window != null) {
                 window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, 800);
             }
+        }
+
+        // dpからpxへの変換ヘルパーメソッド
+        private int dpToPx(Context context, int dp) {
+            return (int) (dp * context.getResources().getDisplayMetrics().density);
         }
         private void showResetConfirmation(Context context, List<ProfileInfo> profiles) {
             new AlertDialog.Builder(context)
