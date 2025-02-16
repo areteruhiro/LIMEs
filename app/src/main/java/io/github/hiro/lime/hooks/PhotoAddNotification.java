@@ -133,7 +133,9 @@ public class PhotoAddNotification implements IHook {
                         }
 
                         if (limeOptions.GroupNotification.checked) {
-                            handleNotificationHook(context, db1, db2, param, notification, true, loadPackageParam);
+                            if (!(param.args[0] == null)) {
+                                handleNotificationHook(context, db1, db2, param, notification, true, loadPackageParam);
+                            }
                         } else {
                             if (param.args[0] == null) {
                                 param.setResult(null);
