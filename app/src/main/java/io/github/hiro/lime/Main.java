@@ -58,7 +58,9 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new AgeCheckSkip(),
             new CallOpenApplication(),
             new SettingCrash(),
-            new BlockCheck()
+            new BlockCheck(),
+            new AutoUpdate(),
+            new Removebutton()
     };
 
     @Override
@@ -154,18 +156,23 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                     liparam.view.setVisibility(View.GONE);
                 }
             });
-        }
+                 }
         if (limeOptions.removeNaviAlbum.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_albums", xModuleResources.fwd(R.drawable.empty_drawable));
                  }
         if (limeOptions.removeNaviOpenchat.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_openchat", xModuleResources.fwd(R.drawable.empty_drawable));
         }
+        resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "freecall_bottom_photobooth", xModuleResources.fwd(R.drawable.empty_drawable));
         if (limeOptions.RemoveVoiceRecord.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_normal", xModuleResources.fwd(R.drawable.empty_drawable));
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_pressed", xModuleResources.fwd(R.drawable.empty_drawable));
         
         }
+
+        resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "chat_ui_photobooth_floating_btn_height", xModuleResources.fwd(R.dimen.main_bnb_button_width));
+        resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "chat_ui_photobooth_top_margin", xModuleResources.fwd(R.dimen.main_bnb_button_width));
+
         if (limeOptions.removeServiceLabels.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "home_tab_v3_service_icon_size", xModuleResources.fwd(R.dimen.home_tab_v3_service_icon_size));
         }

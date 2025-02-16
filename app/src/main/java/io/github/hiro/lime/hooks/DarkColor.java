@@ -9,6 +9,8 @@ import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
+import android.os.Build;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.ContextMenu;
@@ -59,8 +61,7 @@ public class DarkColor implements IHook {
             );
         }
 
-        XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader,
-                "onAttachedToWindow", new XC_MethodHook() {
+        XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "onAttachedToWindow", new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) {
 
@@ -68,24 +69,39 @@ public class DarkColor implements IHook {
                     }
                 });
 
-        XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "onAttachedToWindow", new XC_MethodHook() {
+// メソッドフックの追加
+        XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "setBackground", Drawable.class, new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+            protected void afterHookedMethod(MethodHookParam param) {
                 View view = (View) param.thisObject;
                 checkAndChangeBackgroundColor(view);
-                checkAndChangeTextColor(view);
             }
         });
-        XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "setBackgroundColor", int.class, new XC_MethodHook() {
+
+        XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "setBackgroundResource", int.class, new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+            protected void afterHookedMethod(MethodHookParam param) {
                 View view = (View) param.thisObject;
                 checkAndChangeBackgroundColor(view);
-                checkAndChangeTextColor(view);
+            }
+        });
+
+// setBackgroundColorのBeforeフック
+        XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "setBackgroundColor", int.class, new XC_MethodHook() {
+            @Override
+            protected void beforeHookedMethod(MethodHookParam param) {
+                int color = (int) param.args[0];
+                if (isTargetColor(color, "#111111")) {
+                    param.args[0] = Color.parseColor("#000000");
+                }
             }
         });
     }
-
+    // 改善されたカラーチェックメソッド
+    private boolean isTargetColor(int color, String target) {
+        int targetColor = Color.parseColor(target);
+        return (color & 0x00FFFFFF) == (targetColor & 0x00FFFFFF);
+    }
     private void traverseViewsAndLog(ViewGroup viewGroup, Activity activity) {
         final Set<String> targetResources = new HashSet<>(Arrays.asList(
                 "bnb_home_v2",
@@ -204,7 +220,6 @@ public class DarkColor implements IHook {
     }
 */
     private void applyDarkThemeRecursive(View view) {
-        try {
             String logPrefix = "[DarkTheme]";
             String resName = getViewResourceName(view);
             String viewInfo = String.format("%s|%s|%s",
@@ -216,26 +231,22 @@ public class DarkColor implements IHook {
                 if (!isDarkModeEnabled(view)) return;
             }
             String contentDescription = String.valueOf(view.getContentDescription()); // null安全な変換
-            if ("no_id".equals(resName) && "null".equals(contentDescription)) {
+
+            if ("no_id".equals(resName) && "null".contentEquals(contentDescription)) {
+//                XposedBridge.log(String.format("%s Skipping no_id|null view: %s",
+//                        logPrefix,
+//                        view.getClass().getSimpleName()));
                 return;
             }
-
             if (resName.contains("floating_toolbar_menu_item_text")) {
                 if (view instanceof TextView) {
                     TextView tv = (TextView) view;
                     tv.setTextColor(Color.WHITE);
+//                    XposedBridge.log(String.format("%s FloatingToolbar text white: %s",
+//                            logPrefix, viewInfo));
                 }
                 return;
             }
-
-            if (resName.contains("floating_toolbar_menu_item_image")) {
-                if (view instanceof ImageView) {
-                    ImageView iv = (ImageView) view;
-                    iv.setColorFilter(Color.BLACK);
-                }
-                return;
-            }
-
             if (view instanceof ViewGroup) {
                 ViewGroup viewGroup = (ViewGroup) view;
                 for (int i = 0; i < viewGroup.getChildCount(); i++) {
@@ -245,23 +256,38 @@ public class DarkColor implements IHook {
             }
 
             String parentHierarchy = getParentHierarchy(view);
-            if ( parentHierarchy.contains("PopupBackgroundView")) {
+            if (parentHierarchy.contains("PopupBackgroundView")) {
+                GradientDrawable roundedBg = new GradientDrawable();
+                roundedBg.setShape(GradientDrawable.RECTANGLE);
+                roundedBg.setCornerRadius(20f); // 角丸の半径（単位：ピクセル）
+                roundedBg.setColor(Color.BLACK);
+                view.setBackground(roundedBg);
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    view.setClipToOutline(true);
+                }
+                if (view instanceof ViewGroup) {
+                    ViewGroup container = (ViewGroup) view;
+                    for (int i = 0; i < container.getChildCount(); i++) {
+                        View child = container.getChildAt(i);
+                        if (child instanceof TextView) {
+                            TextView tv = (TextView) child;
+                            tv.setTextColor(Color.WHITE);
+                            XposedBridge.log(String.format("%s PopupTextWhite: %s",
+                                    logPrefix,
+                                    tv.getText()));
+                        }
+                    }
+                }
                 if (view instanceof TextView) {
                     ((TextView) view).setTextColor(Color.WHITE);
                 }
                 if (view instanceof ImageView) {
                     ((ImageView) view).setColorFilter(Color.WHITE);
                 }
-                if (view.getBackground() instanceof ColorDrawable) {
-                    ((ColorDrawable) view.getBackground()).setColor(Color.BLACK);
-                } else {
-                    view.setBackgroundColor(Color.BLACK);
-                }
+
             }
 
-        } catch (Exception e) {
 
-        }
     }
     private String getParentHierarchy(View view) {
         StringBuilder sb = new StringBuilder();

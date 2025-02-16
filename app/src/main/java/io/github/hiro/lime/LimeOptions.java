@@ -71,6 +71,16 @@ public class LimeOptions {
     public Option DarkModSync = new Option("DarkModSync", R.string.DarkkModSync, true);
     public Option BlockCheck = new Option("BlockCheck", R.string.BlockCheck, true);
     public Option SettingClick = new Option("SettingClick", R.string.SettingClick, false);
+
+
+    public Option photoboothButtonOption = new Option("photoboothButtonOption", R.string.photoboothButtonOption, true);
+    public Option voiceButtonOption = new Option("voiceButtonOption", R.string.voiceButtonOption, false);
+    public Option videoButtonOption = new Option("videoButtonOption", R.string.videoButtonOption, true);
+    public Option videoSingleButtonOption = new Option("videoSingleButtonOption", R.string.videoSingleButtonOption, true);
+
+    public Option AutoUpDateCheck = new Option("AutoUpDateCheck", R.string.AutoUpDateCheck, false);
+
+
     public Option UnsendFix = new Option("UnsendFix", R.string.UnsendFix, false);
     public Option[] options = {
             removeOption,
@@ -111,7 +121,9 @@ public class LimeOptions {
             RemoveVoiceRecord,
             AgeCheckSkip,
             CallOpenApplication,
-            BlockCheck,SettingClick
+            BlockCheck,SettingClick,
+            photoboothButtonOption,voiceButtonOption,videoButtonOption,videoSingleButtonOption
+,AutoUpDateCheck
 
     };
 

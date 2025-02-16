@@ -179,6 +179,10 @@
     <string name="BlockCheck">ブロック監視[誤検知可能性有]</string>
     <string name="SettingClick">LsPatch用設定のホームボタンを開く</string>
     <string name="UnsendFix">動画送信中にタスクを切るとチャットリストが表示されないのを修正(動作が遅くなります)</string>
+    <string name="photoboothButtonOption">通話項目LINEプリを削除</string>
+    <string name="videoButtonOption">通話項目 グループ内でのビデオ通話項目を削除</string>
+    <string name="videoSingleButtonOption">通話項目 個人チャット内でのビデオ通話項目を削除</string>
+    <string name="AutoUpDateCheck">更新を自動的に確認する</string>
 
 
 </resources>
