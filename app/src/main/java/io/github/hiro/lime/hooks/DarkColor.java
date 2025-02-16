@@ -2,6 +2,7 @@ package io.github.hiro.lime.hooks;
 
 import static io.github.hiro.lime.Main.limeOptions;
 
+import android.app.Activity;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
@@ -9,26 +10,54 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.util.Log;
+import android.util.TypedValue;
 import android.view.ContextMenu;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Random;
+import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
+import io.github.hiro.lime.R;
 
 public class DarkColor implements IHook {
+    private static final String HEIGHT_MODIFIED_KEY = "123456789";
+
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.DarkColor.checked) return;
 
+        if (limeOptions.extendClickableArea.checked) {
+
+            XposedHelpers.findAndHookMethod(
+                    "jp.naver.line.android.activity.main.MainActivity",
+                    loadPackageParam.classLoader,
+                    "onResume",
+                    new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) {
+                            Activity activity = (Activity) param.thisObject;
+                            View rootView = activity.getWindow().getDecorView();
+                            if (limeOptions.DarkModSync.checked) {
+                                if (!isDarkModeEnabled(rootView)) return;
+                            }
+                                traverseViewsAndLog((ViewGroup) rootView, activity);
+
+                        }
+                    }
+            );
+        }
 
         XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader,
                 "onAttachedToWindow", new XC_MethodHook() {
@@ -57,6 +86,123 @@ public class DarkColor implements IHook {
         });
     }
 
+    private void traverseViewsAndLog(ViewGroup viewGroup, Activity activity) {
+        final Set<String> targetResources = new HashSet<>(Arrays.asList(
+                "bnb_home_v2",
+                "bnb_wallet",
+                "bnb_chat",
+                "bnb_news",
+                "bnb_call",
+                "bnb_timeline",
+                "bnb_wallet_spacer",
+                "bnb_news_spacer",
+                "bnb_call_spacer",
+                "bnb_timeline_spacer",
+                "bnb_chat_spacer",
+                "main_tab_container"
+
+        ));
+        for (int i = 0; i < viewGroup.getChildCount(); i++) {
+            View child = viewGroup.getChildAt(i);
+
+            int resId = child.getId();
+            if (resId != View.NO_ID) {
+                try {
+
+                    String resName = activity.getResources().getResourceEntryName(resId);
+                    String resType = activity.getResources().getResourceTypeName(resId);
+                    String fullResName = activity.getPackageName() + ":" + resType + "/" + resName;
+
+                    if (targetResources.contains(resName)) {
+                        child.setBackgroundColor(Color.BLACK);
+                        if (child instanceof TextView) {
+                            ((TextView) child).setTextColor(Color.BLACK);
+                        }
+                        Boolean isModified = (Boolean) child.getTag(Integer.parseInt(HEIGHT_MODIFIED_KEY));
+                        if (isModified == null || !isModified) {
+                            child.setTag(Integer.parseInt(HEIGHT_MODIFIED_KEY), true);
+
+                            child.getViewTreeObserver().addOnGlobalLayoutListener(
+                                    new ViewTreeObserver.OnGlobalLayoutListener() {
+                                        @Override
+                                        public void onGlobalLayout() {
+                                            if (!child.getViewTreeObserver().isAlive()) return;
+
+                                            if (child.getVisibility() == View.VISIBLE) {
+                                                ViewGroup.LayoutParams params = child.getLayoutParams();
+                                                int newHeight;
+                                                if (params.height > 0) {
+                                                    newHeight = (int)(params.height * 0.7);
+                                                } else {
+                                                    newHeight = (int) TypedValue.applyDimension(
+                                                            TypedValue.COMPLEX_UNIT_DIP,
+                                                            80,
+                                                            activity.getResources().getDisplayMetrics()
+                                                    );
+                                                }
+
+                                                params.height = newHeight;
+                                                child.setLayoutParams(params);
+                                            }
+
+                                            child.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                                        }
+                                    }
+                            );
+                        }
+                    }
+                } catch (Resources.NotFoundException e) {
+                }
+            }
+
+            if (child instanceof ViewGroup) {
+                traverseViewsAndLog((ViewGroup) child, activity);
+            }
+        }
+    }
+
+    /*
+    private void traverseViewsAndLogG(ViewGroup viewGroup, Activity activity) {
+        Random random = new Random(); // ランダムカラー生成用
+
+        for (int i = 0; i < viewGroup.getChildCount(); i++) {
+            View child = viewGroup.getChildAt(i);
+
+            int resId = child.getId();
+            if (resId != View.NO_ID) {
+                try {
+
+                    String resName = activity.getResources().getResourceEntryName(resId);
+                    String resType = activity.getResources().getResourceTypeName(resId);
+                    String fullResName = activity.getPackageName() + ":" + resType + "/" + resName;
+                    int randomColor = Color.argb(
+                            255,
+                            random.nextInt(256),
+                            random.nextInt(256),
+                            random.nextInt(256)
+                    );
+
+                    XposedBridge.log(String.format(
+                            "Changed Resource: %s → #%08X",
+                            fullResName,
+                            randomColor
+                    ));
+                    child.setBackgroundColor(randomColor);
+                    if (child instanceof TextView) {
+                        ((TextView) child).setTextColor(randomColor);
+                    }
+
+                } catch (Resources.NotFoundException e) {
+                    XposedBridge.log("Resource not found for ID: 0x" + Integer.toHexString(resId));
+                }
+            }
+
+            if (child instanceof ViewGroup) {
+                traverseViewsAndLogG((ViewGroup) child, activity);
+            }
+        }
+    }
+*/
     private void applyDarkThemeRecursive(View view) {
         try {
             String logPrefix = "[DarkTheme]";
