@@ -11,8 +11,7 @@ LINEをインストール
 
 1.5パッチするapkについて
 LINE  <br>
-<以下は14.19.1のURLとなっております>
-・arm64-v8a + armeabi-v7a<br>（基本的にこれでok）
+
 https://www.apkmirror.com/apk/line-corporation/line/
 
 クラッシュやなんらかのエラーが発生した場合、自分の端末のアーキテクチャに対応するファイルをダウンロード
