@@ -19,7 +19,7 @@ https://www.apkmirror.com/apk/line-corporation/line/
 
 [アーキテクチャの確認](https://play.google.com/store/apps/details?id=com.ytheekshana.deviceinfo)→CPU→サーポートされているABI
 
-<以下は14.19.1のURLとなっております>
+
 ・armeabi-v7a
 https://line-android-universal-download.line-scdn.net
 
@@ -31,9 +31,7 @@ https://maximoff.su/apktool/?lang=en
 でapkに変換してからパッチしてください 
 
 apkへの変え方
-エラーが発生する場合以下からダウンロードまたは相談<br>
-https://t.me/LsPosedLIMEs/36/83
-
+![AntiSplit.jpg](https://github.com/user-attachments/assets/a0a7b6c4-ff50-4e79-96dd-0ec71de25ddb)
 
 2. **LSPatch** アプリを開き、<kbd>管理</kbd> > 右下の <kbd>＋</kbd> > <kbd>ストレージからapkを選択</kbd> >  先程ダウンロードした LI**N**E の APK を選択 > <kbd>統合</kbd> → <kbd>モジュールを埋め込む</kbd> > <kbd>**インストールされているアプリを選択**</kbd> > LI**M**E にチェックを入れて <kbd>＋</kbd> > <kbd>パッチを開始</kbd> より、パッチを適用
 
