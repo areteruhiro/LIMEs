@@ -1,42 +1,36 @@
-# 通知が届かない場合
+## 方法①導入済みのものを利用する
 
-## （チャット復元を行う場合）
-
-https://t.me/LsPosedLIMEs/1/1877
-を参照
-
-# チャット復元を行わない場合
-
-パッチ済みの14.3.2でログインをし、パッチ済みの14.19.1に更新
+リリースの際にモジュールといっしょに添付されている
+LINEをインストール
 
 
-## 自分で導入する方法
+
+## 方法②自分で導入する
 
 1. [**JingMatrix LSPatch**](https://github.com/JingMatrix/LSPatch/) をインストール
 
 1.5パッチするapkについて
-LINE 14.19.1 <br>
+LINE  <br>
 
-・arm64-v8a + armeabi-v7a<br>（基本的にこれでok）
-https://www.apkmirror.com/apk/line-corporation/line/line-14-19-1-release/
+https://www.apkmirror.com/apk/line-corporation/line/
 
 クラッシュやなんらかのエラーが発生した場合、自分の端末のアーキテクチャに対応するファイルをダウンロード
 
 [アーキテクチャの確認](https://play.google.com/store/apps/details?id=com.ytheekshana.deviceinfo)→CPU→サーポートされているABI
 
-・armeabi-v7a
-https://line-android-universal-download.line-scdn.net/line-14.19.1.apk
 
-・arm64-v8a https://d.apkpure.com/b/XAPK/jp.naver.line.android?versionCode=141910383&nc=arm64-v8a&sv=28
+・armeabi-v7a
+https://line-android-universal-download.line-scdn.net
+
+・arm64-v8a https://d.apkpure.com/b/XAPK/jp.naver.line.android?
 
 
 M apk tool <br>
 https://maximoff.su/apktool/?lang=en
-でapkに変換してからパッチしてください
+でapkに変換してからパッチしてください 
 
-エラーが発生する場合以下からダウンロードまたは相談<br>
-https://t.me/LsPosedLIMEs/36/83
-
+apkへの変え方
+![AntiSplit.jpg](https://github.com/user-attachments/assets/a0a7b6c4-ff50-4e79-96dd-0ec71de25ddb)
 
 2. **LSPatch** アプリを開き、<kbd>管理</kbd> > 右下の <kbd>＋</kbd> > <kbd>ストレージからapkを選択</kbd> >  先程ダウンロードした LI**N**E の APK を選択 > <kbd>統合</kbd> → <kbd>モジュールを埋め込む</kbd> > <kbd>**インストールされているアプリを選択**</kbd> > LI**M**E にチェックを入れて <kbd>＋</kbd> > <kbd>パッチを開始</kbd> より、パッチを適用
 
@@ -47,6 +41,10 @@ https://t.me/LsPosedLIMEs/36/83
 
 3. [**Shizuku**](https://github.com/RikkaApps/Shizuku) を使用している場合は <kbd>インストール</kbd> を押して続行する  
   使用していない場合は、ファイルエクスプローラー等の別のアプリからインストールする
+
+
+-通知が届かない場合
+<14.3.2からパッチインストールを行う>
 
 
 ## トーク履歴のリストアについて
@@ -75,3 +73,6 @@ https://youtu.be/94JN4NLGdOI
 
 または以下を参考にしてください
 https://github.com/areteruhiro/LIMEs/issues/10
+
+
+
