@@ -100,23 +100,25 @@ public class Removebutton implements IHook {
         }
     }
 
+
     private void optimizeViewLayout(View view) {
         try {
             ViewGroup.LayoutParams params = view.getLayoutParams();
             if (params == null) return;
 
-            params.width = 1;
-            params.height = 1;
+            params.width = 0;
+            params.height = 0;
 
             if (params instanceof ViewGroup.MarginLayoutParams) {
                 ((ViewGroup.MarginLayoutParams) params).setMargins(0, 0, 0, 0);
             }
 
             view.setLayoutParams(params);
-           // XposedBridge.log("LIME: Optimized view - " + view.getClass().getSimpleName());
+            // XposedBridge.log("LIME: Optimized view - " + view.getClass().getSimpleName());
 
         } catch (Exception e) {
             //XposedBridge.log("LIME: Optimization error - " + e);
+
         }
     }
 }

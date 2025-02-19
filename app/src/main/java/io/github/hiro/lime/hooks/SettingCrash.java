@@ -24,16 +24,9 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 public class SettingCrash implements IHook {
-    private static final int TARGET_VERSION = 157;
-    private static final String[] TARGET_HELPER_CLASSES = {
-            "cZ0.b",
-            "cY0.a", // よく使われる代替クラス名
-            "jp.naver.line.android.database.LineDatabaseHelper"
-    };
-
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
-
+        if (!limeOptions.SettingClick.checked) return;
         XposedHelpers.findAndHookMethod("android.content.ContentProvider",
                 lpparam.classLoader,
                 "query",
@@ -53,7 +46,7 @@ public class SettingCrash implements IHook {
                         }
                     }
                 });
-        if (!limeOptions.SettingClick.checked) return;
+
 
 
         try {

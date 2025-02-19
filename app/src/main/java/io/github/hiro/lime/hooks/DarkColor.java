@@ -54,7 +54,7 @@ public class DarkColor implements IHook {
                             if (limeOptions.DarkModSync.checked) {
                                 if (!isDarkModeEnabled(rootView)) return;
                             }
-                                traverseViewsAndLog((ViewGroup) rootView, activity);
+                            traverseViewsAndLog((ViewGroup) rootView, activity);
 
                         }
                     }
@@ -62,12 +62,12 @@ public class DarkColor implements IHook {
         }
 
         XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "onAttachedToWindow", new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) {
 
-                        applyDarkThemeRecursive((View) param.thisObject);
-                    }
-                });
+                applyDarkThemeRecursive((View) param.thisObject);
+            }
+        });
 
 // メソッドフックの追加
         XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "setBackground", Drawable.class, new XC_MethodHook() {
@@ -220,72 +220,72 @@ public class DarkColor implements IHook {
     }
 */
     private void applyDarkThemeRecursive(View view) {
-            String logPrefix = "[DarkTheme]";
-            String resName = getViewResourceName(view);
-            String viewInfo = String.format("%s|%s|%s",
-                    view.getClass().getSimpleName(),
-                    resName,
-                    view.getContentDescription()
-            );
-            if (limeOptions.DarkModSync.checked) {
-                if (!isDarkModeEnabled(view)) return;
-            }
-            String contentDescription = String.valueOf(view.getContentDescription()); // null安全な変換
+        String logPrefix = "[DarkTheme]";
+        String resName = getViewResourceName(view);
+        String viewInfo = String.format("%s|%s|%s",
+                view.getClass().getSimpleName(),
+                resName,
+                view.getContentDescription()
+        );
+        if (limeOptions.DarkModSync.checked) {
+            if (!isDarkModeEnabled(view)) return;
+        }
+        String contentDescription = String.valueOf(view.getContentDescription()); // null安全な変換
 
-            if ("no_id".equals(resName) && "null".contentEquals(contentDescription)) {
+        if ("no_id".equals(resName) && "null".contentEquals(contentDescription)) {
 //                XposedBridge.log(String.format("%s Skipping no_id|null view: %s",
 //                        logPrefix,
 //                        view.getClass().getSimpleName()));
-                return;
-            }
-            if (resName.contains("floating_toolbar_menu_item_text")) {
-                if (view instanceof TextView) {
-                    TextView tv = (TextView) view;
-                    tv.setTextColor(Color.WHITE);
+            return;
+        }
+        if (resName.contains("floating_toolbar_menu_item_text")) {
+            if (view instanceof TextView) {
+                TextView tv = (TextView) view;
+                tv.setTextColor(Color.WHITE);
 //                    XposedBridge.log(String.format("%s FloatingToolbar text white: %s",
 //                            logPrefix, viewInfo));
-                }
-                return;
+            }
+            return;
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup viewGroup = (ViewGroup) view;
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                View child = viewGroup.getChildAt(i);
+                applyDarkThemeRecursive(child);
+            }
+        }
+
+        String parentHierarchy = getParentHierarchy(view);
+        if (parentHierarchy.contains("PopupBackgroundView")) {
+            GradientDrawable roundedBg = new GradientDrawable();
+            roundedBg.setShape(GradientDrawable.RECTANGLE);
+            roundedBg.setCornerRadius(20f); // 角丸の半径（単位：ピクセル）
+            roundedBg.setColor(Color.BLACK);
+            view.setBackground(roundedBg);
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                view.setClipToOutline(true);
             }
             if (view instanceof ViewGroup) {
-                ViewGroup viewGroup = (ViewGroup) view;
-                for (int i = 0; i < viewGroup.getChildCount(); i++) {
-                    View child = viewGroup.getChildAt(i);
-                    applyDarkThemeRecursive(child);
-                }
-            }
-
-            String parentHierarchy = getParentHierarchy(view);
-            if (parentHierarchy.contains("PopupBackgroundView")) {
-                GradientDrawable roundedBg = new GradientDrawable();
-                roundedBg.setShape(GradientDrawable.RECTANGLE);
-                roundedBg.setCornerRadius(20f); // 角丸の半径（単位：ピクセル）
-                roundedBg.setColor(Color.BLACK);
-                view.setBackground(roundedBg);
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                    view.setClipToOutline(true);
-                }
-                if (view instanceof ViewGroup) {
-                    ViewGroup container = (ViewGroup) view;
-                    for (int i = 0; i < container.getChildCount(); i++) {
-                        View child = container.getChildAt(i);
-                        if (child instanceof TextView) {
-                            TextView tv = (TextView) child;
-                            tv.setTextColor(Color.WHITE);
-                            XposedBridge.log(String.format("%s PopupTextWhite: %s",
-                                    logPrefix,
-                                    tv.getText()));
-                        }
+                ViewGroup container = (ViewGroup) view;
+                for (int i = 0; i < container.getChildCount(); i++) {
+                    View child = container.getChildAt(i);
+                    if (child instanceof TextView) {
+                        TextView tv = (TextView) child;
+                        tv.setTextColor(Color.WHITE);
+                        XposedBridge.log(String.format("%s PopupTextWhite: %s",
+                                logPrefix,
+                                tv.getText()));
                     }
                 }
-                if (view instanceof TextView) {
-                    ((TextView) view).setTextColor(Color.WHITE);
-                }
-                if (view instanceof ImageView) {
-                    ((ImageView) view).setColorFilter(Color.WHITE);
-                }
-
             }
+            if (view instanceof TextView) {
+                ((TextView) view).setTextColor(Color.WHITE);
+            }
+            if (view instanceof ImageView) {
+                ((ImageView) view).setColorFilter(Color.WHITE);
+            }
+
+        }
 
 
     }
@@ -346,16 +346,16 @@ public class DarkColor implements IHook {
             }
             Drawable background = view.getBackground();
             if (background != null) {
-               // //XposedBridge.log("Background Class Name: " + background.getClass().getName());
+                // //XposedBridge.log("Background Class Name: " + background.getClass().getName());
                 if (background instanceof ColorDrawable) {
                     int currentColor = ((ColorDrawable) background).getColor();
                     if (currentColor == Color.parseColor("#111111") ||
                             currentColor == Color.parseColor("#1A1A1A") ||
                             currentColor == Color.parseColor("#FFFFFF")) {
                         ((ColorDrawable) background).setColor(Color.parseColor("#000000"));
-    ////XposedBridge.log("Changed Background Color of Resource Name: " + resourceName + " to #000000");
+                        ////XposedBridge.log("Changed Background Color of Resource Name: " + resourceName + " to #000000");
                     } else {
-    ////XposedBridge.log("Background Color of Resource Name: " + resourceName + " is not #111111, #1A1A1A, or #FFFFFF (Current: " + convertToHexColor(currentColor) + ")");
+                        ////XposedBridge.log("Background Color of Resource Name: " + resourceName + " is not #111111, #1A1A1A, or #FFFFFF (Current: " + convertToHexColor(currentColor) + ")");
                     }
                 } else if (background instanceof BitmapDrawable) {
 ////XposedBridge.log("BitmapDrawable background, cannot change color directly.");
@@ -363,10 +363,10 @@ public class DarkColor implements IHook {
 ////XposedBridge.log("Unknown background type for Resource Name: " + resourceName + ", Class Name: " + background.getClass().getName());
                 }
             } else {
-              //  //XposedBridge.log("Background is null for Resource Name: " + resourceName);
+                //  //XposedBridge.log("Background is null for Resource Name: " + resourceName);
             }
         } catch (Resources.NotFoundException ignored) {
-       //     //XposedBridge.log("Resource name not found for View ID: " + view.getId());
+            //     //XposedBridge.log("Resource name not found for View ID: " + view.getId());
         }
     }
 
@@ -397,9 +397,3 @@ public class DarkColor implements IHook {
     }
 
 }
-
-
-
-
-
-
