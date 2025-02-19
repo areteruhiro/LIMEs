@@ -80,6 +80,8 @@ public class LimeOptions {
 
     public Option AutoUpDateCheck = new Option("AutoUpDateCheck", R.string.AutoUpDateCheck, false);
 
+    public Option ringtonevolume = new Option("ringtonevolume", R.string.ringtonevolume, false);
+
 
     public Option UnsendFix = new Option("UnsendFix", R.string.UnsendFix, false);
     public Option[] options = {
@@ -112,7 +114,7 @@ public class LimeOptions {
             blockTracking,
             stopVersionCheck,
             outputCommunication,
-            callTone,
+            callTone,ringtonevolume,
             MuteTone,
             DialTone,
             DarkColor,DarkModSync,

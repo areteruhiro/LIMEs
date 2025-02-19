@@ -209,4 +209,5 @@
     <string name="Return">Go back.</string>
     <string name="reset_name">The name has been reset.</string>
     <string name="no_reset_name">Could not confirm the friends to reset.</string>
+    <string name="ringtonevolume">(Sounds a dial tone)Using a ringtone</string>
 </resources>
