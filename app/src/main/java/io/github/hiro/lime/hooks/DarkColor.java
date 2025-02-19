@@ -148,7 +148,7 @@ public class DarkColor implements IHook {
                                                 ViewGroup.LayoutParams params = child.getLayoutParams();
                                                 int newHeight;
                                                 if (params.height > 0) {
-                                                    newHeight = (int)(params.height * 0.7);
+                                                    newHeight = (int)(params.height * 0.8);
                                                 } else {
                                                     newHeight = (int) TypedValue.applyDimension(
                                                             TypedValue.COMPLEX_UNIT_DIP,
