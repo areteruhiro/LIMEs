@@ -30,17 +30,15 @@ public class SpoofUserAgent implements IHook {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        // 設定から値を取得
+
                         String device = customPreferences.getSetting("device_name", "ANDROID");
                         String androidVersion = customPreferences.getSetting("android_version", "14.16.0");
                         String osName = customPreferences.getSetting("os_name", "Android OS");
                         String osVersion = customPreferences.getSetting("os_version", "14");
 
-                        // 偽の User-Agent を生成
                         String spoofedUserAgent = device + "\t" + androidVersion + "\t" + osName + "\t" + osVersion;
                         param.setResult(spoofedUserAgent);
 
-                        // ログに出力（初回のみ）
                         if (!hasLoggedSpoofedUserAgent) {
                             XposedBridge.log("Spoofed User-Agent: " + spoofedUserAgent);
                             hasLoggedSpoofedUserAgent = true;

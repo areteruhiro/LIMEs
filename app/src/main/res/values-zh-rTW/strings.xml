@@ -169,7 +169,31 @@
     <string name="DarkkModSync">將純黑暗模式與設備的黑暗模式同步</string>
     <string name="UserBlocked">可能已被封鎖</string>
     <string name="BlockCheck">區塊監控[可能有誤檢知]</string>
-    <string name="SettingClick">LsPatch用設定のホームボタンを開く</string>
-    <string name="UnsendFix">動画送信中にタスクを切るとチャットリストが表示されないのを修正(動作が遅くなります)</string>
+    <string name="SettingClick">打開 LsPatch 的主按鈕設定。</string>
+    <string name="UnsendFix">修正視頻傳輸中斷任務時聊天列表不顯示的問題（這可能會降低性能）。</string>
+    <string name="AutoUpDateCheck">自動檢查更新。</string>
+    <string name="HideSetting">發送撤回通知消息顯示設定。</string>
+    <string name="HideSetting_selection">是否顯示或隱藏？</string>
+    <string name="Hide">隱藏它。</string>
+    <string name="Show">顯示它。</string>
+    <string name="Hiden_setting">已隱藏。</string>
+    <string name="Show_setting">已顯示。</string>
+    <string name="Setting_Error">更改發送撤回消息設定時發生錯誤。</string>
+    <string name="Block_Profile_Reload">無法加載阻止列表。</string>
+    <string name="Block_list">阻止列表。</string>
+    <string name="Name_Reset">重置阻止確認的名稱更改。</string>
+    <string name="Redisplay">重新顯示。</string>
+    <string name="No_Profiles">沒有可顯示的個人資料。</string>
+    <string name="user_hide">已隱藏。</string>
+    <string name="no_hidden_profiles">沒有隱藏中的個人資料。</string>
+    <string name="Unhide_hidden_profiles">重新顯示隱藏的個人資料。</string>
+    <string name="redisplayed_Profile">已重新顯示。</string>
+    <string name="Return">返回。</string>
+    <string name="reset_name">名稱已重置。</string>
+    <string name="no_reset_name">無法確認要重置的朋友。</string>
+    <string name="photoboothButtonOption">刪除 LINE 通話項目。</string>
+    <string name="voiceButtonOption">隱藏語音通話項目。</string>
+    <string name="videoButtonOption">刪除群組內的視頻通話項目。</string>
+    <string name="videoSingleButtonOption">刪除個人聊天內的視頻通話項目。</string>
 
 </resources>

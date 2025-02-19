@@ -1,6 +1,13 @@
 package io.github.hiro.lime.hooks;
 
+import android.content.Context;
 import android.content.res.Resources;
+import net.sqlcipher.database.SQLiteDatabase;
+
+import android.database.MatrixCursor;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.net.Uri;
+import android.os.Bundle;
 import android.text.SpannedString;
 import android.util.Log;
 
@@ -11,15 +18,44 @@ import java.util.Collections;
 import java.util.List;
 
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 public class SettingCrash implements IHook {
+    private static final int TARGET_VERSION = 157;
+    private static final String[] TARGET_HELPER_CLASSES = {
+            "cZ0.b",
+            "cY0.a", // よく使われる代替クラス名
+            "jp.naver.line.android.database.LineDatabaseHelper"
+    };
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+
+        XposedHelpers.findAndHookMethod("android.content.ContentProvider",
+                lpparam.classLoader,
+                "query",
+                Uri.class,
+                String[].class,
+                String.class,
+                String[].class,
+                String.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        Uri uri = (Uri) param.args[0];
+                        if (uri.toString().contains("database_version")) {
+                            Bundle extras = new Bundle();
+                            extras.putInt("user_version", 156);
+                            param.setResult(new MatrixCursor(new String[0], 0).getExtras());
+                        }
+                    }
+                });
         if (!limeOptions.SettingClick.checked) return;
+
+
         try {
 
             Class<?> te0jClass = XposedHelpers.findClass(Constants.SettingCrash_Hook_Sub.className, lpparam.classLoader);

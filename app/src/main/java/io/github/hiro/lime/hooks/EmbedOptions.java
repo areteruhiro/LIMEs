@@ -409,18 +409,18 @@ public class EmbedOptions implements IHook {
                                     hide_canceled_message_Button.setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
-                                            // 選択ダイアログの表示
+
                                             new AlertDialog.Builder(context)
-                                                    .setTitle("メッセージ表示設定")
-                                                    .setMessage("操作を選択してください")
-                                                    .setPositiveButton("非表示にする", new DialogInterface.OnClickListener() {
+                                                    .setTitle(moduleContext.getResources().getString(R.string.HideSetting))
+                                                    .setMessage(moduleContext.getResources().getString(R.string.HideSetting_selection))
+                                                    .setPositiveButton(moduleContext.getResources().getString(R.string.Hide), new DialogInterface.OnClickListener() {
                                                         public void onClick(DialogInterface dialog, int which) {
-                                                            updateMessagesVisibility(context, true);
+                                                            updateMessagesVisibility(context, true, moduleContext);
                                                         }
                                                     })
-                                                    .setNegativeButton("表示する", new DialogInterface.OnClickListener() {
+                                                    .setNegativeButton(moduleContext.getResources().getString(R.string.Show), new DialogInterface.OnClickListener() {
                                                         public void onClick(DialogInterface dialog, int which) {
-                                                            updateMessagesVisibility(context, false);
+                                                            updateMessagesVisibility(context, false,moduleContext);
                                                         }
                                                     })
                                                     .setIcon(android.R.drawable.ic_dialog_info)
@@ -1329,7 +1329,7 @@ public class EmbedOptions implements IHook {
     }
 
 
-    private void updateMessagesVisibility(Context context, boolean hide) {
+    private void updateMessagesVisibility(Context context, boolean hide,Context moduleContext) {
         SQLiteDatabase db1 = null;
         try {
             db1 = context.openOrCreateDatabase("naver_line", Context.MODE_PRIVATE, null);
@@ -1341,7 +1341,7 @@ public class EmbedOptions implements IHook {
                                 "WHERE parameter = 'LIMEsUnsend' " +
                                 "AND chat_id NOT LIKE '/%'"
                 );
-                Toast.makeText(context, "非表示に設定しました", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, moduleContext.getResources().getString(R.string.Hiden_setting), Toast.LENGTH_SHORT).show();
             } else {
                 db1.execSQL(
                         "UPDATE chat_history " +
@@ -1349,11 +1349,11 @@ public class EmbedOptions implements IHook {
                                 "WHERE parameter = 'LIMEsUnsend' " +
                                 "AND chat_id LIKE '/%'"
                 );
-                Toast.makeText(context, "表示するように設定しました", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context,  moduleContext.getResources().getString(R.string.Show_setting), Toast.LENGTH_SHORT).show();
             }
         } catch (SQLException e) {
             Log.e("DatabaseError", "Update failed: " + e.getMessage());
-            Toast.makeText(context, "設定の更新に失敗しました", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, moduleContext.getResources().getString(R.string.Setting_Error), Toast.LENGTH_SHORT).show();
         } finally {
             if (db1 != null) {
                 db1.close();
@@ -1416,7 +1416,7 @@ public class EmbedOptions implements IHook {
                     }
                 }
             } catch (Exception e) {
-                XposedBridge.log("プロファイル読込エラー: " + e.getMessage());
+                XposedBridge.log( moduleContext.getResources().getString(R.string.Block_Profile_Reload) + e.getMessage());
             }
             return profiles;
         }
@@ -1436,10 +1436,10 @@ public class EmbedOptions implements IHook {
 
         private void showManagementDialog(Context context, List<ProfileInfo> profiles, Context moduleContext) {
             AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                    .setTitle("プロファイル管理")
-                    .setNeutralButton("リセット", (dialog, which) -> showResetConfirmation(context, profiles))
-                    .setPositiveButton("再表示", (dialog, which) -> showRestoreDialog(context))
-                    .setNegativeButton("閉じる", null);
+                    .setTitle(moduleContext.getResources().getString(R.string.Block_list))
+                    .setNeutralButton(moduleContext.getResources().getString(R.string.Name_Reset), (dialog, which) -> showResetConfirmation(context, profiles,moduleContext))
+                    .setPositiveButton(moduleContext.getResources().getString(R.string.Redisplay), (dialog, which) -> showRestoreDialog(context))
+                    .setNegativeButton(moduleContext.getResources().getString(R.string.Close), null);
 
             ScrollView scrollView = new ScrollView(context);
             LinearLayout container = new LinearLayout(context);
@@ -1449,9 +1449,9 @@ public class EmbedOptions implements IHook {
             scrollView.addView(container);
 
             if (profiles.isEmpty()) {
-                // 空状態表示用のビューを追加
+
                 TextView emptyView = new TextView(context);
-                emptyView.setText("表示可能なプロファイルがありません");
+                emptyView.setText(moduleContext.getResources().getString(R.string.No_Profiles));
                 emptyView.setGravity(Gravity.CENTER);
                 emptyView.setTextSize(16);
                 container.addView(emptyView, new LinearLayout.LayoutParams(
@@ -1459,7 +1459,7 @@ public class EmbedOptions implements IHook {
                         LinearLayout.LayoutParams.WRAP_CONTENT
                 ));
             } else {
-                // 通常のプロファイルリストを追加
+
                 for (ProfileInfo profile : profiles) {
                     container.addView(createProfileItem(context, profile, container));
                 }
@@ -1468,23 +1468,21 @@ public class EmbedOptions implements IHook {
             builder.setView(scrollView);
             currentDialog = builder.show();
 
-            // ダイアログサイズ調整（空状態でも同じサイズを維持）
             Window window = currentDialog.getWindow();
             if (window != null) {
                 window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, 800);
             }
         }
 
-        // dpからpxへの変換ヘルパーメソッド
         private int dpToPx(Context context, int dp) {
             return (int) (dp * context.getResources().getDisplayMetrics().density);
         }
-        private void showResetConfirmation(Context context, List<ProfileInfo> profiles) {
+        private void showResetConfirmation(Context context, List<ProfileInfo> profiles,Context moduleContext) {
             new AlertDialog.Builder(context)
-                    .setTitle("Confirm Reset")
-                    .setMessage("すべてのプロファイルを削除しますか？")
-                    .setPositiveButton("OK", (d, w) -> performResetOperation(context, profiles))
-                    .setNegativeButton("Cancel", null)
+                    .setTitle(moduleContext.getResources().getString(R.string.really_delete))
+                    .setMessage(moduleContext.getResources().getString(R.string.really_delete))
+                    .setPositiveButton(moduleContext.getResources().getString(R.string.ok), (d, w) -> performResetOperation(context, profiles))
+                    .setNegativeButton(moduleContext.getResources().getString(R.string.cancel), null)
                     .show();
         }
         private LinearLayout createProfileItem(Context context, ProfileInfo profile, ViewGroup parent) {
@@ -1499,13 +1497,13 @@ public class EmbedOptions implements IHook {
             tv.setTextSize(16);
 
             Button hideBtn = new Button(context);
-            hideBtn.setText("非表示");
+                hideBtn.setText(moduleContext.getResources().getString(R.string.Hide));
             hideBtn.setBackgroundColor(Color.parseColor("#FF9800")); // オレンジ色
             hideBtn.setTextColor(Color.WHITE);
             hideBtn.setOnClickListener(v -> {
                 hiddenManager.addHiddenProfile(profile.contactMid);
                 parent.removeView(layout);
-                Toast.makeText(context, profile.profileName + "を非表示にしました", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, profile.profileName + moduleContext.getResources().getString(R.string.user_hide), Toast.LENGTH_SHORT).show();
             });
 
             layout.addView(tv);
@@ -1516,12 +1514,12 @@ public class EmbedOptions implements IHook {
         private void showRestoreDialog(Context context) {
             Set<String> hidden = hiddenManager.getHiddenProfiles();
             if (hidden.isEmpty()) {
-                Toast.makeText(context, "非表示中のプロファイルはありません", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, moduleContext.getResources().getString(R.string.no_hidden_profiles), Toast.LENGTH_SHORT).show();
                 return;
             }
 
             AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                    .setTitle("非表示プロファイルの再表示");
+                    .setTitle(moduleContext.getResources().getString(R.string.Unhide_hidden_profiles));
 
             ScrollView scrollView = new ScrollView(context);
             LinearLayout container = new LinearLayout(context);
@@ -1547,13 +1545,13 @@ public class EmbedOptions implements IHook {
                                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
 
                         Button restoreBtn = new Button(context);
-                        restoreBtn.setText("再表示");
+                        restoreBtn.setText(moduleContext.getResources().getString(R.string.Redisplay));
                         restoreBtn.setBackgroundColor(Color.parseColor("#4CAF50")); // 緑色
                         restoreBtn.setTextColor(Color.WHITE);
                         restoreBtn.setOnClickListener(v -> {
                             hiddenManager.removeHiddenProfile(profile.contactMid);
                             container.removeView(itemLayout);
-                            Toast.makeText(context, profile.profileName + "を再表示しました", Toast.LENGTH_SHORT).show();
+                            Toast.makeText(context, profile.profileName + moduleContext.getResources().getString(R.string.redisplayed_Profile), Toast.LENGTH_SHORT).show();
                         });
 
                         itemLayout.addView(tv);
@@ -1564,7 +1562,7 @@ public class EmbedOptions implements IHook {
             }.execute();
 
             builder.setView(scrollView);
-            builder.setNegativeButton("戻る", null);
+            builder.setNegativeButton(moduleContext.getResources().getString(R.string.Return), null);
             builder.show();
         }
 
@@ -1628,8 +1626,8 @@ public class EmbedOptions implements IHook {
                         }
                     }
                     final String message = affectedRows > 0 ?
-                            affectedRows + "件のレコードから文字列を削除しました" :
-                            "該当するレコードはありませんでした";
+                            affectedRows + moduleContext.getResources().getString(R.string.reset_name) :
+                            moduleContext.getResources().getString(R.string.no_reset_name);
 
                     new Handler(Looper.getMainLooper()).post(() -> {
                         Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
@@ -1638,7 +1636,7 @@ public class EmbedOptions implements IHook {
 
                 } catch (Exception e) {
                     new Handler(Looper.getMainLooper()).post(() ->
-                            Toast.makeText(context, "エラー: " + e.getMessage(), Toast.LENGTH_LONG).show());
+                            Toast.makeText(context, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show());
                 } finally {
                     if (db != null) {
                         db.close();

@@ -180,9 +180,29 @@
     <string name="SettingClick">LsPatch用設定のホームボタンを開く</string>
     <string name="UnsendFix">動画送信中にタスクを切るとチャットリストが表示されないのを修正(動作が遅くなります)</string>
     <string name="photoboothButtonOption">通話項目LINEプリを削除</string>
+    <string name="voiceButtonOption">通話項目 音声通話項目を非表示に</string>
     <string name="videoButtonOption">通話項目 グループ内でのビデオ通話項目を削除</string>
     <string name="videoSingleButtonOption">通話項目 個人チャット内でのビデオ通話項目を削除</string>
     <string name="AutoUpDateCheck">更新を自動的に確認する</string>
+    <string name="HideSetting">送信取り消し通知メッセージ表示設定</string>
+    <string name="HideSetting_selection">表示しますか非表示にしますか</string>
+    <string name="Hide">非表示にする</string>
+    <string name="Show">表示する</string>
+    <string name="Hiden_setting">非表示にしました</string>
+    <string name="Show_setting">表示設定しました</string>
+    <string name="Setting_Error">送信取り消しメッセージ設定の変更でエラーが発生しました</string>
+    <string name="Block_Profile_Reload">ブロックリストの読み込みに失敗しました</string>
+    <string name="Block_list">ブロックリスト</string>
+    <string name="Name_Reset">ブロック確認名前の変更をリセット</string>
+    <string name="Redisplay">再表示</string>
+    <string name="No_Profiles">表示可能なプロフィールがありません</string>
+    <string name="user_hide">を非表示にしました</string>
+    <string name="no_hidden_profiles">非表示中のプロファイルはありません</string>
+    <string name="Unhide_hidden_profiles">非表示プロファイルの再表示</string>
+    <string name="redisplayed_Profile">を再表示しました</string>
+    <string name="Return">戻る</string>
+    <string name="reset_name">件の名前をリセットしました</string>
+    <string name="no_reset_name">リセットする友達は確認できませんでした</string>
 
 
 </resources>
