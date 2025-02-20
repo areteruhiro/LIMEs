@@ -106,8 +106,8 @@ public class Removebutton implements IHook {
             ViewGroup.LayoutParams params = view.getLayoutParams();
             if (params == null) return;
 
-            params.width = 0;
-            params.height = 0;
+            params.width = 1;
+            params.height = 1;
 
             if (params instanceof ViewGroup.MarginLayoutParams) {
                 ((ViewGroup.MarginLayoutParams) params).setMargins(0, 0, 0, 0);
