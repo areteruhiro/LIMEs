@@ -1,6 +1,7 @@
 package io.github.hiro.lime.hooks;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Resources;
 import net.sqlcipher.database.SQLiteDatabase;
 
@@ -11,12 +12,16 @@ import android.os.Bundle;
 import android.text.SpannedString;
 import android.util.Log;
 
+import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 
+import dalvik.system.DexFile;
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XposedBridge;
@@ -26,6 +31,7 @@ import io.github.hiro.lime.LimeOptions;
 public class SettingCrash implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+
         if (!limeOptions.SettingClick.checked) return;
         XposedHelpers.findAndHookMethod("android.content.ContentProvider",
                 lpparam.classLoader,
@@ -90,4 +96,20 @@ public class SettingCrash implements IHook {
             XposedBridge.log("LIME RESOLVED ERROR: " + Log.getStackTraceString(t));
         }
     }
+
+    private void hookOnReceive(Class<?> clazz) {
+        try {
+            // BroadcastReceiverのonReceiveメソッドをフック
+            XposedBridge.hookAllMethods(clazz, "onReceive", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    Intent intent = (Intent) param.args[1]; // 引数のインデックスは環境によって異なる場合があります
+                    XposedBridge.log("Received Intent in " + clazz.getName() + ": " + intent.toString());
+                }
+            });
+        } catch (Throwable e) {
+            XposedBridge.log("Error hooking onReceive for " + clazz.getName() + ": " + e.getMessage());
+        }
+    }
+
 }

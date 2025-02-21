@@ -11,10 +11,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
-import android.util.Log;
 import android.util.TypedValue;
-import android.view.ContextMenu;
-import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
@@ -23,7 +20,6 @@ import android.widget.TextView;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Random;
 import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -31,7 +27,6 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
-import io.github.hiro.lime.R;
 
 public class DarkColor implements IHook {
     private static final String HEIGHT_MODIFIED_KEY = "123456789";
@@ -69,7 +64,6 @@ public class DarkColor implements IHook {
             }
         });
 
-// メソッドフックの追加
         XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "setBackground", Drawable.class, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
@@ -86,7 +80,6 @@ public class DarkColor implements IHook {
             }
         });
 
-// setBackgroundColorのBeforeフック
         XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "setBackgroundColor", int.class, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
@@ -97,7 +90,6 @@ public class DarkColor implements IHook {
             }
         });
     }
-    // 改善されたカラーチェックメソッド
     private boolean isTargetColor(int color, String target) {
         int targetColor = Color.parseColor(target);
         return (color & 0x00FFFFFF) == (targetColor & 0x00FFFFFF);
@@ -379,14 +371,13 @@ public class DarkColor implements IHook {
             try {
                 resName = view.getResources().getResourceEntryName(viewId);
             } catch (Resources.NotFoundException e) {
-                // パッケージ名を含めて取得
                 String pkgName = view.getResources().getResourcePackageName(viewId);
                 String typeName = view.getResources().getResourceTypeName(viewId);
                 String entryName = view.getResources().getResourceEntryName(viewId);
                 resName = pkgName + ":" + typeName + "/" + entryName;
             }
             return resName;
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             return "unknown";
         }
     }

@@ -26,7 +26,7 @@ public class ModifyResponse implements IHook {
                         final String script = new String(Base64.decode(customPreferences.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP));
 
                         Context ctx = Context.enter();
-                        ctx.setOptimizationLevel(-1); // 最適化レベルを無効化
+                        ctx.setOptimizationLevel(-1);
                         try {
                             Scriptable scope = ctx.initStandardObjects();
 

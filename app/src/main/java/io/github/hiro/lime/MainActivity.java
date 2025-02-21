@@ -106,7 +106,7 @@ public class MainActivity extends Activity {
         LinearLayout mainLayout = new LinearLayout(this);
         mainLayout.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT));
+                LinearLayout.LayoutParams.MATCH_PARENT));
         mainLayout.setOrientation(LinearLayout.VERTICAL);
         mainLayout.setPadding(Utils.dpToPx(20, this), Utils.dpToPx(20, this), Utils.dpToPx(20, this), Utils.dpToPx(20, this));
 
@@ -201,12 +201,14 @@ public class MainActivity extends Activity {
             buttonLayout.addView(pasteButton);
             layoutModifyRequest.addView(buttonLayout);
 
-            ScrollView dialogScrollView = new ScrollView(this);
-            dialogScrollView.addView(layoutModifyRequest);
+            LinearLayout dialogContent = new LinearLayout(this);
+            dialogContent.setOrientation(LinearLayout.VERTICAL);
+            dialogContent.addView(layoutModifyRequest);
+
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this)
                     .setTitle(R.string.modify_request)
-                    .setView(dialogScrollView)
+                    .setView(dialogContent)
                     .setPositiveButton(R.string.positive_button, (dialog, which) -> {
                         customPrefs.saveSetting("encoded_js_modify_request", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
                     })
@@ -287,15 +289,13 @@ public class MainActivity extends Activity {
                 }
             });
 
-            buttonLayout.addView(pasteButton);
-            layoutModifyResponse.addView(buttonLayout);
-
-            ScrollView dialogScrollView = new ScrollView(this);
-            dialogScrollView.addView(layoutModifyResponse);
+            LinearLayout dialogContent = new LinearLayout(this);
+            dialogContent.setOrientation(LinearLayout.VERTICAL);
+            dialogContent.addView(layoutModifyResponse);
 
             AlertDialog.Builder builder = new AlertDialog.Builder(this)
                     .setTitle(R.string.modify_response)
-                    .setView(dialogScrollView)
+                    .setView(dialogContent)
                     .setPositiveButton(R.string.positive_button, (dialog, which) -> {
                         customPrefs.saveSetting("encoded_js_modify_response", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
                     })

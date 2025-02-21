@@ -135,6 +135,55 @@ public class Constants {
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
 
         } else if (versionName.equals("15.1.3")) {
+            /*
+            TRADITIONAL_CHINESE
+            static  HookTarget USER_AGENT_HOOK = new  HookTarget("qi1.c", "j");
+            HANDLED_AND_RETURN_TRUE
+            static  HookTarget WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
+            NOTIFICATION_DISABLED
+            static  HookTarget MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
+            PROCESSING
+            static  HookTarget MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
+
+        ChatListViewModel
+            static  HookTarget Archive = new HookTarget("LB.W", "invokeSuspend");
+          StreamingFetchOperationHandler
+            static  HookTarget NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
+            static  HookTarget REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
+            static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
+          */
+            //BackEventCompat
+            USER_AGENT_HOOK = new HookTarget("qi1.c", "j");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
+            MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
+            MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
+            Archive = new HookTarget("LB.W", "invokeSuspend");
+            NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
+            RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+            SettingCrash_Hook = new HookTarget("af0.o0", "B0");
+            SettingCrash_Hook_Sub = new HookTarget("Te0.j", "");
+
+        } else if (versionName.equals("15.1.4")) {
+            /*
+            TRADITIONAL_CHINESE
+            static  HookTarget USER_AGENT_HOOK = new  HookTarget("qi1.c", "j");
+            HANDLED_AND_RETURN_TRUE
+            static  HookTarget WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
+            NOTIFICATION_DISABLED
+            static  HookTarget MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
+            PROCESSING
+            static  HookTarget MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
+
+        ChatListViewModel
+            static  HookTarget Archive = new HookTarget("LB.W", "invokeSuspend");
+          StreamingFetchOperationHandler
+            static  HookTarget NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
+            static  HookTarget REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
+            static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
+          */
+            //BackEventCompat
             USER_AGENT_HOOK = new HookTarget("qi1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");

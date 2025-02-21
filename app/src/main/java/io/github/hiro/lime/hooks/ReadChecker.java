@@ -635,7 +635,6 @@ public class ReadChecker implements IHook {
 
         return messages;
     }
-
     private void fetchDataAndSave(SQLiteDatabase db3, SQLiteDatabase db4, String paramValue, Context context, Context moduleContext) {
         String serverId = null;
         String SentUser = null;
@@ -644,17 +643,32 @@ public class ReadChecker implements IHook {
             serverId = extractServerId(paramValue, context);
             SentUser = extractSentUser(paramValue);
             if (serverId == null || SentUser == null) return;
+
             String SendUser = queryDatabaseWithRetry(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
+            SendUser = SendUser != null ? SendUser : "null"; 
+
             String groupId = queryDatabaseWithRetry(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
+            groupId = groupId != null ? groupId : "null"; 
+
             String groupName = queryDatabaseWithRetry(db3, "SELECT name FROM groups WHERE id=?", groupId);
+            groupName = groupName != null ? groupName : "null"; 
+
             String content = queryDatabaseWithRetry(db3, "SELECT content FROM chat_history WHERE server_id=?", serverId);
+            content = content != null ? content : "null"; 
+
             String name = queryDatabaseWithRetry(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
+            name = name != null ? name : "null"; 
+
             String timeEpochStr = queryDatabaseWithRetry(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
+            timeEpochStr = timeEpochStr != null ? timeEpochStr : "null"; 
+
             String media = queryDatabaseWithRetry(db3, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
+            media = media != null ? media : "null"; 
+
             String mediaDescription = "";
             boolean mediaError = false;
 
-            if (media != null) {
+            if (!media.equals("null")) { // "null"文字列で判定
                 switch (media) {
                     case "7":
                         mediaDescription = moduleContext.getResources().getString(R.string.sticker);
@@ -679,14 +693,13 @@ public class ReadChecker implements IHook {
             }
 
             String finalContent = determineFinalContent(content, mediaDescription);
-            String timeFormatted = formatMessageTime (timeEpochStr);
-            saveData(SendUser , groupId, serverId, SentUser , groupName, finalContent, name, timeFormatted, context);
+            String timeFormatted = formatMessageTime(timeEpochStr);
+            saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, name, timeFormatted, context);
 
         } catch (Resources.NotFoundException e) {
             throw new RuntimeException(e);
         }
     }
-
     private String determineFinalContent(String content, String mediaDescription) {
         if (content != null && !content.isEmpty() && !content.equals("null")) {
             return content;

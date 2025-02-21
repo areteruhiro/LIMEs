@@ -2,8 +2,13 @@ package io.github.hiro.lime.hooks;
 
 import android.content.Context;
 import android.content.res.Resources;
+import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -18,16 +23,33 @@ public class Removebutton implements IHook {
     private volatile boolean initialized = false;
 
     private static final String[] TARGET_RESOURCES = {
-            "chat_ui_call_header_starter_photobooth_button",
+
             "chat_ui_group_call_header_starter_voice_button",
+            "chat_ui_group_call_header_starter_voice_button_text",
+            "chat_ui_group_call_header_starter_voice_button_icon",
+
             "chat_ui_group_call_header_starter_video_button",
+            "chat_ui_group_call_header_starter_video_button_text",
+            "chat_ui_group_call_header_starter_video_button_icon",
+
             "chat_ui_singlecall_layer_video_button",
-            "chat_ui_send_button_image"
+            "chat_ui_send_button_image",
+
+
+            "top_space_for_photobooth",
+            "chat_ui_photo_booth_root",
+
+            "chat_ui_call_header_starter_photobooth_button",
+
+            "chat_ui_group_call_header_starter_photobooth_new_badge_icon",
+            "chat_ui_group_call_header_starter_photobooth_new_badge_background",
+            "chat_ui_group_call_header_starter_photobooth_button_text",
+            "chat_ui_group_call_header_starter_photobooth_button_icon",
+
     };
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
-        // 1. LayoutInflaterフック（主要な処理）
         XposedHelpers.findAndHookMethod("android.view.LayoutInflater", lpparam.classLoader,
                 "inflate", int.class, ViewGroup.class, boolean.class, new XC_MethodHook() {
                     @Override
@@ -36,7 +58,6 @@ public class Removebutton implements IHook {
                     }
                 });
 
-        // 2. onAttachedToWindowフック（フォールバック）
         XposedHelpers.findAndHookMethod("android.view.View", lpparam.classLoader,
                 "onAttachedToWindow", new XC_MethodHook() {
                     @Override
@@ -44,12 +65,14 @@ public class Removebutton implements IHook {
                         handleView((View) param.thisObject, limeOptions);
                     }
                 });
+
+
+
     }
 
     private void handleView(View view, LimeOptions options) {
         if (view == null) return;
 
-        // 初期化チェック（スレッドセーフ）
         if (!initialized) {
             synchronized (this) {
                 if (!initialized) {
@@ -59,11 +82,9 @@ public class Removebutton implements IHook {
             }
         }
 
-        // 高速チェック
         if (targetIds.isEmpty() || !targetIds.contains(view.getId())) return;
-
-        // 最適化処理
-        optimizeViewLayout(view);
+        applyDefaultOptimization(view);
+        adjustParentLayout(view);
     }
 
     private void initialize(Context context, LimeOptions options) {
@@ -76,18 +97,34 @@ public class Removebutton implements IHook {
                     int id = res.getIdentifier(resName, "id", context.getPackageName());
                     if (id != View.NO_ID) {
                         targetIds.add(id);
-                        XposedBridge.log("LIME: Registered ID - " + resName + " = 0x" + Integer.toHexString(id));
                     }
                 }
             }
-        } catch (Exception e) {
-            XposedBridge.log("LIME: Initialization failed - " + e);
+        } catch (Exception ignored) {
+            XposedBridge.log("LIME: Initialization failed - ");
         }
     }
-
+    private void adjustParentLayout(View view) {
+        ViewGroup parent = (ViewGroup) view.getParent();
+        if (parent != null) {
+            ViewGroup.LayoutParams params = parent.getLayoutParams();
+            if (params instanceof LinearLayout.LayoutParams) {
+                LinearLayout.LayoutParams linearParams = (LinearLayout.LayoutParams) params;
+                linearParams.weight = 0; // 必要に応じて重みを設定
+                parent.setLayoutParams(linearParams);
+            }
+        }
+    }
     private boolean isOptionEnabled(LimeOptions options, String resName) {
         switch (resName) {
             case "chat_ui_call_header_starter_photobooth_button":
+            case "chat_ui_group_call_header_starter_photobooth_new_badge_icon":
+            case "chat_ui_group_call_header_starter_photobooth_new_badge_background":
+            case "chat_ui_group_call_header_starter_photobooth_new_badge_text":
+            case "chat_ui_group_call_header_starter_photobooth_button_text":
+            case "chat_ui_group_call_header_starter_photobooth_button_icon":
+
+
                 return options.photoboothButtonOption.checked;
             case "chat_ui_group_call_header_starter_voice_button":
                 return options.voiceButtonOption.checked;
@@ -101,32 +138,30 @@ public class Removebutton implements IHook {
     }
 
 
-    private void optimizeViewLayout(View view) {
-        try {
-            ViewGroup.LayoutParams params = view.getLayoutParams();
-            if (params == null) return;
 
-            params.width = 1;
-            params.height = 1;
 
-            if (params instanceof ViewGroup.MarginLayoutParams) {
-                ((ViewGroup.MarginLayoutParams) params).setMargins(0, 0, 0, 0);
-            }
-
-            view.setLayoutParams(params);
-            // XposedBridge.log("LIME: Optimized view - " + view.getClass().getSimpleName());
-
-        } catch (Exception e) {
-            //XposedBridge.log("LIME: Optimization error - " + e);
-
+    private void applyDefaultOptimization(View view) {
+        ViewGroup.LayoutParams params = view.getLayoutParams();
+        if (params == null) return;
+        params.width = 1;
+        params.height = 1;
+        if (params instanceof ViewGroup.MarginLayoutParams) {
+            ((ViewGroup.MarginLayoutParams) params).setMargins(0, 0, 0, 0);
         }
+
+        view.setLayoutParams(params);
+    }
+
+    private int convertDpToPixel(float dp, Context context) {
+        return (int) (dp * context.getResources().getDisplayMetrics().density);
     }
 }
 
 
-    //        XposedHelpers.findAndHookMethod(
+
+//        XposedHelpers.findAndHookMethod(
 //                "android.view.View",
-//                loadPackageParam.classLoader,
+//                lpparam.classLoader,
 //                "onAttachedToWindow",
 //                new XC_MethodHook() {
 //                    @Override
