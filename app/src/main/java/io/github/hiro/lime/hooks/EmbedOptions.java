@@ -84,11 +84,8 @@ public class EmbedOptions implements IHook {
                                 XposedHelpers.findClass("android.app.ActivityThread", null),
                                 "currentActivityThread"
                         ), "getSystemContext");
+
                         try {
-
-
-
-
                             PackageManager pm = contextV.getPackageManager();
                             String versionName = ""; // 初期化
                             try {
@@ -98,9 +95,13 @@ public class EmbedOptions implements IHook {
                             }
 
                             CustomPreferences customPreferences = new CustomPreferences();
+                            Set<String> checkedOptions = new HashSet<>(); // 重複をチェックするためのセット
 
                             for (LimeOptions.Option option : limeOptions.options) {
-                                option.checked = Boolean.parseBoolean(customPreferences.getSetting(option.name, String.valueOf(option.checked)));
+                                if (!checkedOptions.contains(option.name)) {
+                                    option.checked = Boolean.parseBoolean(customPreferences.getSetting(option.name, String.valueOf(option.checked)));
+                                    checkedOptions.add(option.name);
+                                }
                             }
                             Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                     "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);

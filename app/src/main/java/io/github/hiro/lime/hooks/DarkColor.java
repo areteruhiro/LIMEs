@@ -20,6 +20,7 @@ import android.widget.TextView;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Random;
 import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -29,16 +30,13 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 
 public class DarkColor implements IHook {
-    private static final String HEIGHT_MODIFIED_KEY = "123456789";
-
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.DarkColor.checked) return;
 
         if (limeOptions.extendClickableArea.checked) {
-
             XposedHelpers.findAndHookMethod(
-                    "jp.naver.line.android.activity.main.MainActivity",
+                    "android.app.Activity",
                     loadPackageParam.classLoader,
                     "onResume",
                     new XC_MethodHook() {
@@ -46,14 +44,27 @@ public class DarkColor implements IHook {
                         protected void afterHookedMethod(MethodHookParam param) {
                             Activity activity = (Activity) param.thisObject;
                             View rootView = activity.getWindow().getDecorView();
-                            if (limeOptions.DarkModSync.checked) {
-                                if (!isDarkModeEnabled(rootView)) return;
-                            }
                             traverseViewsAndLog((ViewGroup) rootView, activity);
-
                         }
                     }
             );
+//            XposedHelpers.findAndHookMethod(
+//                    "jp.naver.line.android.activity.main.MainActivity",
+//                    loadPackageParam.classLoader,
+//                    "onResume",
+//                    new XC_MethodHook() {
+//                        @Override
+//                        protected void afterHookedMethod(MethodHookParam param) {
+//                            Activity activity = (Activity) param.thisObject;
+//                            View rootView = activity.getWindow().getDecorView();
+//                            if (limeOptions.DarkModSync.checked) {
+//                                if (!isDarkModeEnabled(rootView)) return;
+//                            }
+//                            traverseViewsAndLog((ViewGroup) rootView, activity);
+//
+//                        }
+//                    }
+//            );
         }
 
         XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "onAttachedToWindow", new XC_MethodHook() {
@@ -107,8 +118,11 @@ public class DarkColor implements IHook {
                 "bnb_call_spacer",
                 "bnb_timeline_spacer",
                 "bnb_chat_spacer",
-                "main_tab_container"
-
+                "main_tab_container",
+                "bnb_background_image",
+                "bnb_portal_spacer",
+                "main_tab_container",
+                "bnb"
         ));
         for (int i = 0; i < viewGroup.getChildCount(); i++) {
             View child = viewGroup.getChildAt(i);
@@ -120,16 +134,11 @@ public class DarkColor implements IHook {
                     String resName = activity.getResources().getResourceEntryName(resId);
                     String resType = activity.getResources().getResourceTypeName(resId);
                     String fullResName = activity.getPackageName() + ":" + resType + "/" + resName;
-
                     if (targetResources.contains(resName)) {
                         child.setBackgroundColor(Color.BLACK);
                         if (child instanceof TextView) {
                             ((TextView) child).setTextColor(Color.BLACK);
                         }
-                        Boolean isModified = (Boolean) child.getTag(Integer.parseInt(HEIGHT_MODIFIED_KEY));
-                        if (isModified == null || !isModified) {
-                            child.setTag(Integer.parseInt(HEIGHT_MODIFIED_KEY), true);
-
                             child.getViewTreeObserver().addOnGlobalLayoutListener(
                                     new ViewTreeObserver.OnGlobalLayoutListener() {
                                         @Override
@@ -140,11 +149,11 @@ public class DarkColor implements IHook {
                                                 ViewGroup.LayoutParams params = child.getLayoutParams();
                                                 int newHeight;
                                                 if (params.height > 0) {
-                                                    newHeight = (int)(params.height * 0.8);
+                                                    newHeight = (int)(params.height * 0.9);
                                                 } else {
                                                     newHeight = (int) TypedValue.applyDimension(
                                                             TypedValue.COMPLEX_UNIT_DIP,
-                                                            80,
+                                                            78,
                                                             activity.getResources().getDisplayMetrics()
                                                     );
                                                 }
@@ -157,7 +166,7 @@ public class DarkColor implements IHook {
                                         }
                                     }
                             );
-                        }
+
                     }
                 } catch (Resources.NotFoundException e) {
                 }
@@ -169,7 +178,7 @@ public class DarkColor implements IHook {
         }
     }
 
-    /*
+
     private void traverseViewsAndLogG(ViewGroup viewGroup, Activity activity) {
         Random random = new Random(); // ランダムカラー生成用
 
@@ -210,7 +219,7 @@ public class DarkColor implements IHook {
             }
         }
     }
-*/
+
     private void applyDarkThemeRecursive(View view) {
         String logPrefix = "[DarkTheme]";
         String resName = getViewResourceName(view);
@@ -264,9 +273,6 @@ public class DarkColor implements IHook {
                     if (child instanceof TextView) {
                         TextView tv = (TextView) child;
                         tv.setTextColor(Color.WHITE);
-                        XposedBridge.log(String.format("%s PopupTextWhite: %s",
-                                logPrefix,
-                                tv.getText()));
                     }
                 }
             }

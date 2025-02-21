@@ -33,6 +33,7 @@ public class SettingCrash implements IHook {
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
 
         if (!limeOptions.SettingClick.checked) return;
+        try {
         XposedHelpers.findAndHookMethod("android.content.ContentProvider",
                 lpparam.classLoader,
                 "query",
@@ -55,7 +56,7 @@ public class SettingCrash implements IHook {
 
 
 
-        try {
+
 
             Class<?> te0jClass = XposedHelpers.findClass(Constants.SettingCrash_Hook_Sub.className, lpparam.classLoader);
             Class<?> integerClass = Integer.class;
@@ -92,8 +93,8 @@ public class SettingCrash implements IHook {
                     }
             );
 
-        } catch (Throwable t) {
-            XposedBridge.log("LIME RESOLVED ERROR: " + Log.getStackTraceString(t));
+        } catch (Throwable ignored) {
+            XposedBridge.log("LIME RESOLVED ERROR: ");
         }
     }
 

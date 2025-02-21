@@ -69,6 +69,9 @@ public class LimeOptions {
     public Option AddCopyAction = new Option("AddCopyAction", R.string.AddCopyAction, false);
     public Option CallOpenApplication = new Option("CallOpenApplication", R.string.CallOpenApplication, true);
     public Option DarkModSync = new Option("DarkModSync", R.string.DarkkModSync, true);
+
+    public Option PureDarkCall = new Option("PureDarkCall", R.string.PureDarkCall, false);
+
     public Option BlockCheck = new Option("BlockCheck", R.string.BlockCheck, true);
     public Option SettingClick = new Option("SettingClick", R.string.SettingClick, false);
 
@@ -117,7 +120,7 @@ public class LimeOptions {
             callTone,ringtonevolume,
             MuteTone,
             DialTone,
-            DarkColor,DarkModSync,
+            DarkColor,DarkModSync,PureDarkCall,
             MuteGroup,
             PhotoAddNotification,GroupNotification,CansellNotification,AddCopyAction,
             RemoveVoiceRecord,

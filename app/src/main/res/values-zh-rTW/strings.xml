@@ -195,5 +195,7 @@
     <string name="voiceButtonOption">隱藏語音通話項目。</string>
     <string name="videoButtonOption">刪除群組內的視頻通話項目。</string>
     <string name="videoSingleButtonOption">刪除個人聊天內的視頻通話項目。</string>
+    <string name="ringtonevolume">"（發出撥號音）使用鈴聲 "</string>
+    <string name="PureDarkCall">（PureDark 底部欄）用於檢視通話記錄</string>
 
 </resources>

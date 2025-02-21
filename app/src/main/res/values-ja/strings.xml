@@ -205,4 +205,5 @@
     <string name="no_reset_name">リセットする友達は確認できませんでした</string>
 
     <string name="ringtonevolume">(発信音を鳴らす)着信音を利用する</string>
+    <string name="PureDarkCall">(PureDarkボトムバー)通話履歴用</string>
 </resources>
