@@ -120,7 +120,7 @@ public class LimeOptions {
             callTone,ringtonevolume,
             MuteTone,
             DialTone,
-            DarkColor,DarkModSync,PureDarkCall,
+            DarkColor,DarkModSync,
             MuteGroup,
             PhotoAddNotification,GroupNotification,CansellNotification,AddCopyAction,
             RemoveVoiceRecord,
