@@ -108,8 +108,22 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
         mainLayout.setOrientation(LinearLayout.VERTICAL);
-        mainLayout.setPadding(Utils.dpToPx(20, this), Utils.dpToPx(100, this), Utils.dpToPx(20, this), Utils.dpToPx(20, this));
-
+// パディングの設定（Android 15以降は上部パディングを大きく）
+        if (Build.VERSION.SDK_INT >= 35) {
+            mainLayout.setPadding(
+                    Utils.dpToPx(20, this),
+                    Utils.dpToPx(100, this),
+                    Utils.dpToPx(20, this),
+                    Utils.dpToPx(20, this)
+            );
+        } else {
+            mainLayout.setPadding(
+                    Utils.dpToPx(20, this),
+                    Utils.dpToPx(10, this),
+                    Utils.dpToPx(20, this),
+                    Utils.dpToPx(20, this)
+            );
+        }
         Switch switchRedirectWebView = null;
         for (LimeOptions.Option option : limeOptions.options) {
             final String name = option.name;
