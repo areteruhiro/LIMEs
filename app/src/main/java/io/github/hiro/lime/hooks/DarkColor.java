@@ -10,7 +10,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.LayerDrawable;
 import android.os.Build;
 import android.util.TypedValue;
 import android.view.View;
@@ -36,6 +35,7 @@ public class DarkColor implements IHook {
         if (!limeOptions.DarkColor.checked) return;
 
 
+        if (limeOptions.extendClickableArea.checked) {
             XposedHelpers.findAndHookMethod(
                     "android.app.Activity",
                     loadPackageParam.classLoader,
@@ -45,10 +45,16 @@ public class DarkColor implements IHook {
                         protected void afterHookedMethod(MethodHookParam param) {
                             Activity activity = (Activity) param.thisObject;
                             View rootView = activity.getWindow().getDecorView();
+                            View view = rootView;
+
+                            if (limeOptions.DarkModSync.checked) {
+                                if (!isDarkModeEnabled(view)) return;
+                            }
                             traverseViewsAndLog((ViewGroup) rootView, activity);
                         }
                     }
             );
+        }
 //            XposedHelpers.findAndHookMethod(
 //                    "jp.naver.line.android.activity.main.MainActivity",
 //                    loadPackageParam.classLoader,
@@ -107,91 +113,88 @@ public class DarkColor implements IHook {
         return (color & 0x00FFFFFF) == (targetColor & 0x00FFFFFF);
     }
     private void traverseViewsAndLog(ViewGroup viewGroup, Activity activity) {
-        final Set<String> gradientTargets = new HashSet<>(Arrays.asList(
+        final Set<String> targetResources = new HashSet<>(Arrays.asList(
+                "bnb_home_v2",
+                "bnb_wallet",
                 "bnb_chat",
-                "bnb_home_v2"
+                "bnb_news",
+                "bnb_call",
+                "bnb_timeline",
+                "bnb_wallet_spacer",
+                "bnb_news_spacer",
+                "bnb_call_spacer",
+                "bnb_timeline_spacer",
+                "bnb_chat_spacer",
+                "main_tab_container",
+                "bnb_background_image",
+                "bnb_portal_spacer",
+                "main_tab_container"
         ));
-
-        final Set<String> otherTargets = new HashSet<>(Arrays.asList(
-                "bnb_wallet", "bnb_news", "bnb_call", "bnb_timeline",
-                "bnb_wallet_spacer", "bnb_news_spacer", "bnb_call_spacer",
-                "bnb_timeline_spacer", "bnb_chat_spacer", "main_tab_container",
-                "bnb_background_image", "bnb_portal_spacer"
-        ));
-
         for (int i = 0; i < viewGroup.getChildCount(); i++) {
             View child = viewGroup.getChildAt(i);
-            int resId = child.getId();
 
+            int resId = child.getId();
             if (resId != View.NO_ID) {
                 try {
+
                     String resName = activity.getResources().getResourceEntryName(resId);
-                    if (gradientTargets.contains(resName) || otherTargets.contains(resName)) {
-                        ViewTreeObserver.OnGlobalLayoutListener bgListener =
-                                new ViewTreeObserver.OnGlobalLayoutListener() {
-                                    @Override
-                                    public void onGlobalLayout() {
-                                        if (!child.getViewTreeObserver().isAlive()) return;
-                                        int height = child.getHeight();
-                                        if (height <= 0) return;
-
-                                        LayerDrawable layerDrawable = new LayerDrawable(new Drawable[]{
-                                                createTransparentRect(height * 0.2f),
-                                                createBlackRect(height * 0.8f)
-                                        });
-                                        layerDrawable.setLayerInset(1, 0, (int)(height * 0.2f), 0, 0);
-                                        child.setBackground(layerDrawable);
-                                        child.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                                    }
-                                };
-                        ViewTreeObserver.OnGlobalLayoutListener heightListener =
-                                new ViewTreeObserver.OnGlobalLayoutListener() {
-                                    @Override
-                                    public void onGlobalLayout() {
-                                        if (!child.getViewTreeObserver().isAlive()) return;
-
-                                        if (child.getVisibility() == View.VISIBLE) {
-                                            ViewGroup.LayoutParams params = child.getLayoutParams();
-                                            params.height = (int) TypedValue.applyDimension(
-                                                    TypedValue.COMPLEX_UNIT_DIP,
-                                                    80,
-                                                    activity.getResources().getDisplayMetrics()
-                                            );
-                                            child.setLayoutParams(params);
-                                        }
-                                        child.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                                    }
-                                };
-                        child.getViewTreeObserver().addOnGlobalLayoutListener(bgListener);
-                        child.getViewTreeObserver().addOnGlobalLayoutListener(heightListener);
-
-                        if (child instanceof TextView && !resName.endsWith("_spacer")) {
+                    String resType = activity.getResources().getResourceTypeName(resId);
+                    String fullResName = activity.getPackageName() + ":" + resType + "/" + resName;
+                    if (targetResources.contains(resName)) {
+                        child.setBackgroundColor(Color.BLACK);
+                        if (child instanceof TextView) {
                             ((TextView) child).setTextColor(Color.BLACK);
                         }
+                            child.getViewTreeObserver().addOnGlobalLayoutListener(
+                                    new ViewTreeObserver.OnGlobalLayoutListener() {
+                                        @Override
+                                        public void onGlobalLayout() {
+                                            if (!child.getViewTreeObserver().isAlive()) return;
+                                            // 特定リソース名の場合、上部を透明化
+                                            if (resName.equals("main_tab_container")) {
+                                                GradientDrawable gradient = new GradientDrawable(
+                                                        GradientDrawable.Orientation.TOP_BOTTOM,
+                                                        new int[]{
+                                                                Color.TRANSPARENT,  // 上部
+                                                                Color.BLACK         // 下部
+                                                        }
+                                                );
+                                                gradient.setGradientType(GradientDrawable.LINEAR_GRADIENT);
+                                                gradient.setShape(GradientDrawable.RECTANGLE);
+                                                child.setBackground(gradient);
+                                            } else {
+                                                child.setBackgroundColor(Color.BLACK);
+                                            }
+
+                                            if (child.getVisibility() == View.VISIBLE) {
+                                                ViewGroup.LayoutParams params = child.getLayoutParams();
+                                                int newHeight;
+
+                                                    newHeight = (int) TypedValue.applyDimension(
+                                                            TypedValue.COMPLEX_UNIT_DIP,
+                                                            80,
+                                                            activity.getResources().getDisplayMetrics()
+                                                    );
+
+
+                                                params.height = newHeight;
+                                                child.setLayoutParams(params);
+                                            }
+
+                                            child.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                                        }
+                                    }
+                            );
+
                     }
-                } catch (Resources.NotFoundException ignored) {}
+                } catch (Resources.NotFoundException e) {
+                }
             }
 
             if (child instanceof ViewGroup) {
                 traverseViewsAndLog((ViewGroup) child, activity);
             }
         }
-    }
-
-    private Drawable createTransparentRect(float height) {
-        GradientDrawable transparent = new GradientDrawable();
-        transparent.setShape(GradientDrawable.RECTANGLE);
-        transparent.setColor(Color.TRANSPARENT);
-        transparent.setSize(ViewGroup.LayoutParams.MATCH_PARENT, (int)height);
-        return transparent;
-    }
-
-    private Drawable createBlackRect(float height) {
-        GradientDrawable black = new GradientDrawable();
-        black.setShape(GradientDrawable.RECTANGLE);
-        black.setColor(Color.BLACK);
-        black.setSize(ViewGroup.LayoutParams.MATCH_PARENT, (int)height);
-        return black;
     }
 
 

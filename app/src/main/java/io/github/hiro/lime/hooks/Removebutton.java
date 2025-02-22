@@ -45,7 +45,7 @@ public class Removebutton implements IHook {
             "chat_ui_group_call_header_starter_photobooth_new_badge_background",
             "chat_ui_group_call_header_starter_photobooth_button_text",
             "chat_ui_group_call_header_starter_photobooth_button_icon",
-
+            "bottom_action_photo_booth",
     };
 
     @Override
@@ -65,8 +65,6 @@ public class Removebutton implements IHook {
                         handleView((View) param.thisObject, limeOptions);
                     }
                 });
-
-
 
     }
 
@@ -123,7 +121,7 @@ public class Removebutton implements IHook {
             case "chat_ui_group_call_header_starter_photobooth_new_badge_text":
             case "chat_ui_group_call_header_starter_photobooth_button_text":
             case "chat_ui_group_call_header_starter_photobooth_button_icon":
-
+            case "bottom_action_photo_booth":
 
                 return options.photoboothButtonOption.checked;
             case "chat_ui_group_call_header_starter_voice_button":
@@ -158,31 +156,3 @@ public class Removebutton implements IHook {
 }
 
 
-
-//        XposedHelpers.findAndHookMethod(
-//                "android.view.View",
-//                lpparam.classLoader,
-//                "onAttachedToWindow",
-//                new XC_MethodHook() {
-//                    @Override
-//                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-//                        // Viewからリソースを取得
-//                        View view = (View) param.thisObject;
-//                        Context context = view.getContext();
-//                        Resources resources = context.getResources();
-//
-//                        // リソースIDを取得
-//                        int resourceId = view.getId(); // ViewのIDを取得
-//
-//                        // リソース名をログに出力
-//                        if (resourceId != View.NO_ID) {
-//                            Log.d("RemovePhotoBooth", "onAttachedToWindow called");
-//                            Log.d("RemovePhotoBooth", "Resource package name: " + resources.getResourcePackageName(resourceId));
-//                            Log.d("RemovePhotoBooth", "Resource name: " + resources.getResourceName(resourceId));
-//                            Log.d("RemovePhotoBooth", "Resource type: " + resources.getResourceTypeName(resourceId));
-//                        } else {
-//                            Log.d("RemovePhotoBooth", "No resource ID found for the view.");
-//                        }
-//                    }
-//                }
-//        );
