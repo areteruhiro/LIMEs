@@ -91,7 +91,7 @@ hiro_1114
 
 
 # Support Server
-https://t.me/LsPosedLIMEss
+https://t.me/LsPosedLIMEs
 
 
 # 更新について
