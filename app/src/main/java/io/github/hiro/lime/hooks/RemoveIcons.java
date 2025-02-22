@@ -59,6 +59,14 @@ public class RemoveIcons implements IHook {
                 if (isDarkMode) {
                     setViewProperties(activity, "bnb_timeline", Color.BLACK);
                     setViewProperties(activity, "bnb_timeline_spacer", Color.BLACK);
+                }else {
+                    int timelineResId = activity.getResources().getIdentifier("bnb_timeline", "id", activity.getPackageName());
+                    activity.findViewById(timelineResId).setVisibility(View.GONE);
+                    if (limeOptions.distributeEvenly.checked) {
+                        int timelineSpacerResId = activity.getResources().getIdentifier("bnb_timeline_spacer", "id", activity.getPackageName());
+                        activity.findViewById(timelineSpacerResId).setVisibility(View.GONE);
+                    }
+
                 }
                 } else {
                 int timelineResId = activity.getResources().getIdentifier("bnb_timeline", "id", activity.getPackageName());
@@ -67,7 +75,9 @@ public class RemoveIcons implements IHook {
                     int timelineSpacerResId = activity.getResources().getIdentifier("bnb_timeline_spacer", "id", activity.getPackageName());
                     activity.findViewById(timelineSpacerResId).setVisibility(View.GONE);
                 }
+
             }
+
 
         }
     }
@@ -79,8 +89,16 @@ public class RemoveIcons implements IHook {
                     if (isDarkMode) {
                         setViewProperties(activity, "bnb_wallet", Color.BLACK);
                         setViewProperties(activity, "bnb_wallet_spacer", Color.BLACK);
+                    }else {
+                        int walletResId = activity.getResources().getIdentifier("bnb_wallet", "id", activity.getPackageName());
+                        activity.findViewById(walletResId).setVisibility(View.GONE);
+                        if (limeOptions.distributeEvenly.checked) {
+                            int walletSpacerResId = activity.getResources().getIdentifier("bnb_wallet_spacer", "id", activity.getPackageName());
+                            activity.findViewById(walletSpacerResId).setVisibility(View.GONE);
+                        }
                     }
                 }
+
             }else {
                 int walletResId = activity.getResources().getIdentifier("bnb_wallet", "id", activity.getPackageName());
                 activity.findViewById(walletResId).setVisibility(View.GONE);
@@ -98,16 +116,21 @@ public class RemoveIcons implements IHook {
             if (!limeOptions.distributeEvenly.checked && limeOptions.DarkColor.checked) {
                 if (limeOptions.DarkModSync.checked ) {
                     if (isDarkMode) {
-
-
                         setViewProperties(activity, "bnb_news", Color.BLACK);
                         setViewProperties(activity, "bnb_news_spacer", Color.BLACK);
+                    }else {
+                        int newsResId = activity.getResources().getIdentifier("bnb_news", "id", activity.getPackageName());
+                        activity.findViewById(newsResId).setVisibility(View.GONE);
+                        if (limeOptions.distributeEvenly.checked) {
+                            int newsSpacerResId = activity.getResources().getIdentifier("bnb_news_spacer", "id", activity.getPackageName());
+                            activity.findViewById(newsSpacerResId).setVisibility(View.GONE);
+                        }
+
                     }
                 }
             }else {
                 int newsResId = activity.getResources().getIdentifier("bnb_news", "id", activity.getPackageName());
                 activity.findViewById(newsResId).setVisibility(View.GONE);
-
                 if (limeOptions.distributeEvenly.checked) {
                     int newsSpacerResId = activity.getResources().getIdentifier("bnb_news_spacer", "id", activity.getPackageName());
                     activity.findViewById(newsSpacerResId).setVisibility(View.GONE);
