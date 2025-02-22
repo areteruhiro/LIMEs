@@ -110,7 +110,7 @@ public class Removebutton implements IHook {
             ViewGroup.LayoutParams params = parent.getLayoutParams();
             if (params instanceof LinearLayout.LayoutParams) {
                 LinearLayout.LayoutParams linearParams = (LinearLayout.LayoutParams) params;
-                linearParams.weight = 0; // 必要に応じて重みを設定
+                linearParams.weight = 0;
                 parent.setLayoutParams(linearParams);
             }
         }

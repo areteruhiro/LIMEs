@@ -30,9 +30,9 @@ public class RemoveIcons implements IHook {
                         Activity activity = (Activity) param.thisObject;
 
                         if (limeOptions.removeVoom.checked) {
-                            if (!limeOptions.DarkColor.checked) {
+
                                 hideViewWithSpacer(activity, "bnb_timeline", "bnb_timeline_spacer");
-                            }
+
                             if (!limeOptions.distributeEvenly.checked) {
                                 if (limeOptions.DarkColor.checked) {
                                     int timelineId = activity.getResources().getIdentifier(
@@ -69,9 +69,7 @@ public class RemoveIcons implements IHook {
                             }
                         }
                         if (limeOptions.removeWallet.checked) {
-                            if (!limeOptions.DarkColor.checked) {
                                 hideViewWithSpacer(activity, "bnb_wallet", "bnb_wallet_spacer");
-                            }
                             if (!limeOptions.distributeEvenly.checked) {
                                 if (limeOptions.DarkColor.checked) {
                                     int bnb_walletid = activity.getResources().getIdentifier(
@@ -109,14 +107,11 @@ public class RemoveIcons implements IHook {
                         }
 
                         if (limeOptions.removeNewsOrCall.checked) {
-
-                            if (!limeOptions.DarkColor.checked) {
                                 hideViewWithSpacer(activity, "bnb_news", "bnb_news_spacer");
-                            }
-
+                            if (!limeOptions.distributeEvenly.checked) {
                             if (limeOptions.DarkColor.checked) {
                                 if (!limeOptions.PureDarkCall.checked) {
-                                    if (!limeOptions.distributeEvenly.checked) {
+
                                         // bnb_news の処理
                                         int bnb_newsId = activity.getResources().getIdentifier(
                                                 "bnb_news",
@@ -151,13 +146,10 @@ public class RemoveIcons implements IHook {
                                     }
                                 }
                                 if (limeOptions.removeNewsOrCall.checked) {
-                                    if (!limeOptions.DarkColor.checked) {
                                         hideViewWithSpacer(activity, "bnb_call", "bnb_call_spacer");
-                                    }
-
+                                    if (!limeOptions.distributeEvenly.checked) {
                                     if (limeOptions.DarkColor.checked) {
                                         if (limeOptions.PureDarkCall.checked) {
-                                            if (!limeOptions.distributeEvenly.checked) {
                                                 int bnb_callId = activity.getResources().getIdentifier(
                                                         "bnb_call",
                                                         "id",
