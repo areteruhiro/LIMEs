@@ -44,7 +44,12 @@ public class DarkColor implements IHook {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) {
                             Activity activity = (Activity) param.thisObject;
-                            View rootView = activity.getWindow().getDecorView();
+                            View rootView = activity.getWindow().getDecorView(); // DecorViewを取得
+                            View view = rootView; 
+
+                            if (limeOptions.DarkModSync.checked) {
+                                if (!isDarkModeEnabled(view)) return;
+                            }
                             traverseViewsAndLog((ViewGroup) rootView, activity);
                         }
                     }
