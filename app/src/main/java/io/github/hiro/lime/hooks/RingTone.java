@@ -376,11 +376,6 @@ public class RingTone implements IHook {
                                                 Uri ringtoneUriA = Uri.fromFile(destFileA);
                                                 AudioManager am = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
 
-                                                am.setStreamVolume(
-                                                        AudioManager.STREAM_ALARM,
-                                                        am.getStreamMaxVolume(AudioManager.STREAM_ALARM),
-                                                        AudioManager.FLAG_SHOW_UI
-                                                );
                                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                                                     ringtone = RingtoneManager.getRingtone(appContext, ringtoneUriA);
                                                     AudioAttributes attributes = new AudioAttributes.Builder()
@@ -431,12 +426,6 @@ public class RingTone implements IHook {
 
                                         Uri ringtoneUriA = Uri.fromFile(destFileA);
                                         AudioManager am = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
-
-                                        am.setStreamVolume(
-                                                AudioManager.STREAM_ALARM,
-                                                am.getStreamMaxVolume(AudioManager.STREAM_ALARM),
-                                                AudioManager.FLAG_SHOW_UI
-                                        );
 
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                                             ringtone = RingtoneManager.getRingtone(appContext, ringtoneUriA);
