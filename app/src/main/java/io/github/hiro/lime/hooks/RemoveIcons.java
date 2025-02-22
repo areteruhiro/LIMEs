@@ -33,12 +33,20 @@ public class RemoveIcons implements IHook {
 
                         handleRemoveNewsOrCall(activity, isDarkMode);
 
-                        if (limeOptions.distributeEvenly.checked) {
-                            adjustParentLayout(activity);
-                        }
-
                         if (limeOptions.extendClickableArea.checked) {
-                            extendClickableArea(activity);
+                            int mainTabContainerResId = activity.getResources().getIdentifier("main_tab_container", "id", activity.getPackageName());
+                            ViewGroup mainTabContainer = activity.findViewById(mainTabContainerResId);
+                            for (int i = 2; i < mainTabContainer.getChildCount(); i += 2) {
+                                ViewGroup icon = (ViewGroup) mainTabContainer.getChildAt(i);
+                                ViewGroup.LayoutParams layoutParams = icon.getLayoutParams();
+                                layoutParams.width = 0;
+                                icon.setLayoutParams(layoutParams);
+
+                                View clickableArea = icon.getChildAt(icon.getChildCount() - 1);
+                                layoutParams = clickableArea.getLayoutParams();
+                                layoutParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                                clickableArea.setLayoutParams(layoutParams);
+                            }
                         }
                     }
                 }
@@ -51,37 +59,59 @@ public class RemoveIcons implements IHook {
                 if (isDarkMode) {
                     setViewProperties(activity, "bnb_timeline", Color.BLACK);
                     setViewProperties(activity, "bnb_timeline_spacer", Color.BLACK);
+                }
                 } else {
-                    hideViewWithSpacer(activity, "bnb_timeline", "bnb_timeline_spacer");
+                int timelineResId = activity.getResources().getIdentifier("bnb_timeline", "id", activity.getPackageName());
+                activity.findViewById(timelineResId).setVisibility(View.GONE);
+                if (limeOptions.distributeEvenly.checked) {
+                    int timelineSpacerResId = activity.getResources().getIdentifier("bnb_timeline_spacer", "id", activity.getPackageName());
+                    activity.findViewById(timelineSpacerResId).setVisibility(View.GONE);
                 }
             }
+
         }
     }
 
     private void handleRemoveWallet(Activity activity, boolean isDarkMode) {
         if (limeOptions.removeWallet.checked) {
             if (!limeOptions.distributeEvenly.checked && limeOptions.DarkColor.checked) {
-                if (limeOptions.DarkModSync.checked && !isDarkMode) {
-                    hideViewWithSpacer(activity, "bnb_wallet", "bnb_wallet_spacer");
-                    hideViewWithSpacer(activity, "bnb_call", "bnb_call_spacer");
-
-                    return; // 処理を終了
+                if (limeOptions.DarkModSync.checked ) {
+                    if (isDarkMode) {
+                        setViewProperties(activity, "bnb_wallet", Color.BLACK);
+                        setViewProperties(activity, "bnb_wallet_spacer", Color.BLACK);
+                    }
                 }
-                setViewProperties(activity, "bnb_wallet", Color.BLACK);
-                setViewProperties(activity, "bnb_wallet_spacer", Color.BLACK);
+            }else {
+                int walletResId = activity.getResources().getIdentifier("bnb_wallet", "id", activity.getPackageName());
+                activity.findViewById(walletResId).setVisibility(View.GONE);
+                if (limeOptions.distributeEvenly.checked) {
+                    int walletSpacerResId = activity.getResources().getIdentifier("bnb_wallet_spacer", "id", activity.getPackageName());
+                    activity.findViewById(walletSpacerResId).setVisibility(View.GONE);
+                }
             }
+
         }
     }
 
     private void handleRemoveNewsOrCall(Activity activity, boolean isDarkMode) {
         if (limeOptions.removeNewsOrCall.checked) {
             if (!limeOptions.distributeEvenly.checked && limeOptions.DarkColor.checked) {
-                if (limeOptions.DarkModSync.checked && !isDarkMode) {
-                    hideViewWithSpacer(activity, "bnb_news", "bnb_news_spacer");
-                    return;
+                if (limeOptions.DarkModSync.checked ) {
+                    if (isDarkMode) {
+
+
+                        setViewProperties(activity, "bnb_news", Color.BLACK);
+                        setViewProperties(activity, "bnb_news_spacer", Color.BLACK);
+                    }
                 }
-                setViewProperties(activity, "bnb_news", Color.BLACK);
-                setViewProperties(activity, "bnb_news_spacer", Color.BLACK);
+            }else {
+                int newsResId = activity.getResources().getIdentifier("bnb_news", "id", activity.getPackageName());
+                activity.findViewById(newsResId).setVisibility(View.GONE);
+
+                if (limeOptions.distributeEvenly.checked) {
+                    int newsSpacerResId = activity.getResources().getIdentifier("bnb_news_spacer", "id", activity.getPackageName());
+                    activity.findViewById(newsSpacerResId).setVisibility(View.GONE);
+                }
             }
         }
 
@@ -109,8 +139,6 @@ public class RemoveIcons implements IHook {
             if (spacerView != null) {
                 spacerView.setVisibility(View.VISIBLE);
             }
-        } else {
-            hideViewWithSpacer(activity, viewId, viewId + "_spacer");
         }
     }
 
@@ -118,8 +146,14 @@ public class RemoveIcons implements IHook {
         int resId = activity.getResources().getIdentifier(mainId, "id", activity.getPackageName());
         activity.findViewById(resId).setVisibility(View.GONE);
         if (limeOptions.distributeEvenly.checked) {
-            int spacerResId = activity.getResources().getIdentifier(spacerId, "id", activity.getPackageName());
-            activity.findViewById(spacerResId).setVisibility(View.GONE);
+            int walletSpacerResId = activity.getResources().getIdentifier("bnb_wallet_spacer", "id", activity.getPackageName());
+            activity.findViewById(walletSpacerResId).setVisibility(View.GONE);
+            int newsSpacerResId = activity.getResources().getIdentifier("bnb_news_spacer", "id", activity.getPackageName());
+            activity.findViewById(newsSpacerResId).setVisibility(View.GONE);
+
+                int timelineSpacerResId = activity.getResources().getIdentifier("bnb_timeline_spacer", "id", activity.getPackageName());
+                activity.findViewById(timelineSpacerResId).setVisibility(View.GONE);
+
         }
     }
 
