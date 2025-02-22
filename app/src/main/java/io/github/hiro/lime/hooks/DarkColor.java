@@ -3,6 +3,7 @@ package io.github.hiro.lime.hooks;
 import static io.github.hiro.lime.Main.limeOptions;
 
 import android.app.Activity;
+import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
@@ -12,6 +13,7 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.os.Build;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,42 +38,24 @@ public class DarkColor implements IHook {
         if (!limeOptions.DarkColor.checked) return;
 
 
-            XposedHelpers.findAndHookMethod(
-                    "android.app.Activity",
-                    loadPackageParam.classLoader,
-                    "onResume",
-                    new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) {
-                            Activity activity = (Activity) param.thisObject;
-                            View rootView = activity.getWindow().getDecorView(); // DecorViewを取得
-                            View view = rootView; 
+        XposedHelpers.findAndHookMethod(
+                "android.app.Activity",
+                loadPackageParam.classLoader,
+                "onResume",
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) {
+                        Activity activity = (Activity) param.thisObject;
+                        View rootView = activity.getWindow().getDecorView(); // DecorViewを取得
+                        View view = rootView;
 
-                            if (limeOptions.DarkModSync.checked) {
-                                if (!isDarkModeEnabled(view)) return;
-                            }
-                            traverseViewsAndLog((ViewGroup) rootView, activity);
+                        if (limeOptions.DarkModSync.checked) {
+                            if (!isDarkModeEnabled(view)) return;
                         }
+                        traverseViewsAndLog((ViewGroup) rootView, activity);
                     }
-            );
-//            XposedHelpers.findAndHookMethod(
-//                    "jp.naver.line.android.activity.main.MainActivity",
-//                    loadPackageParam.classLoader,
-//                    "onResume",
-//                    new XC_MethodHook() {
-//                        @Override
-//                        protected void afterHookedMethod(MethodHookParam param) {
-//                            Activity activity = (Activity) param.thisObject;
-//                            View rootView = activity.getWindow().getDecorView();
-//                            if (limeOptions.DarkModSync.checked) {
-//                                if (!isDarkModeEnabled(rootView)) return;
-//                            }
-//                            traverseViewsAndLog((ViewGroup) rootView, activity);
-//
-//                        }
-//                    }
-//            );
-
+                }
+        );
 
         XposedHelpers.findAndHookMethod("android.view.View", loadPackageParam.classLoader, "onAttachedToWindow", new XC_MethodHook() {
             @Override
@@ -106,57 +90,75 @@ public class DarkColor implements IHook {
                 }
             }
         });
+
+//        XposedHelpers.findAndHookMethod(
+//                "android.view.View",
+//                loadPackageParam.classLoader,
+//                "onAttachedToWindow",
+//                new XC_MethodHook() {
+//                    @Override
+//                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+//                        // Viewからリソースを取得
+//                        View view = (View) param.thisObject;
+//                        Context context = view.getContext();
+//                        Resources resources = context.getResources();
+//
+//                        // リソースIDを取得
+//                        int resourceId = view.getId(); // ViewのIDを取得
+//
+//                        // リソース名をログに出力
+//                        if (resourceId != View.NO_ID) {
+//                            Log.d("RemovePhotoBooth", "onAttachedToWindow called");
+//                            Log.d("RemovePhotoBooth", "Resource package name: " + resources.getResourcePackageName(resourceId));
+//                            Log.d("RemovePhotoBooth", "Resource name: " + resources.getResourceName(resourceId));
+//                            Log.d("RemovePhotoBooth", "Resource type: " + resources.getResourceTypeName(resourceId));
+//                        } else {
+//                            Log.d("RemovePhotoBooth", "No resource ID found for the view.");
+//                        }
+//                    }
+//                }
+//        );
+
     }
     private boolean isTargetColor(int color, String target) {
         int targetColor = Color.parseColor(target);
         return (color & 0x00FFFFFF) == (targetColor & 0x00FFFFFF);
     }
     private void traverseViewsAndLog(ViewGroup viewGroup, Activity activity) {
-        final Set<String> gradientTargets = new HashSet<>(Arrays.asList(
+        final Set<String> targetResources = new HashSet<>(Arrays.asList(
+                "bnb_home_v2",
+                "bnb_wallet",
                 "bnb_chat",
-                "bnb_home_v2"
+                "bnb_news",
+                "bnb_call",
+                "bnb_timeline",
+                "bnb_wallet_spacer",
+                "bnb_news_spacer",
+                "bnb_call_spacer",
+                "bnb_timeline_spacer",
+                "bnb_chat_spacer",
+                "main_tab_container",
+                "bnb_background_image",
+                "bnb_portal_spacer",
+                "main_tab_container",
+                "bnb"
         ));
-
-        final Set<String> otherTargets = new HashSet<>(Arrays.asList(
-                "bnb_wallet", "bnb_news", "bnb_call", "bnb_timeline",
-                "bnb_wallet_spacer", "bnb_news_spacer", "bnb_call_spacer",
-                "bnb_timeline_spacer", "bnb_chat_spacer", "main_tab_container",
-                "bnb_background_image", "bnb_portal_spacer"
-        ));
-
         for (int i = 0; i < viewGroup.getChildCount(); i++) {
             View child = viewGroup.getChildAt(i);
-            int resId = child.getId();
 
+            int resId = child.getId();
             if (resId != View.NO_ID) {
                 try {
+
                     String resName = activity.getResources().getResourceEntryName(resId);
-
-                    if (gradientTargets.contains(resName) || otherTargets.contains(resName)) {
-                        ViewTreeObserver.OnGlobalLayoutListener bgListener =
-                                new ViewTreeObserver.OnGlobalLayoutListener() {
-                                    @Override
-                                    public void onGlobalLayout() {
-                                        if (!child.getViewTreeObserver().isAlive()) return;
-
-                                        int height = child.getHeight();
-                                        if (height <= 0) return;
-
-
-                                        LayerDrawable layerDrawable = new LayerDrawable(new Drawable[]{
-                                                createTransparentRect(height * 0.3f), // 上部20%
-                                                createBlackRect(height * 0.8f)        // 下部80%
-                                        });
-
-                                        layerDrawable.setLayerInset(1, 0, (int)(height * 0.2f), 0, 0);
-
-                                        child.setBackground(layerDrawable);
-                                        child.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                                    }
-                                };
-
-                        // 高さ調整用リスナー（元の処理）
-                        ViewTreeObserver.OnGlobalLayoutListener heightListener =
+                    String resType = activity.getResources().getResourceTypeName(resId);
+                    String fullResName = activity.getPackageName() + ":" + resType + "/" + resName;
+                    if (targetResources.contains(resName)) {
+                        child.setBackgroundColor(Color.BLACK);
+                        if (child instanceof TextView) {
+                            ((TextView) child).setTextColor(Color.BLACK);
+                        }
+                        child.getViewTreeObserver().addOnGlobalLayoutListener(
                                 new ViewTreeObserver.OnGlobalLayoutListener() {
                                     @Override
                                     public void onGlobalLayout() {
@@ -164,27 +166,33 @@ public class DarkColor implements IHook {
 
                                         if (child.getVisibility() == View.VISIBLE) {
                                             ViewGroup.LayoutParams params = child.getLayoutParams();
-                                            params.height = (int) TypedValue.applyDimension(
-                                                    TypedValue.COMPLEX_UNIT_DIP,
-                                                    80,
-                                                    activity.getResources().getDisplayMetrics()
-                                            );
+                                            int newHeight;
+                                            if (limeOptions.removeIconLabels.checked) {
+                                                newHeight = (int) TypedValue.applyDimension(
+                                                        TypedValue.COMPLEX_UNIT_DIP,
+                                                        80,
+                                                        activity.getResources().getDisplayMetrics()
+                                                );
+                                                params.height = newHeight;
+                                            }else {
+                                                newHeight = (int) TypedValue.applyDimension(
+                                                        TypedValue.COMPLEX_UNIT_DIP,
+                                                        75,
+                                                        activity.getResources().getDisplayMetrics()
+                                                );
+                                                params.height = newHeight;
+                                            }
                                             child.setLayoutParams(params);
                                         }
+
                                         child.getViewTreeObserver().removeOnGlobalLayoutListener(this);
                                     }
-                                };
+                                }
+                        );
 
-                        // リスナー登録
-                        child.getViewTreeObserver().addOnGlobalLayoutListener(bgListener);
-                        child.getViewTreeObserver().addOnGlobalLayoutListener(heightListener);
-
-                        // TextViewの色変更
-                        if (child instanceof TextView && !resName.endsWith("_spacer")) {
-                            ((TextView) child).setTextColor(Color.BLACK);
-                        }
                     }
-                } catch (Resources.NotFoundException ignored) {}
+                } catch (Resources.NotFoundException e) {
+                }
             }
 
             if (child instanceof ViewGroup) {
