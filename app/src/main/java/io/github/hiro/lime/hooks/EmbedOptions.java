@@ -16,6 +16,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
@@ -27,6 +28,8 @@ import android.text.InputType;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Base64;
 import android.util.Log;
+import android.util.Pair;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -55,9 +58,11 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -430,6 +435,21 @@ public class EmbedOptions implements IHook {
                                     });
                                     layout.addView(hide_canceled_message_Button);
                                 }
+
+                                if (limeOptions.PinList.checked) {
+
+                                    Button PinList_Button = new Button(context);
+                                    PinList_Button.setLayoutParams(buttonParams);
+                                    PinList_Button.setText(moduleContext.getResources().getString(R.string.PinList));
+                                    PinList_Button.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            PinListButton(context, moduleContext);
+                                        }
+                                    });
+                                    layout.addView(PinList_Button);
+                                }
+
 
                                 builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
                                     @Override
@@ -1361,6 +1381,213 @@ public class EmbedOptions implements IHook {
             }
         }
     }
+    private static class UserEntry {
+        String userId;
+        String userName;
+        transient EditText inputView; // 入力欄への直接参照
+
+        UserEntry(String userId, String userName) {
+            this.userId = userId;
+            this.userName = userName;
+        }
+    }
+
+    private void PinListButton(Context context, Context moduleContext) {
+        List<UserEntry> userEntries = new ArrayList<>();
+        Map<String, String> existingSettings = loadExistingSettings(context); // 設定読み込み
+
+        try (SQLiteDatabase chatListDb = context.openOrCreateDatabase("naver_line", Context.MODE_PRIVATE, null);
+             SQLiteDatabase profileDb = context.openOrCreateDatabase("contact", Context.MODE_PRIVATE, null);
+             Cursor chatCursor = chatListDb.rawQuery("SELECT chat_id FROM chat WHERE is_archived = 0", null)) {
+
+            if (chatCursor != null && chatCursor.getColumnIndex("chat_id") != -1) {
+                while (chatCursor.moveToNext()) {
+                    String chatId = chatCursor.getString(chatCursor.getColumnIndex("chat_id"));
+                    String profileName = getProfileNameFromContacts(profileDb, chatId);
+                    if (profileName.equals("Unknown")) {
+                        profileName = getGroupNameFromGroups(chatListDb, chatId);
+                    }
+                    userEntries.add(new UserEntry(chatId, profileName));
+                }
+            }
+
+        } catch (SQLiteException e) {
+            XposedBridge.log("SQL Error: " + e.getMessage());
+            Toast.makeText(context, "データ取得エラー", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // ダイナミックレイアウト作成
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        int padding = (int) TypedValue.applyDimension(
+                TypedValue.COMPLEX_UNIT_DIP,
+                16,
+                context.getResources().getDisplayMetrics()
+        );
+        layout.setPadding(padding, padding, padding, padding);
+
+        // 入力欄作成
+        for (UserEntry entry : userEntries) {
+            LinearLayout row = new LinearLayout(context);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            ));
+
+            TextView userNameView = new TextView(context);
+            userNameView.setText(entry.userName);
+            LinearLayout.LayoutParams textParams = new LinearLayout.LayoutParams(
+                    0,
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    1f
+            );
+            textParams.setMargins(0, 0, padding, 0);
+            userNameView.setLayoutParams(textParams);
+
+            EditText inputNumber = new EditText(context);
+            inputNumber.setInputType(InputType.TYPE_CLASS_NUMBER);
+            int inputWidth = (int) TypedValue.applyDimension(
+                    TypedValue.COMPLEX_UNIT_DIP,
+                    120,
+                    context.getResources().getDisplayMetrics()
+            );
+            inputNumber.setLayoutParams(new LinearLayout.LayoutParams(
+                    inputWidth,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            ));
+
+            // 既存の設定値を反映
+            if (existingSettings.containsKey(entry.userId)) {
+                inputNumber.setText(existingSettings.get(entry.userId));
+            }
+
+            entry.inputView = inputNumber;
+            row.addView(userNameView);
+            row.addView(inputNumber);
+            layout.addView(row);
+        }
+
+        // 保存ボタン
+        Button saveButton = new Button(context);
+        saveButton.setText("保存");
+        saveButton.setOnClickListener(v -> saveUserData(context, userEntries));
+        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
+        btnParams.topMargin = padding;
+        saveButton.setLayoutParams(btnParams);
+        layout.addView(saveButton);
+
+        // ダイアログ表示
+        new AlertDialog.Builder(context)
+                .setTitle("ユーザー設定")
+                .setView(layout)
+                .setNegativeButton("キャンセル", null)
+                .show();
+    }
+    private Map<String, String> loadExistingSettings(Context context) {
+        Map<String, String> settingsMap = new HashMap<>();
+        File dir = new File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                "LimeBackup/Setting"
+        );
+        File file = new File(dir, "ChatList.txt");
+
+        if (!file.exists()) {
+            return settingsMap;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty()) continue;
+
+                String[] parts = line.split(",", 2);
+                if (parts.length == 2) {
+                    settingsMap.put(parts[0].trim(), parts[1].trim());
+                }
+            }
+        } catch (IOException e) {
+            XposedBridge.log("設定読み込みエラー: " + e.getMessage());
+            Toast.makeText(context, "設定読み込みに失敗しました", Toast.LENGTH_SHORT).show();
+        }
+
+        return settingsMap;
+    }
+    private void saveUserData(Context context, List<UserEntry> entries) {
+        File dir = new File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                "LimeBackup/Setting"
+        );
+
+        if (!dir.exists() && !dir.mkdirs()) {
+            Toast.makeText(context, "ディレクトリ作成失敗", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        File file = new File(dir, "ChatList.txt");
+        Map<String, String> existingSettings = loadExistingSettings(context);
+
+        try (FileWriter writer = new FileWriter(file)) {
+            // 既存の設定をコピー
+            Map<String, String> mergedSettings = new HashMap<>(existingSettings);
+
+            // 新しい入力値を処理
+            for (UserEntry entry : entries) {
+                if (entry.inputView != null) {
+                    String inputValue = entry.inputView.getText().toString().trim();
+                    if (!inputValue.isEmpty()) {
+                        mergedSettings.put(entry.userId, inputValue);
+                    } else {
+                        // 空欄の場合はエントリを削除
+                        mergedSettings.remove(entry.userId);
+                    }
+                }
+            }
+
+            // ファイルに書き込み
+            for (Map.Entry<String, String> entry : mergedSettings.entrySet()) {
+                writer.write(entry.getKey() + "," + entry.getValue() + "\n");
+            }
+
+            Toast.makeText(context, "保存完了: " + file.getPath(), Toast.LENGTH_LONG).show();
+        } catch (IOException e) {
+            Toast.makeText(context, "保存失敗: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+        }
+    }
+    private String getProfileNameFromContacts(SQLiteDatabase db, String contactMid) {
+        String profileName = "Unknown"; // デフォルト値
+
+        try (Cursor cursor = db.rawQuery(
+                "SELECT profile_name FROM contacts WHERE mid=?", new String[]{contactMid})) {
+            if (cursor.moveToFirst()) {
+                profileName = cursor.getString(0); // プロファイル名を取得
+            }
+        } catch (SQLiteException e) {
+            XposedBridge.log("Profile query error: " + e.getMessage());
+        }
+
+        return profileName; // プロファイル名を返す
+    }
+
+    private String getGroupNameFromGroups(SQLiteDatabase db, String groupId) {
+        String groupName = "Unknown"; // デフォルト値
+
+        try (Cursor cursor = db.rawQuery(
+                "SELECT name FROM groups WHERE id=?", new String[]{groupId})) {
+            if (cursor.moveToFirst()) {
+                groupName = cursor.getString(0); // グループ名を取得
+            }
+        } catch (SQLiteException e) {
+            XposedBridge.log("Group query error: " + e.getMessage());
+        }
+
+        return groupName; // グループ名を返す
+    }
 
     private void Blocklist(Context context, Context moduleContext) {
         new ProfileManager().showProfileManagement(context,moduleContext);
@@ -1428,12 +1655,7 @@ public class EmbedOptions implements IHook {
                     cursor.isNull(cursor.getColumnIndex("day"));
         }
 
-        private String getProfileName(SQLiteDatabase db, String contactMid) {
-            try (Cursor cursor = db.rawQuery(
-                    "SELECT profile_name FROM contacts WHERE mid=?", new String[]{contactMid})) {
-                return cursor.moveToFirst() ? cursor.getString(0) : "Unknown";
-            }
-        }
+
 
         private void showManagementDialog(Context context, List<ProfileInfo> profiles, Context moduleContext) {
             AlertDialog.Builder builder = new AlertDialog.Builder(context)
@@ -1655,7 +1877,12 @@ public class EmbedOptions implements IHook {
         }
     }
 
-
+    private String getProfileName(SQLiteDatabase db, String contactMid) {
+        try (Cursor cursor = db.rawQuery(
+                "SELECT profile_name FROM contacts WHERE mid=?", new String[]{contactMid})) {
+            return cursor.moveToFirst() ? cursor.getString(0) : "Unknown";
+        }
+    }
     private static class HiddenProfileManager {
         private static final String HIDDEN_FILE = "hidden_profiles.txt";
         private final File storageFile;

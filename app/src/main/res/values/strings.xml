@@ -211,4 +211,6 @@
     <string name="no_reset_name">Could not confirm the friends to reset.</string>
     <string name="ringtonevolume">(Sounds a dial tone)Using a ringtone</string>
     <string name="PureDarkCall">(PureDark bottom bar) for call history</string>
+    <string name="PinList">チャットリストのピン設定</string>
+
 </resources>

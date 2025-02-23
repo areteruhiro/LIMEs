@@ -125,83 +125,120 @@ public class DarkColor implements IHook {
         return (color & 0x00FFFFFF) == (targetColor & 0x00FFFFFF);
     }
     private void traverseViewsAndLog(ViewGroup viewGroup, Activity activity) {
-        final Set<String> targetResources = new HashSet<>(Arrays.asList(
-                "bnb_home_v2",
-                "bnb_wallet",
+        final Set<String> gradientTargets = new HashSet<>(Arrays.asList(
                 "bnb_chat",
-                "bnb_news",
-                "bnb_call",
-                "bnb_timeline",
-                "bnb_wallet_spacer",
-                "bnb_news_spacer",
-                "bnb_call_spacer",
-                "bnb_timeline_spacer",
-                "bnb_chat_spacer",
-                "main_tab_container",
-                "bnb_background_image",
-                "bnb_portal_spacer",
-                "main_tab_container",
-                "bnb"
+                "bnb_home_v2"
         ));
+
+        final Set<String> otherTargets = new HashSet<>(Arrays.asList(
+                "bnb_wallet", "bnb_news", "bnb_call", "bnb_timeline",
+                "bnb_wallet_spacer", "bnb_news_spacer", "bnb_call_spacer",
+                "bnb_timeline_spacer", "bnb_chat_spacer", "main_tab_container",
+                "bnb_background_image", "bnb_portal_spacer"
+        ));
+
         for (int i = 0; i < viewGroup.getChildCount(); i++) {
             View child = viewGroup.getChildAt(i);
-
             int resId = child.getId();
+
             if (resId != View.NO_ID) {
                 try {
-
                     String resName = activity.getResources().getResourceEntryName(resId);
-                    String resType = activity.getResources().getResourceTypeName(resId);
-                    String fullResName = activity.getPackageName() + ":" + resType + "/" + resName;
-                    if (targetResources.contains(resName)) {
-                        child.setBackgroundColor(Color.BLACK);
-                        if (child instanceof TextView) {
-                            ((TextView) child).setTextColor(Color.BLACK);
-                        }
-                        child.getViewTreeObserver().addOnGlobalLayoutListener(
+
+                    if (gradientTargets.contains(resName) || otherTargets.contains(resName)) {
+                        // 常に背景を設定（条件によって内容を変更）
+                        ViewTreeObserver.OnGlobalLayoutListener bgListener =
                                 new ViewTreeObserver.OnGlobalLayoutListener() {
                                     @Override
                                     public void onGlobalLayout() {
                                         if (!child.getViewTreeObserver().isAlive()) return;
 
-                                        if (child.getVisibility() == View.VISIBLE) {
-                                            ViewGroup.LayoutParams params = child.getLayoutParams();
-                                            int newHeight;
-                                            if (limeOptions.removeIconLabels.checked) {
-                                                newHeight = (int) TypedValue.applyDimension(
+                                        int height = child.getHeight();
+                                        if (height <= 0) return;
+
+                                        // removeIconLabelsの状態でレイヤーを切り替え
+                                        LayerDrawable layerDrawable;
+                                        if (limeOptions.removeIconLabels.checked) {
+                                            layerDrawable = new LayerDrawable(new Drawable[]{
+                                                    createTransparentRect(height * 0.1f),
+                                                    createBlackRect(height * 0.9f)
+                                            });
+                                        } else {
+                                            // 元のグラデーション
+                                            layerDrawable = new LayerDrawable(new Drawable[]{
+                                                    createTransparentRect(height * 0.3f),
+                                                    createBlackRect(height * 0.8f)
+                                            });
+                                            layerDrawable.setLayerInset(1, 0, (int) (height * 0.2f), 0, 0);
+                                        }
+
+                                        child.setBackground(layerDrawable);
+                                        child.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                                    }
+                                };
+                        child.getViewTreeObserver().addOnGlobalLayoutListener(bgListener);
+
+                        // ラベル削除OFF時のみ追加設定
+                        if (!limeOptions.removeIconLabels.checked) {
+                            ViewTreeObserver.OnGlobalLayoutListener heightListener =
+                                    new ViewTreeObserver.OnGlobalLayoutListener() {
+                                        @Override
+                                        public void onGlobalLayout() {
+                                            if (!child.getViewTreeObserver().isAlive()) return;
+
+                                            if (child.getVisibility() == View.VISIBLE) {
+                                                ViewGroup.LayoutParams params = child.getLayoutParams();
+                                                params.height = (int) TypedValue.applyDimension(
                                                         TypedValue.COMPLEX_UNIT_DIP,
                                                         80,
                                                         activity.getResources().getDisplayMetrics()
                                                 );
-                                                params.height = newHeight;
-                                            }else {
-                                                newHeight = (int) TypedValue.applyDimension(
+                                                child.setLayoutParams(params);
+                                            }
+                                            child.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                                        }
+                                    };
+                            child.getViewTreeObserver().addOnGlobalLayoutListener(heightListener);
+
+                            if (child instanceof TextView && !resName.endsWith("_spacer")) {
+                                ((TextView) child).setTextColor(Color.BLACK);
+                            }
+                        }else{
+
+                            ViewTreeObserver.OnGlobalLayoutListener heightListener =
+                                    new ViewTreeObserver.OnGlobalLayoutListener() {
+                                        @Override
+                                        public void onGlobalLayout() {
+                                            if (!child.getViewTreeObserver().isAlive()) return;
+
+                                            if (child.getVisibility() == View.VISIBLE) {
+                                                ViewGroup.LayoutParams params = child.getLayoutParams();
+                                                params.height = (int) TypedValue.applyDimension(
                                                         TypedValue.COMPLEX_UNIT_DIP,
-                                                        75,
+                                                        80,
                                                         activity.getResources().getDisplayMetrics()
                                                 );
-                                                params.height = newHeight;
+                                                child.setLayoutParams(params);
                                             }
-                                            child.setLayoutParams(params);
+                                            child.getViewTreeObserver().removeOnGlobalLayoutListener(this);
                                         }
+                                    };
+                            child.getViewTreeObserver().addOnGlobalLayoutListener(heightListener);
 
-                                        child.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                                    }
-                                }
-                        );
-
+                            if (child instanceof TextView && !resName.endsWith("_spacer")) {
+                                ((TextView) child).setTextColor(Color.BLACK);
+                            }
+                        }
                     }
-                } catch (Resources.NotFoundException e) {
+                } catch (Resources.NotFoundException ignored) {
                 }
             }
-
             if (child instanceof ViewGroup) {
                 traverseViewsAndLog((ViewGroup) child, activity);
             }
         }
     }
 
-    // 透明な矩形を作成
     private Drawable createTransparentRect(float height) {
         GradientDrawable transparent = new GradientDrawable();
         transparent.setShape(GradientDrawable.RECTANGLE);

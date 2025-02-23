@@ -159,7 +159,26 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                  }
         if (limeOptions.removeNaviAlbum.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_albums", xModuleResources.fwd(R.drawable.empty_drawable));
-                 }
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "badge_dot_green", xModuleResources.fwd(R.drawable.empty_drawable));
+
+        }
+
+        if (limeOptions.removeNewsOrCall.checked) {
+
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_news_new", xModuleResources.fwd(R.drawable.empty_drawable));
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_news_new_dark", xModuleResources.fwd(R.drawable.empty_drawable));
+        }
+        if (limeOptions.removeWallet.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_wallet_new", xModuleResources.fwd(R.drawable.empty_drawable));
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_wallet_new_dark", xModuleResources.fwd(R.drawable.empty_drawable));
+        }
+        if (limeOptions.removeVoom.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_voom_new", xModuleResources.fwd(R.drawable.empty_drawable));
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_voom_new_dark", xModuleResources.fwd(R.drawable.empty_drawable));
+        }
+
+
+
         if (limeOptions.removeNaviOpenchat.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_openchat", xModuleResources.fwd(R.drawable.empty_drawable));
         }
