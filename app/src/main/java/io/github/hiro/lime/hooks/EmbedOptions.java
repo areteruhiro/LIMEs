@@ -20,6 +20,7 @@ import android.database.sqlite.SQLiteException;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
@@ -40,6 +41,7 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -1394,7 +1396,7 @@ public class EmbedOptions implements IHook {
 
     private void PinListButton(Context context, Context moduleContext) {
         List<UserEntry> userEntries = new ArrayList<>();
-        Map<String, String> existingSettings = loadExistingSettings(context); // 設定読み込み
+        Map<String, String> existingSettings = loadExistingSettings(context);
 
         try (SQLiteDatabase chatListDb = context.openOrCreateDatabase("naver_line", Context.MODE_PRIVATE, null);
              SQLiteDatabase profileDb = context.openOrCreateDatabase("contact", Context.MODE_PRIVATE, null);
@@ -1417,17 +1419,29 @@ public class EmbedOptions implements IHook {
             return;
         }
 
-        // ダイナミックレイアウト作成
-        LinearLayout layout = new LinearLayout(context);
-        layout.setOrientation(LinearLayout.VERTICAL);
+        RelativeLayout mainLayout = new RelativeLayout(context);
+        mainLayout.setLayoutParams(new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                RelativeLayout.LayoutParams.MATCH_PARENT
+        ));
+
+
+        ScrollView scrollView = new ScrollView(context);
+        scrollView.setLayoutParams(new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                RelativeLayout.LayoutParams.MATCH_PARENT
+        ));
+
+        LinearLayout contentLayout = new LinearLayout(context);
+        contentLayout.setOrientation(LinearLayout.VERTICAL);
         int padding = (int) TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_DIP,
                 16,
                 context.getResources().getDisplayMetrics()
         );
-        layout.setPadding(padding, padding, padding, padding);
+        contentLayout.setPadding(padding, padding, padding, padding);
 
-        // 入力欄作成
+        // ユーザーエントリーの追加
         for (UserEntry entry : userEntries) {
             LinearLayout row = new LinearLayout(context);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -1458,7 +1472,6 @@ public class EmbedOptions implements IHook {
                     LinearLayout.LayoutParams.WRAP_CONTENT
             ));
 
-            // 既存の設定値を反映
             if (existingSettings.containsKey(entry.userId)) {
                 inputNumber.setText(existingSettings.get(entry.userId));
             }
@@ -1466,25 +1479,41 @@ public class EmbedOptions implements IHook {
             entry.inputView = inputNumber;
             row.addView(userNameView);
             row.addView(inputNumber);
-            layout.addView(row);
+            contentLayout.addView(row);
         }
 
-        // 保存ボタン
+        scrollView.addView(contentLayout);
         Button saveButton = new Button(context);
         saveButton.setText("保存");
         saveButton.setOnClickListener(v -> saveUserData(context, userEntries));
-        LinearLayout.LayoutParams btnParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.WRAP_CONTENT
-        );
-        btnParams.topMargin = padding;
-        saveButton.setLayoutParams(btnParams);
-        layout.addView(saveButton);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
+            saveButton.setId(View.generateViewId());
+        } else {
+            saveButton.setId(0xFFFF); // 衝突しないよう適当なIDを設定
+        }
 
-        // ダイアログ表示
+        RelativeLayout.LayoutParams buttonParams = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.WRAP_CONTENT,
+                RelativeLayout.LayoutParams.WRAP_CONTENT
+        );
+        buttonParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
+        buttonParams.addRule(RelativeLayout.ALIGN_PARENT_END);
+        buttonParams.setMargins(0, 0, padding, padding);
+        saveButton.setLayoutParams(buttonParams);
+
+        RelativeLayout.LayoutParams scrollParams = new RelativeLayout.LayoutParams(
+                RelativeLayout.LayoutParams.MATCH_PARENT,
+                RelativeLayout.LayoutParams.MATCH_PARENT
+        );
+        scrollParams.addRule(RelativeLayout.ABOVE, saveButton.getId());
+        scrollView.setLayoutParams(scrollParams);
+        mainLayout.addView(scrollView);
+        mainLayout.addView(saveButton);
+
+
         new AlertDialog.Builder(context)
                 .setTitle("ユーザー設定")
-                .setView(layout)
+                .setView(mainLayout)
                 .setNegativeButton("キャンセル", null)
                 .show();
     }
