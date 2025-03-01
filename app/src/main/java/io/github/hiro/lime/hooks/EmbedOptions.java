@@ -1383,10 +1383,12 @@ public class EmbedOptions implements IHook {
             }
         }
     }
+
+
     private static class UserEntry {
         String userId;
         String userName;
-        transient EditText inputView; // 入力欄への直接参照
+        transient EditText inputView;
 
         UserEntry(String userId, String userName) {
             this.userId = userId;
@@ -1398,6 +1400,7 @@ public class EmbedOptions implements IHook {
         List<UserEntry> userEntries = new ArrayList<>();
         Map<String, String> existingSettings = loadExistingSettings(context);
 
+        // データベースからチャットリストを取得
         try (SQLiteDatabase chatListDb = context.openOrCreateDatabase("naver_line", Context.MODE_PRIVATE, null);
              SQLiteDatabase profileDb = context.openOrCreateDatabase("contact", Context.MODE_PRIVATE, null);
              Cursor chatCursor = chatListDb.rawQuery("SELECT chat_id FROM chat WHERE is_archived = 0", null)) {
@@ -1406,7 +1409,7 @@ public class EmbedOptions implements IHook {
                 while (chatCursor.moveToNext()) {
                     String chatId = chatCursor.getString(chatCursor.getColumnIndex("chat_id"));
                     String profileName = getProfileNameFromContacts(profileDb, chatId);
-                    if (profileName.equals("Unknown")) {
+                    if ("Unknown".equals(profileName)) {
                         profileName = getGroupNameFromGroups(chatListDb, chatId);
                     }
                     userEntries.add(new UserEntry(chatId, profileName));
@@ -1419,29 +1422,22 @@ public class EmbedOptions implements IHook {
             return;
         }
 
-        RelativeLayout mainLayout = new RelativeLayout(context);
-        mainLayout.setLayoutParams(new RelativeLayout.LayoutParams(
-                RelativeLayout.LayoutParams.MATCH_PARENT,
-                RelativeLayout.LayoutParams.MATCH_PARENT
-        ));
-
-
+        // ダイアログのレイアウト構成
         ScrollView scrollView = new ScrollView(context);
-        scrollView.setLayoutParams(new RelativeLayout.LayoutParams(
-                RelativeLayout.LayoutParams.MATCH_PARENT,
-                RelativeLayout.LayoutParams.MATCH_PARENT
-        ));
+        LinearLayout mainLayout = new LinearLayout(context);
+        mainLayout.setOrientation(LinearLayout.VERTICAL);
 
-        LinearLayout contentLayout = new LinearLayout(context);
-        contentLayout.setOrientation(LinearLayout.VERTICAL);
         int padding = (int) TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_DIP,
                 16,
                 context.getResources().getDisplayMetrics()
         );
+
+        // ユーザーエントリーのリスト作成
+        LinearLayout contentLayout = new LinearLayout(context);
+        contentLayout.setOrientation(LinearLayout.VERTICAL);
         contentLayout.setPadding(padding, padding, padding, padding);
 
-        // ユーザーエントリーの追加
         for (UserEntry entry : userEntries) {
             LinearLayout row = new LinearLayout(context);
             row.setOrientation(LinearLayout.HORIZONTAL);
@@ -1462,13 +1458,8 @@ public class EmbedOptions implements IHook {
 
             EditText inputNumber = new EditText(context);
             inputNumber.setInputType(InputType.TYPE_CLASS_NUMBER);
-            int inputWidth = (int) TypedValue.applyDimension(
-                    TypedValue.COMPLEX_UNIT_DIP,
-                    120,
-                    context.getResources().getDisplayMetrics()
-            );
             inputNumber.setLayoutParams(new LinearLayout.LayoutParams(
-                    inputWidth,
+                    (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 120, context.getResources().getDisplayMetrics()),
                     LinearLayout.LayoutParams.WRAP_CONTENT
             ));
 
@@ -1483,139 +1474,90 @@ public class EmbedOptions implements IHook {
         }
 
         scrollView.addView(contentLayout);
-        Button saveButton = new Button(context);
-        saveButton.setText("保存");
-        saveButton.setOnClickListener(v -> saveUserData(context, userEntries));
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN_MR1) {
-            saveButton.setId(View.generateViewId());
-        } else {
-            saveButton.setId(0xFFFF); // 衝突しないよう適当なIDを設定
-        }
-
-        RelativeLayout.LayoutParams buttonParams = new RelativeLayout.LayoutParams(
-                RelativeLayout.LayoutParams.WRAP_CONTENT,
-                RelativeLayout.LayoutParams.WRAP_CONTENT
-        );
-        buttonParams.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM);
-        buttonParams.addRule(RelativeLayout.ALIGN_PARENT_END);
-        buttonParams.setMargins(0, 0, padding, padding);
-        saveButton.setLayoutParams(buttonParams);
-
-        RelativeLayout.LayoutParams scrollParams = new RelativeLayout.LayoutParams(
-                RelativeLayout.LayoutParams.MATCH_PARENT,
-                RelativeLayout.LayoutParams.MATCH_PARENT
-        );
-        scrollParams.addRule(RelativeLayout.ABOVE, saveButton.getId());
-        scrollView.setLayoutParams(scrollParams);
         mainLayout.addView(scrollView);
-        mainLayout.addView(saveButton);
 
-
+        // ダイアログの表示
         new AlertDialog.Builder(context)
                 .setTitle("ユーザー設定")
                 .setView(mainLayout)
+                .setPositiveButton("保存", (dialog, which) -> saveUserData(context, userEntries))
                 .setNegativeButton("キャンセル", null)
                 .show();
     }
+
+    // 設定読み込みメソッド
     private Map<String, String> loadExistingSettings(Context context) {
         Map<String, String> settingsMap = new HashMap<>();
-        File dir = new File(
+        File settingFile = new File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
-                "LimeBackup/Setting"
+                "LimeBackup/Setting/ChatList.txt"
         );
-        File file = new File(dir, "ChatList.txt");
 
-        if (!file.exists()) {
-            return settingsMap;
-        }
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                line = line.trim();
-                if (line.isEmpty()) continue;
-
-                String[] parts = line.split(",", 2);
-                if (parts.length == 2) {
-                    settingsMap.put(parts[0].trim(), parts[1].trim());
+        if (settingFile.exists()) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(settingFile))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split(",", 2);
+                    if (parts.length == 2) {
+                        settingsMap.put(parts[0].trim(), parts[1].trim());
+                    }
                 }
+            } catch (IOException e) {
+                XposedBridge.log("設定読み込みエラー: " + e.getMessage());
             }
-        } catch (IOException e) {
-            XposedBridge.log("設定読み込みエラー: " + e.getMessage());
-            Toast.makeText(context, "設定読み込みに失敗しました", Toast.LENGTH_SHORT).show();
         }
-
         return settingsMap;
     }
+
+    // データ保存メソッド
     private void saveUserData(Context context, List<UserEntry> entries) {
-        File dir = new File(
+        File outputDir = new File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 "LimeBackup/Setting"
         );
 
-        if (!dir.exists() && !dir.mkdirs()) {
+        if (!outputDir.exists() && !outputDir.mkdirs()) {
             Toast.makeText(context, "ディレクトリ作成失敗", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        File file = new File(dir, "ChatList.txt");
-        Map<String, String> existingSettings = loadExistingSettings(context);
+        File outputFile = new File(outputDir, "ChatList.txt");
+        Map<String, String> newSettings = new HashMap<>();
 
-        try (FileWriter writer = new FileWriter(file)) {
-            // 既存の設定をコピー
-            Map<String, String> mergedSettings = new HashMap<>(existingSettings);
-
-            // 新しい入力値を処理
-            for (UserEntry entry : entries) {
-                if (entry.inputView != null) {
-                    String inputValue = entry.inputView.getText().toString().trim();
-                    if (!inputValue.isEmpty()) {
-                        mergedSettings.put(entry.userId, inputValue);
-                    } else {
-                        // 空欄の場合はエントリを削除
-                        mergedSettings.remove(entry.userId);
-                    }
-                }
+        for (UserEntry entry : entries) {
+            String value = entry.inputView.getText().toString().trim();
+            if (!value.isEmpty()) {
+                newSettings.put(entry.userId, value);
             }
+        }
 
-            // ファイルに書き込み
-            for (Map.Entry<String, String> entry : mergedSettings.entrySet()) {
+        try (FileWriter writer = new FileWriter(outputFile)) {
+            for (Map.Entry<String, String> entry : newSettings.entrySet()) {
                 writer.write(entry.getKey() + "," + entry.getValue() + "\n");
             }
-
-            Toast.makeText(context, "保存完了: " + file.getPath(), Toast.LENGTH_LONG).show();
+            Toast.makeText(context, "設定を保存しました: " + outputFile.getPath(), Toast.LENGTH_LONG).show();
         } catch (IOException e) {
             Toast.makeText(context, "保存失敗: " + e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
+
+    // その他の補助メソッド
     private String getProfileNameFromContacts(SQLiteDatabase db, String contactMid) {
-        String profileName = "Unknown"; // デフォルト値
-
-        try (Cursor cursor = db.rawQuery(
-                "SELECT profile_name FROM contacts WHERE mid=?", new String[]{contactMid})) {
-            if (cursor.moveToFirst()) {
-                profileName = cursor.getString(0); // プロファイル名を取得
-            }
+        try (Cursor cursor = db.rawQuery("SELECT profile_name FROM contacts WHERE mid=?", new String[]{contactMid})) {
+            return cursor.moveToFirst() ? cursor.getString(0) : "Unknown";
         } catch (SQLiteException e) {
-            XposedBridge.log("Profile query error: " + e.getMessage());
+            XposedBridge.log("プロファイル取得エラー: " + e.getMessage());
+            return "Unknown";
         }
-
-        return profileName; // プロファイル名を返す
     }
 
     private String getGroupNameFromGroups(SQLiteDatabase db, String groupId) {
-        String groupName = "Unknown"; // デフォルト値
-
-        try (Cursor cursor = db.rawQuery(
-                "SELECT name FROM groups WHERE id=?", new String[]{groupId})) {
-            if (cursor.moveToFirst()) {
-                groupName = cursor.getString(0); // グループ名を取得
-            }
+        try (Cursor cursor = db.rawQuery("SELECT name FROM groups WHERE id=?", new String[]{groupId})) {
+            return cursor.moveToFirst() ? cursor.getString(0) : "Unknown";
         } catch (SQLiteException e) {
-            XposedBridge.log("Group query error: " + e.getMessage());
+            XposedBridge.log("グループ名取得エラー: " + e.getMessage());
+            return "Unknown";
         }
-
-        return groupName; // グループ名を返す
     }
 
     private void Blocklist(Context context, Context moduleContext) {
