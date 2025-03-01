@@ -74,9 +74,9 @@ jobs:
       - name: Download Required APKs
         if: github.event.inputs.release == 'true'
         run: |
-          curl -L -o LINE.15.0.0.arm64-v8a.armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.16.10beta/LINE.15.0.0.arm64-v8a.armeabi-v7a.apk
-          curl -L -o LINE.15.0.0.armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.16.10beta/armeabi-v7a-15-0-0.apk
-          curl -L -o LINE.15.0.0arm64-v8a.apk https://github.com/areteruhiro/LIMEs/releases/download/v1.16.10beta/LINE.15.0.0arm64-v8a.apk
+          curl -L -o LINE-15.2.1-arm64-v8a.armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/line15.2.1/LINE-15.2.1-arm64-v8a.armeabi-v7a.apk
+          curl -L -o LINE-15.2.1-arm64-v8a.apk https://github.com/areteruhiro/LIMEs/releases/download/line15.2.1/LINE-15.2.1-arm64-v8a.apk
+          curl -L -o LINE-15-2-1armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/line15.2.1/line-15-2-1armeabi-v7a.apk
       - name: Download LSPatch
         if: github.event.inputs.release == 'true'
         run: |
@@ -97,7 +97,7 @@ jobs:
       - name: LSPatch
         if: github.event.inputs.release == 'true'
         run: |
-          for file in LINE.15.0.0.arm64-v8a.armeabi-v7a.apk LINE.15.0.0.armeabi-v7a.apk LINE.15.0.0arm64-v8a.apk; do
+          for file in LINE-15.2.1-arm64-v8a.armeabi-v7a.apk LINE-15.2.1-arm64-v8a.apk LINE-15-2-1armeabi-v7a.apk; do
             echo "Patching $file..."
             java -jar lspatch.jar "$file" -m "${{ env.repo }}-${{ env.version }}.apk" -l 2 -v
 
@@ -128,9 +128,9 @@ jobs:
           prerelease: false
           files: |
             ${{ env.repo }}-${{ env.version }}.apk
-            Patched_${{ env.version }}_LINE.15.0.0.arm64-v8a.armeabi-v7a.apk
-            Patched_${{ env.version }}_LINE.15.0.0.armeabi-v7a.apk
-            Patched_${{ env.version }}_LINE.15.0.0arm64-v8a.apk
+            Patched_${{ env.version }}_LINE-15.2.1-arm64-v8a.armeabi-v7a.apk
+            Patched_${{ env.version }}_LINE-15.2.1-arm64-v8a.apk
+            Patched_${{ env.version }}_LINE-15-2-1armeabi-v7a.apk
           body: |
             # 更新内容
 
