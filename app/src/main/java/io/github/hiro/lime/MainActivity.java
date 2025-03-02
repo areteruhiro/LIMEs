@@ -38,58 +38,84 @@ public class MainActivity extends Activity {
     public LimeOptions limeOptions = new LimeOptions();
     private static final int REQUEST_CODE = 100;
 
-    @Deprecated
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            if (!Environment.isExternalStorageManager()) {
-                Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
-                intent.setData(Uri.parse("package:" + getPackageName()));
-                startActivity(intent);
-            } else {
-                try {
-                    initializeApp();
-                } catch (PackageManager.NameNotFoundException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+        if (needStoragePermission()) {
+            requestStoragePermission();
         } else {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(
-                        this,
-                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                        REQUEST_CODE
-                );
-            } else {
-                try {
-                    initializeApp();
-                } catch (PackageManager.NameNotFoundException e) {
-                    throw new RuntimeException(e);
-                }
-            }
+            safelyInitializeApp();
         }
+    }
+
+    private boolean needStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            return !Environment.isExternalStorageManager();
+        } else {
+            return ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED;
+        }
+    }
+
+    private void requestStoragePermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+            intent.setData(Uri.parse("package:" + getPackageName()));
+            startActivity(intent);
+        } else {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            Manifest.permission.READ_EXTERNAL_STORAGE
+                    },
+                    REQUEST_CODE
+            );
+        }
+    }
+
+    private void safelyInitializeApp() {
+        try {
+            initializeApp();
+        } catch (PackageManager.NameNotFoundException e) {
+            handleInitializationError(e);
+        }
+    }
+
+    private void handleInitializationError(Exception e) {
+        new AlertDialog.Builder(this)
+                .setTitle("初期化エラー")
+                .setMessage("アプリの初期化に失敗しました: " + e.getMessage())
+                .setPositiveButton("終了", (dialog, which) -> finish())
+                .setCancelable(false)
+                .show();
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
         if (requestCode == REQUEST_CODE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                try {
-                    initializeApp();
-                } catch (PackageManager.NameNotFoundException e) {
-                    throw new RuntimeException(e);
-                }
+                safelyInitializeApp();
             } else {
-                // パーミッションが拒否された場合の処理
-                Toast.makeText(this, "ストレージアクセス権限が必要です", Toast.LENGTH_SHORT).show();
+                new AlertDialog.Builder(this)
+                        .setTitle("権限が必要です")
+                        .setMessage("この機能を使用するにはストレージ権限が必要です")
+                        .setPositiveButton("設定", (d, w) -> openAppSettings())
+                        .setNegativeButton("キャンセル", (d, w) -> finish())
+                        .show();
             }
         }
     }
 
+    private void openAppSettings() {
+        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+        intent.setData(Uri.parse("package:" + getPackageName()));
+        startActivity(intent);
+    }
     private void initializeApp() throws PackageManager.NameNotFoundException {
         CustomPreferences customPrefs;
         customPrefs = new CustomPreferences();
