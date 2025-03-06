@@ -645,44 +645,36 @@ public class ReadChecker implements IHook {
             if (serverId == null || SentUser == null) return;
 
             String SendUser = queryDatabaseWithRetry(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
-            SendUser = SendUser != null ? SendUser : "null"; 
+            SendUser = SendUser != null ? SendUser : "null";
 
             String groupId = queryDatabaseWithRetry(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
-            groupId = groupId != null ? groupId : "null"; 
+            groupId = groupId != null ? groupId : "null";
 
             String groupName = queryDatabaseWithRetry(db3, "SELECT name FROM groups WHERE id=?", groupId);
-            groupName = groupName != null ? groupName : "null"; 
+            groupName = groupName != null ? groupName : "null";
 
             String content = queryDatabaseWithRetry(db3, "SELECT content FROM chat_history WHERE server_id=?", serverId);
-            content = content != null ? content : "null"; 
+            content = content != null ? content : "null";
 
             String name = queryDatabaseWithRetry(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
-            name = name != null ? name : "null"; 
+            name = name != null ? name : "null";
 
             String timeEpochStr = queryDatabaseWithRetry(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
-            timeEpochStr = timeEpochStr != null ? timeEpochStr : "null"; 
+            timeEpochStr = timeEpochStr != null ? timeEpochStr : "null";
 
-            String media = queryDatabaseWithRetry(db3, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
-            media = media != null ? media : "null"; 
+            String media = queryDatabaseWithRetry(db3, "SELECT parameter FROM chat_history WHERE server_id=?", serverId);
+            media = media != null ? media : "null";
 
             String mediaDescription = "";
             boolean mediaError = false;
-
-            if (!media.equals("null")) { // "null"文字列で判定
-                switch (media) {
-                    case "7":
-                        mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                        break;
-                    case "1":
+                if (media != null) {
+                    if (media.contains("IMAGE")) {
                         mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                        break;
-                    case "2":
+                    } else if (media.contains("video")) {
                         mediaDescription = moduleContext.getResources().getString(R.string.video);
-                        break;
-                    default:
-                        mediaError = true;
-                        break;
-                }
+                    } else if (media.contains("STKPKGID")) {
+                        mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                    }
             } else {
                 mediaError = true;
             }
@@ -838,7 +830,6 @@ public class ReadChecker implements IHook {
                           String timeFormatted, Context context) {
         final String currentTime = getCurrentTime();
 
-        // 修正箇所: nameがnullの場合のデフォルト値を設定
         final String safeName = (name != null && !name.equals("null")) ? name : "Unknown";
         final String formattedUserName = "-" + safeName + " [" + currentTime + "]";
 
