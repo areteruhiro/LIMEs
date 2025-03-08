@@ -212,5 +212,9 @@
     <string name="ringtonevolume">(Sounds a dial tone)Using a ringtone</string>
     <string name="PureDarkCall">(PureDark bottom bar) for call history</string>
     <string name="PinList">チャットリストのピン設定</string>
+    <string name="file">File</string>
+    <string name="location">Location Message</string>
+    <string name="SpoofAndroidId">androidIDを偽装する</string>
+    <string name="SpoofUserAgent">デバイス情報を偽装する</string>
 
 </resources>

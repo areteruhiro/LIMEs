@@ -197,5 +197,8 @@
     <string name="videoSingleButtonOption">刪除個人聊天內的視頻通話項目。</string>
     <string name="ringtonevolume">"（發出撥號音）使用鈴聲 "</string>
     <string name="PureDarkCall">（PureDark 底部欄）用於檢視通話記錄</string>
+    <string name="file">File</string>
+    <string name="SpoofAndroidId">androidIDを偽装する</string>
+    <string name="SpoofUserAgent">デバイス情報を偽装する</string>
 
 </resources>

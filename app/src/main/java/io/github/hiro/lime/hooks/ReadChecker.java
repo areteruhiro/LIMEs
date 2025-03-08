@@ -21,7 +21,6 @@ import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Environment;
-import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -44,7 +43,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
@@ -150,13 +148,8 @@ public class ReadChecker implements IHook {
                     //XposedBridge.log("Module context is null. Skipping hook.");
                     return;
                 }
-
-
                 if (shouldHookOnCreate && currentGroupId != null) {
-
                     Activity activity = (Activity) param.thisObject;
-
-
                     addButton(activity, moduleContext);
                 }
             }
@@ -405,9 +398,57 @@ public class ReadChecker implements IHook {
         Map<String, DataItem> dataItemMap = new HashMap<>();
 
         while (cursor.moveToNext()) {
+
             String serverId = cursor.getString(0);
             String content = cursor.getString(1);
             String timeFormatted = cursor.getString(2);
+            if (content == null || "null".equals(content)) {
+                // contentRetry取得処理
+                String contentRetry = queryDatabaseWithRetry(db3,
+                        "SELECT content FROM chat_history WHERE server_id=?",
+                        serverId
+                );
+                contentRetry = (contentRetry != null) ? contentRetry : "null";
+
+                // media取得処理
+                String media = queryDatabaseWithRetry(db3,
+                        "SELECT parameter FROM chat_history WHERE server_id=?",
+                        serverId
+                );
+                media = (media != null) ? media : "null";
+
+                String mediaDescription = "null";
+                if (!"null".equals(media)) {
+                    if (media.contains("IMAGE")) {
+                        mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                    } else if (media.contains("video")) {
+                        mediaDescription = moduleContext.getResources().getString(R.string.video);
+                    } else if (media.contains("STKPKGID")) {
+                        mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                    } else if (media.contains("FILE")) {
+                        mediaDescription = moduleContext.getResources().getString(R.string.file);
+                    } else if (media.contains("LOCATION")) {
+                        mediaDescription = moduleContext.getResources().getString(R.string.location);
+                    }
+                }
+                // 最終コンテンツ決定（メソッドのロジックをインライン化）
+                String finalcontent;
+                if (contentRetry != null && !contentRetry.isEmpty() && !contentRetry.equals("null")) {
+                    finalcontent = contentRetry;
+                } else {
+                    finalcontent = mediaDescription;
+                }
+
+                if (finalcontent == null || finalcontent.isEmpty()
+                        || finalcontent.equals("null") || finalcontent.equals("NoGetError")) {
+                    finalcontent = "null";
+                }
+
+                content = finalcontent;
+                processRelatedRecords(groupId, serverId, finalcontent);
+
+            }
+
 
             // created_time が "null" の場合、chat_history テーブルから取得してフォーマットする
             if ("null".equals(timeFormatted)) {
@@ -484,6 +525,7 @@ public class ReadChecker implements IHook {
         scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
     }
 
+
     private List<String> getuser_namesForServerId(String serverId, SQLiteDatabase db3) {
         if (limeDatabase == null) {
             //("limeDatabaseがnullです。");
@@ -542,6 +584,120 @@ public class ReadChecker implements IHook {
         return userNames;
     }
 
+    private void processRelatedRecords(String groupId, String currentServerId, String finalcontent) {
+        if (limeDatabase == null) return;
+        // 現在のレコードのtrimmed user_name取得
+        String currentTrimmedName = extractTrimmedName(finalcontent);
+        // 同一group_idでserver_idが異なるレコードを検索
+        Cursor cursor = limeDatabase.rawQuery(
+                "SELECT server_id, user_name, Sent_User, Send_User, group_name, content, created_time " +
+                        "FROM read_message WHERE group_id = ? AND server_id != ?",
+                new String[]{groupId, currentServerId}
+        );
+
+        while (cursor.moveToNext()) {
+            String targetServerId = cursor.getString(0);
+            String targetUserName = cursor.getString(1);
+            String sentUser = cursor.getString(2);
+            String sendUser = cursor.getString(3);
+            String groupName = cursor.getString(4);
+            String content = cursor.getString(5);
+            String createdTime = cursor.getString(6);
+
+            // 比較対象のtrimmed user_name取得
+            String targetTrimmedName = extractTrimmedName(targetUserName);
+
+            // 名前比較処理
+            if (currentTrimmedName != null && targetTrimmedName != null &&
+                    !currentTrimmedName.equals(targetTrimmedName)) {
+
+                // 新規レコード作成（元のuser_nameを保持）
+                ContentValues values = new ContentValues();
+                values.put("group_id", groupId);
+                values.put("server_id", targetServerId);
+                values.put("Sent_User", sentUser);
+                values.put("Send_User", sendUser);
+                values.put("group_name", groupName);
+                values.put("content", content);
+                values.put("user_name", targetUserName); // トリミング前の値を保持
+                values.put("created_time", createdTime);
+
+                limeDatabase.insert("read_message", null, values);
+            }
+        }
+        cursor.close();
+    }
+
+    // ユーザー名トリミングメソッド
+    private String extractTrimmedName(String formattedName) {
+        if (formattedName == null) return null;
+        Pattern pattern = Pattern.compile("-(.*?)\\s\\[");
+        Matcher matcher = pattern.matcher(formattedName);
+        return matcher.find() ? matcher.group(1).trim() : null;
+    }
+
+    private void fetchDataAndSave(SQLiteDatabase db3, SQLiteDatabase db4, String paramValue, Context context, Context moduleContext) {
+        String serverId = null;
+        String SentUser = null;
+
+        try {
+            serverId = extractServerId(paramValue, context);
+            SentUser = extractSentUser(paramValue);
+            if (serverId == null || SentUser == null) return;
+
+            String SendUser = queryDatabaseWithRetry(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
+            SendUser = SendUser != null ? SendUser : "null";
+
+            String groupId = queryDatabaseWithRetry(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
+            groupId = groupId != null ? groupId : "null";
+
+            String groupName = queryDatabaseWithRetry(db3, "SELECT name FROM groups WHERE id=?", groupId);
+            groupName = groupName != null ? groupName : "null";
+
+            String content = queryDatabase(db3, "SELECT content FROM chat_history WHERE server_id=?", serverId);
+            content = content != null ? content : "null";
+
+            String name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
+            name = name != null ? name : "null";
+
+            String timeEpochStr = queryDatabase(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
+            timeEpochStr = timeEpochStr != null ? timeEpochStr : "null";
+
+            String media = queryDatabase(db3, "SELECT parameter FROM chat_history WHERE server_id=?", serverId);
+            media = media != null ? media : "null";
+
+            String mediaDescription = "";
+            boolean mediaError = false;
+                if (media != null) {
+                    if (media.contains("IMAGE")) {
+                        mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                    } else if (media.contains("video")) {
+                        mediaDescription = moduleContext.getResources().getString(R.string.video);
+                    } else if (media.contains("STKPKGID")) {
+                        mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                    } else if (media.contains("FILE")) {
+                        mediaDescription = moduleContext.getResources().getString(R.string.file);
+                    } else if (media.contains("LOCATION")) {
+                        mediaDescription = moduleContext.getResources().getString(R.string.location);
+                    }
+            } else {
+                    mediaDescription = "null";
+                mediaError = true;
+            }
+
+            if (mediaError) {
+                mediaDescription = "null";
+                createErrorFile(context, serverId, media); // エラーファイル作成
+            }
+
+            String finalContent = determineFinalContent(content, mediaDescription);
+            String timeFormatted = formatMessageTime(timeEpochStr);
+            saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, name, timeFormatted, context);
+
+        } catch (Resources.NotFoundException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
     private void deleteGroupData(String groupId, Activity activity, Context moduleContext) {
         if (limeDatabase == null) {
@@ -568,19 +724,6 @@ public class ReadChecker implements IHook {
     }
 
 
-    private static class DataItem {
-        String serverId;
-        String content;
-        String timeFormatted;
-        List<String> user_names; // Set から List に変更
-
-        DataItem(String serverId, String content, String timeFormatted) {
-            this.serverId = serverId;
-            this.content = content;
-            this.timeFormatted = timeFormatted;
-            this.user_names = new ArrayList<>(); // HashSet から ArrayList に変更
-        }
-    }
 
     private void catchNotification(XC_LoadPackage.LoadPackageParam loadPackageParam, SQLiteDatabase db3, SQLiteDatabase db4, Context appContext, Context moduleContext) {
         try {
@@ -635,71 +778,35 @@ public class ReadChecker implements IHook {
 
         return messages;
     }
-    private void fetchDataAndSave(SQLiteDatabase db3, SQLiteDatabase db4, String paramValue, Context context, Context moduleContext) {
-        String serverId = null;
-        String SentUser = null;
 
-        try {
-            serverId = extractServerId(paramValue, context);
-            SentUser = extractSentUser(paramValue);
-            if (serverId == null || SentUser == null) return;
-
-            String SendUser = queryDatabaseWithRetry(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
-            SendUser = SendUser != null ? SendUser : "null";
-
-            String groupId = queryDatabaseWithRetry(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
-            groupId = groupId != null ? groupId : "null";
-
-            String groupName = queryDatabaseWithRetry(db3, "SELECT name FROM groups WHERE id=?", groupId);
-            groupName = groupName != null ? groupName : "null";
-
-            String content = queryDatabaseWithRetry(db3, "SELECT content FROM chat_history WHERE server_id=?", serverId);
-            content = content != null ? content : "null";
-
-            String name = queryDatabaseWithRetry(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
-            name = name != null ? name : "null";
-
-            String timeEpochStr = queryDatabaseWithRetry(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
-            timeEpochStr = timeEpochStr != null ? timeEpochStr : "null";
-
-            String media = queryDatabaseWithRetry(db3, "SELECT parameter FROM chat_history WHERE server_id=?", serverId);
-            media = media != null ? media : "null";
-
-            String mediaDescription = "";
-            boolean mediaError = false;
-                if (media != null) {
-                    if (media.contains("IMAGE")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                    } else if (media.contains("video")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.video);
-                    } else if (media.contains("STKPKGID")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                    }
-            } else {
-                mediaError = true;
-            }
-
-            if (mediaError) {
-                mediaDescription = "NoGetError";
-                createErrorFile(context, serverId, media); // エラーファイル作成
-            }
-
-            String finalContent = determineFinalContent(content, mediaDescription);
-            String timeFormatted = formatMessageTime(timeEpochStr);
-            saveData(SendUser, groupId, serverId, SentUser, groupName, finalContent, name, timeFormatted, context);
-
-        } catch (Resources.NotFoundException e) {
-            throw new RuntimeException(e);
-        }
-    }
     private String determineFinalContent(String content, String mediaDescription) {
+        String result;
         if (content != null && !content.isEmpty() && !content.equals("null")) {
-            return content;
+            result = content;
         } else {
-            return mediaDescription;
+            result = mediaDescription;
+        }
+
+        if (result == null || result.isEmpty() || result.equals("null") || result.equals("NoGetError")) {
+            return "null";
+        } else {
+            return result;
         }
     }
 
+    private static class DataItem {
+        String serverId;
+        String content;
+        String timeFormatted;
+        List<String> user_names; // Set から List に変更
+
+        DataItem(String serverId, String content, String timeFormatted) {
+            this.serverId = serverId;
+            this.content = content;
+            this.timeFormatted = timeFormatted;
+            this.user_names = new ArrayList<>(); // HashSet から ArrayList に変更
+        }
+    }
     private void createErrorFile(Context context, String serverId, String mediaValue) {
         File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
         File limeBackupDir = new File(downloadsDir, "LimeBackup");
@@ -800,8 +907,7 @@ public class ReadChecker implements IHook {
                 //XposedBridge.log("Failed to delete old database file lime_data.db.");
             }
         }
-        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-        File dbFile = new File(dir, "lime_checked_data.db");
+  File dbFile = new File(context.getFilesDir(), "lime_checked_data.db");
         limeDatabase = SQLiteDatabase.openOrCreateDatabase(dbFile, null);
 
         String createGroupTable = "CREATE TABLE IF NOT EXISTS read_message (" +

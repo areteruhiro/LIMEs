@@ -47,8 +47,10 @@ public class RemoveFlexibleContents implements IHook {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         view = (View) param.thisObject;
-
                         int viewId = view.getId();
+//                          String resourceName = getResourceName(view.getContext(), viewId);
+                          //XposedBridge.log("View ID: " + viewId + ", Resource Name: " + resourceName);
+
                         if (limeOptions.removeRecommendation.checked && viewId == recommendationResId
                                 || limeOptions.removeServiceLabels.checked && viewId == serviceNameResId
                                 || limeOptions.removeAllServices.checked && (viewId == serviceRowContainerResId
@@ -67,11 +69,14 @@ public class RemoveFlexibleContents implements IHook {
                         }
                     }
                 }
+
         );
     }
 
     private int getIdByName(Context context, String resourceName) {
         return context.getResources().getIdentifier(resourceName, "id", context.getPackageName());
     }
-
+    private String getResourceName(Context context, int resourceId) {
+        return context.getResources().getResourceEntryName(resourceId);
+    }
 }

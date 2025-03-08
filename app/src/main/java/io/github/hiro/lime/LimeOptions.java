@@ -87,6 +87,9 @@ public class LimeOptions {
 
     public Option PinList = new Option("ringtonevolume", R.string.PinList, false);
 
+    public Option SpoofAndroidId = new Option("SpoofAndroidId", R.string.SpoofAndroidId, false);
+    public Option SpoofUserAgent = new Option("SpoofUserAgent", R.string.SpoofUserAgent, false);
+
 
     public Option UnsendFix = new Option("UnsendFix", R.string.UnsendFix, false);
     public Option[] options = {
@@ -130,7 +133,7 @@ public class LimeOptions {
             CallOpenApplication,
             BlockCheck,SettingClick,
             photoboothButtonOption,voiceButtonOption,videoButtonOption,videoSingleButtonOption
-            ,AutoUpDateCheck,PinList
+            ,AutoUpDateCheck,PinList,
 
     };
 

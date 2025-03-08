@@ -32,6 +32,8 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.io.IOException;
+
 import io.github.hiro.lime.hooks.CustomPreferences;
 
 public class MainActivity extends Activity {
@@ -81,6 +83,8 @@ public class MainActivity extends Activity {
             initializeApp();
         } catch (PackageManager.NameNotFoundException e) {
             handleInitializationError(e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
@@ -116,7 +120,7 @@ public class MainActivity extends Activity {
         intent.setData(Uri.parse("package:" + getPackageName()));
         startActivity(intent);
     }
-    private void initializeApp() throws PackageManager.NameNotFoundException {
+    private void initializeApp() throws PackageManager.NameNotFoundException, IOException {
         CustomPreferences customPrefs;
         customPrefs = new CustomPreferences();
 

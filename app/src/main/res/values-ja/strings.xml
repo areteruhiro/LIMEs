@@ -206,4 +206,8 @@
 
     <string name="ringtonevolume">(発信音を鳴らす)着信音を利用する</string>
     <string name="PureDarkCall">(PureDarkボトムバー)通話履歴用</string>
+    <string name="file">ファイル</string>
+    <string name="location">位置情報</string>
+    <string name="SpoofAndroidId">androidIDを偽装する</string>
+    <string name="SpoofUserAgent">デバイス情報を偽装する</string>
 </resources>
