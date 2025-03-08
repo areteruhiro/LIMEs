@@ -20,7 +20,7 @@ public class CustomPreferences {
 
     public CustomPreferences() throws PackageManager.NameNotFoundException {
         File settingsDir1;
-        File baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        File baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
         settingsDir1 = new File(baseDir, SETTINGS_DIR);
 
         // 初期ディレクトリ作成試行
