@@ -88,6 +88,7 @@ public class DarkColor implements IHook {
                 if (isTargetColor(color, "#111111")) {
                     param.args[0] = Color.parseColor("#000000");
                 }
+
             }
         });
 
@@ -277,18 +278,14 @@ public class DarkColor implements IHook {
                             random.nextInt(256)
                     );
 
-                    XposedBridge.log(String.format(
-                            "Changed Resource: %s → #%08X",
-                            fullResName,
-                            randomColor
-                    ));
+                 //   XposedBridge.log(String.format("Changed Resource: %s → #%08X", fullResName, randomColor));
                     child.setBackgroundColor(randomColor);
                     if (child instanceof TextView) {
                         ((TextView) child).setTextColor(randomColor);
                     }
 
                 } catch (Resources.NotFoundException e) {
-                    XposedBridge.log("Resource not found for ID: 0x" + Integer.toHexString(resId));
+                 //   XposedBridge.log("Resource not found for ID: 0x" + Integer.toHexString(resId));
                 }
             }
 
@@ -317,12 +314,33 @@ public class DarkColor implements IHook {
 //                        view.getClass().getSimpleName()));
             return;
         }
+       // XposedBridge.log(resName);
         if (resName.contains("floating_toolbar_menu_item_text")) {
             if (view instanceof TextView) {
                 TextView tv = (TextView) view;
                 tv.setTextColor(Color.WHITE);
-//                    XposedBridge.log(String.format("%s FloatingToolbar text white: %s",
-//                            logPrefix, viewInfo));
+            }
+            return;
+        }
+        if (resName.contains("title")) {
+            if (view instanceof TextView) {
+                TextView tv = (TextView) view;
+                // テキスト内容を取得
+                String textContent = tv.getText().toString();
+                XposedBridge.log(textContent);
+
+                if (
+                        textContent.contains("プロフィール表示を設定") || textContent.contains("お気に入りに追加")||
+                                textContent.contains("Set profile to display")|| textContent.contains("Add to favorites")||
+                                textContent.contains("設定個人檔案的顯示")|| textContent.contains("加到我的最愛")
+
+
+                )
+
+                {
+                    tv.setTextColor(Color.WHITE);
+                }
+
             }
             return;
         }
@@ -407,7 +425,7 @@ public class DarkColor implements IHook {
                 if (!isDarkModeEnabled(view)) return;
             }
             String resourceName = getViewResourceName(view);
-//            XposedBridge.log("Resource Name: " + resourceName);
+          //  XposedBridge.log("Resource Name: " + resourceName);
 
             // floating_toolbarの強制処理（最優先）
             if (resourceName.contains("floating_toolbar")) {

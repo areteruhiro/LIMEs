@@ -359,21 +359,16 @@ public class ReadChecker implements IHook {
             String chatId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
 
             if (chatId != null && !"null".equals(chatId)) {
-                // group_id を更新
                 limeDatabase.execSQL("UPDATE read_message SET group_id=? WHERE server_id=?", new String[]{chatId, serverId});
 
-                // 同じ group_id を持つ他の server_id を検索
                 Cursor sameGroupIdCursor = limeDatabase.rawQuery(
                         "SELECT server_id, user_name FROM read_message WHERE group_id=? AND server_id != ?",
                         new String[]{chatId, serverId}
                 );
-
                 while (sameGroupIdCursor.moveToNext()) {
                     String otherServerId = sameGroupIdCursor.getString(0);
                     String otherUserName = sameGroupIdCursor.getString(1);
-
                     if (!userName.equals(otherUserName)) {
-                        // 新しいレコードを作成
                         limeDatabase.execSQL(
                                 "INSERT INTO read_message (server_id, group_id, user_name) VALUES (?, ?, ?)",
                                 new String[]{otherServerId, chatId, userName}
@@ -382,6 +377,31 @@ public class ReadChecker implements IHook {
                 }
                 sameGroupIdCursor.close();
             }
+            Cursor nullSendUserCursor = limeDatabase.rawQuery(
+                    "SELECT server_id FROM read_message WHERE Send_User = 'null' OR Send_User IS NULL",
+                    null
+            );
+            while (nullSendUserCursor.moveToNext()) {
+                String SendUser = queryDatabaseWithRetry(db3,
+                        "SELECT from_mid FROM chat_history WHERE server_id=?",
+                        serverId
+                );
+                SendUser = (SendUser != null && !SendUser.isEmpty() && !SendUser.equals("null"))
+                        ? SendUser
+                        : "null";
+                limeDatabase.execSQL(
+                        "UPDATE read_message SET Send_User = ? WHERE server_id = ?",
+                        new String[]{SendUser, serverId}
+                );
+
+                Cursor sameUserCursor = limeDatabase.rawQuery(
+                        "SELECT server_id FROM read_message WHERE Send_User = ? AND server_id != ?",
+                        new String[]{SendUser, serverId}
+                );
+
+                sameUserCursor.close();
+            }
+            nullSendUserCursor.close();
         }
         nullGroupIdCursor.close();
 
@@ -668,20 +688,20 @@ public class ReadChecker implements IHook {
 
             String mediaDescription = "";
             boolean mediaError = false;
-                if (media != null) {
-                    if (media.contains("IMAGE")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                    } else if (media.contains("video")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.video);
-                    } else if (media.contains("STKPKGID")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                    } else if (media.contains("FILE")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.file);
-                    } else if (media.contains("LOCATION")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.location);
-                    }
+            if (media != null) {
+                if (media.contains("IMAGE")) {
+                    mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                } else if (media.contains("video")) {
+                    mediaDescription = moduleContext.getResources().getString(R.string.video);
+                } else if (media.contains("STKPKGID")) {
+                    mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                } else if (media.contains("FILE")) {
+                    mediaDescription = moduleContext.getResources().getString(R.string.file);
+                } else if (media.contains("LOCATION")) {
+                    mediaDescription = moduleContext.getResources().getString(R.string.location);
+                }
             } else {
-                    mediaDescription = "null";
+                mediaDescription = "null";
                 mediaError = true;
             }
 
@@ -907,7 +927,7 @@ public class ReadChecker implements IHook {
                 //XposedBridge.log("Failed to delete old database file lime_data.db.");
             }
         }
-  File dbFile = new File(context.getFilesDir(), "lime_checked_data.db");
+        File dbFile = new File(context.getFilesDir(), "lime_checked_data.db");
         limeDatabase = SQLiteDatabase.openOrCreateDatabase(dbFile, null);
 
         String createGroupTable = "CREATE TABLE IF NOT EXISTS read_message (" +
