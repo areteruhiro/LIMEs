@@ -405,11 +405,67 @@ public class ReadChecker implements IHook {
         }
         nullGroupIdCursor.close();
 
+        Cursor preUpdateCursor = limeDatabase.rawQuery(
+            "SELECT server_id FROM read_message WHERE group_id=? AND (content IS NULL OR content = 'null')",
+            new String[]{groupId}
+        );
+
+        while (preUpdateCursor.moveToNext()) {
+            String serverId = preUpdateCursor.getString(0);
+
+            String contentRetry = queryDatabaseWithRetry(
+                db3,
+                "SELECT content FROM chat_history WHERE server_id=?", 
+                serverId
+            );
+            contentRetry = (contentRetry != null) ? contentRetry : "null";
+
+            String media = queryDatabaseWithRetry(
+                db3,
+                "SELECT parameter FROM chat_history WHERE server_id=?", 
+                serverId
+            );
+            media = (media != null) ? media : "null";
+
+    
+            String mediaDescription = "null";
+            if (!"null".equals(media)) {
+                if (media.contains("IMAGE")) {
+                    mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                } else if (media.contains("video")) {
+                    mediaDescription = moduleContext.getResources().getString(R.string.video);
+                } else if (media.contains("STKPKGID")) {
+                    mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                } else if (media.contains("FILE")) {
+                    mediaDescription = moduleContext.getResources().getString(R.string.file);
+                } else if (media.contains("LOCATION")) {
+                    mediaDescription = moduleContext.getResources().getString(R.string.location);
+                }
+            }
+            
+            String finalcontent = "null";
+            if (contentRetry != null && !contentRetry.isEmpty() && !contentRetry.equals("null")) {
+                finalcontent = contentRetry;
+            } else {
+                finalcontent = mediaDescription;
+            }
+
+            if (finalcontent == null || finalcontent.isEmpty() 
+                || finalcontent.equals("null") || finalcontent.equals("NoGetError")) {
+                finalcontent = "null";
+            }
+            limeDatabase.execSQL(
+                "UPDATE read_message SET content=? WHERE server_id=?", 
+                new String[]{finalcontent, serverId}
+            );
+
+            processRelatedRecords(groupId, serverId, finalcontent);
+        }
+        preUpdateCursor.close();
+
         if (limeOptions.MySendMessage.checked) {
-            // Send_User が (null) のメッセージのみを取得するクエリ
             query = "SELECT server_id, content, created_time FROM read_message WHERE group_id=? AND Send_User = 'null' ORDER BY created_time ASC";
         } else {
-            // 通常のクエリ
             query = "SELECT server_id, content, created_time FROM read_message WHERE group_id=? ORDER BY created_time ASC";
         }
 
@@ -422,52 +478,6 @@ public class ReadChecker implements IHook {
             String serverId = cursor.getString(0);
             String content = cursor.getString(1);
             String timeFormatted = cursor.getString(2);
-            if (content == null || "null".equals(content)) {
-                // contentRetry取得処理
-                String contentRetry = queryDatabaseWithRetry(db3,
-                        "SELECT content FROM chat_history WHERE server_id=?",
-                        serverId
-                );
-                contentRetry = (contentRetry != null) ? contentRetry : "null";
-
-                // media取得処理
-                String media = queryDatabaseWithRetry(db3,
-                        "SELECT parameter FROM chat_history WHERE server_id=?",
-                        serverId
-                );
-                media = (media != null) ? media : "null";
-
-                String mediaDescription = "null";
-                if (!"null".equals(media)) {
-                    if (media.contains("IMAGE")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                    } else if (media.contains("video")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.video);
-                    } else if (media.contains("STKPKGID")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                    } else if (media.contains("FILE")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.file);
-                    } else if (media.contains("LOCATION")) {
-                        mediaDescription = moduleContext.getResources().getString(R.string.location);
-                    }
-                }
-                // 最終コンテンツ決定（メソッドのロジックをインライン化）
-                String finalcontent;
-                if (contentRetry != null && !contentRetry.isEmpty() && !contentRetry.equals("null")) {
-                    finalcontent = contentRetry;
-                } else {
-                    finalcontent = mediaDescription;
-                }
-
-                if (finalcontent == null || finalcontent.isEmpty()
-                        || finalcontent.equals("null") || finalcontent.equals("NoGetError")) {
-                    finalcontent = "null";
-                }
-
-                content = finalcontent;
-                processRelatedRecords(groupId, serverId, finalcontent);
-
-            }
 
 
             // created_time が "null" の場合、chat_history テーブルから取得してフォーマットする
