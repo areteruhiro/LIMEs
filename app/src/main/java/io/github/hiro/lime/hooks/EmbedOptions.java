@@ -1368,8 +1368,8 @@ public class EmbedOptions implements IHook {
 
     private void ReadCheckerbackup(Context appContext, Context moduleContext) {
         // 元のデータベースファイル
-        File originalDbFile = appContext.getDatabasePath("lime_checked_data.db");
-        if (!originalDbFile.exists()) {
+        File dbFile = new File(appContext.getFilesDir(), "lime_checked_data.db");
+        if (!dbFile.exists()) {
             Toast.makeText(appContext, "Database file not found", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -1390,7 +1390,7 @@ public class EmbedOptions implements IHook {
         String timestamp = sdf.format(new Date());
         File backupFile = new File(backupDir, "lime_checked_data_" + timestamp + ".db");
 
-        try (FileInputStream fis = new FileInputStream(originalDbFile);
+        try (FileInputStream fis = new FileInputStream(dbFile);
              FileOutputStream fos = new FileOutputStream(backupFile)) {
 
             // ファイルコピーの実行
