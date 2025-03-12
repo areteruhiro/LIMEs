@@ -210,4 +210,5 @@
     <string name="location">位置情報</string>
     <string name="SpoofAndroidId">androidIDを偽装する</string>
     <string name="SpoofUserAgent">デバイス情報を偽装する</string>
+    <string name="ReadChecker_BackUp">ReadDataBackUp</string>
 </resources>
