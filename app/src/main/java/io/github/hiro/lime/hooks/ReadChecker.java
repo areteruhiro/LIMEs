@@ -1,3 +1,4 @@
+
 package io.github.hiro.lime.hooks;
 
 
@@ -406,28 +407,28 @@ public class ReadChecker implements IHook {
         nullGroupIdCursor.close();
 
         Cursor preUpdateCursor = limeDatabase.rawQuery(
-            "SELECT server_id FROM read_message WHERE group_id=? AND (content IS NULL OR content = 'null')",
-            new String[]{groupId}
+                "SELECT server_id FROM read_message WHERE group_id=? AND (content IS NULL OR content = 'null')",
+                new String[]{groupId}
         );
 
         while (preUpdateCursor.moveToNext()) {
             String serverId = preUpdateCursor.getString(0);
 
             String contentRetry = queryDatabaseWithRetry(
-                db3,
-                "SELECT content FROM chat_history WHERE server_id=?", 
-                serverId
+                    db3,
+                    "SELECT content FROM chat_history WHERE server_id=?",
+                    serverId
             );
             contentRetry = (contentRetry != null) ? contentRetry : "null";
 
             String media = queryDatabaseWithRetry(
-                db3,
-                "SELECT parameter FROM chat_history WHERE server_id=?", 
-                serverId
+                    db3,
+                    "SELECT parameter FROM chat_history WHERE server_id=?",
+                    serverId
             );
             media = (media != null) ? media : "null";
 
-    
+
             String mediaDescription = "null";
             if (!"null".equals(media)) {
                 if (media.contains("IMAGE")) {
@@ -442,7 +443,7 @@ public class ReadChecker implements IHook {
                     mediaDescription = moduleContext.getResources().getString(R.string.location);
                 }
             }
-            
+
             String finalcontent = "null";
             if (contentRetry != null && !contentRetry.isEmpty() && !contentRetry.equals("null")) {
                 finalcontent = contentRetry;
@@ -450,13 +451,13 @@ public class ReadChecker implements IHook {
                 finalcontent = mediaDescription;
             }
 
-            if (finalcontent == null || finalcontent.isEmpty() 
-                || finalcontent.equals("null") || finalcontent.equals("NoGetError")) {
+            if (finalcontent == null || finalcontent.isEmpty()
+                    || finalcontent.equals("null") || finalcontent.equals("NoGetError")) {
                 finalcontent = "null";
             }
             limeDatabase.execSQL(
-                "UPDATE read_message SET content=? WHERE server_id=?", 
-                new String[]{finalcontent, serverId}
+                    "UPDATE read_message SET content=? WHERE server_id=?",
+                    new String[]{finalcontent, serverId}
             );
 
             processRelatedRecords(groupId, serverId, finalcontent);
@@ -616,12 +617,12 @@ public class ReadChecker implements IHook {
 
     private void processRelatedRecords(String groupId, String currentServerId, String finalcontent) {
         if (limeDatabase == null) return;
-        // 現在のレコードのtrimmed user_name取得
         String currentTrimmedName = extractTrimmedName(finalcontent);
-        // 同一group_idでserver_idが異なるレコードを検索
+        if (currentTrimmedName == null) return;
         Cursor cursor = limeDatabase.rawQuery(
                 "SELECT server_id, user_name, Sent_User, Send_User, group_name, content, created_time " +
-                        "FROM read_message WHERE group_id = ? AND server_id != ?",
+                        "FROM read_message " +
+                        "WHERE group_id = ? AND server_id != ?",
                 new String[]{groupId, currentServerId}
         );
 
@@ -634,31 +635,43 @@ public class ReadChecker implements IHook {
             String content = cursor.getString(5);
             String createdTime = cursor.getString(6);
 
-            // 比較対象のtrimmed user_name取得
             String targetTrimmedName = extractTrimmedName(targetUserName);
+            if (targetTrimmedName == null) continue;
 
-            // 名前比較処理
-            if (currentTrimmedName != null && targetTrimmedName != null &&
-                    !currentTrimmedName.equals(targetTrimmedName)) {
+            if (!currentTrimmedName.equals(targetTrimmedName)) {
 
-                // 新規レコード作成（元のuser_nameを保持）
-                ContentValues values = new ContentValues();
-                values.put("group_id", groupId);
-                values.put("server_id", targetServerId);
-                values.put("Sent_User", sentUser);
-                values.put("Send_User", sendUser);
-                values.put("group_name", groupName);
-                values.put("content", content);
-                values.put("user_name", targetUserName); // トリミング前の値を保持
-                values.put("created_time", createdTime);
+                Cursor checkCursor = limeDatabase.rawQuery(
+                        "SELECT 1 FROM read_message " +
+                                "WHERE group_id = ? " +
+                                "AND server_id = ? " +
+                                "AND user_name LIKE '%' || ? || '%'",
+                        new String[]{
+                                groupId,
+                                targetServerId,
+                                currentTrimmedName
+                        }
+                );
 
-                limeDatabase.insert("read_message", null, values);
+
+                if (!checkCursor.moveToFirst()) {
+                    ContentValues values = new ContentValues();
+                    values.put("group_id", groupId);
+                    values.put("server_id", targetServerId);
+                    values.put("Sent_User", sentUser);
+                    values.put("Send_User", sendUser);
+                    values.put("group_name", groupName);
+                    values.put("content", content);
+                    values.put("user_name", targetUserName + " [" + currentTrimmedName + "]"); // 新旧を結合
+                    values.put("created_time", createdTime);
+
+                    limeDatabase.insert("read_message", null, values);
+                }
+                checkCursor.close();
             }
         }
         cursor.close();
     }
 
-    // ユーザー名トリミングメソッド
     private String extractTrimmedName(String formattedName) {
         if (formattedName == null) return null;
         Pattern pattern = Pattern.compile("-(.*?)\\s\\[");
