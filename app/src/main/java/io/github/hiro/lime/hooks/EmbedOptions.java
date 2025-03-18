@@ -698,9 +698,9 @@ public class EmbedOptions implements IHook {
 
                         } catch (Exception e) {
                             // エラー情報を詳細にログ出力
-                            XposedBridge.log("設定作成エラー: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                           // XposedBridge.log("設定作成エラー: " + e.getClass().getSimpleName() + " - " + e.getMessage());
                             for (StackTraceElement ste : e.getStackTrace()) {
-                                XposedBridge.log("  at " + ste.toString());
+                               // XposedBridge.log("  at " + ste.toString());
                             }
 
                             try {
@@ -714,11 +714,11 @@ public class EmbedOptions implements IHook {
                                                 Toast.LENGTH_LONG
                                         ).show();
                                     } else {
-                                        XposedBridge.log("Toast表示失敗: moduleContextがnullです");
+                                       // XposedBridge.log("Toast表示失敗: moduleContextがnullです");
                                     }
                                 });
                             } catch (Throwable t) {
-                                XposedBridge.log("Toast表示中に例外発生: " + t);
+                               // XposedBridge.log("Toast表示中に例外発生: " + t);
                                 t.printStackTrace();
                             }
                         }
@@ -1427,7 +1427,7 @@ public class EmbedOptions implements IHook {
             }
 
         } catch (SQLiteException e) {
-            XposedBridge.log("SQL Error: " + e.getMessage());
+           // XposedBridge.log("SQL Error: " + e.getMessage());
             Toast.makeText(context, "データ取得エラー", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -1513,7 +1513,7 @@ public class EmbedOptions implements IHook {
                     }
                 }
             } catch (IOException e) {
-                XposedBridge.log("設定読み込みエラー: " + e.getMessage());
+               // XposedBridge.log("設定読み込みエラー: " + e.getMessage());
             }
         }
         return settingsMap;
@@ -1556,7 +1556,7 @@ public class EmbedOptions implements IHook {
         try (Cursor cursor = db.rawQuery("SELECT profile_name FROM contacts WHERE mid=?", new String[]{contactMid})) {
             return cursor.moveToFirst() ? cursor.getString(0) : "Unknown";
         } catch (SQLiteException e) {
-            XposedBridge.log("プロファイル取得エラー: " + e.getMessage());
+           // XposedBridge.log("プロファイル取得エラー: " + e.getMessage());
             return "Unknown";
         }
     }
@@ -1565,7 +1565,7 @@ public class EmbedOptions implements IHook {
         try (Cursor cursor = db.rawQuery("SELECT name FROM groups WHERE id=?", new String[]{groupId})) {
             return cursor.moveToFirst() ? cursor.getString(0) : "Unknown";
         } catch (SQLiteException e) {
-            XposedBridge.log("グループ名取得エラー: " + e.getMessage());
+           // XposedBridge.log("グループ名取得エラー: " + e.getMessage());
             return "Unknown";
         }
     }
@@ -1625,7 +1625,7 @@ public class EmbedOptions implements IHook {
                     }
                 }
             } catch (Exception e) {
-                XposedBridge.log( moduleContext.getResources().getString(R.string.Block_Profile_Reload) + e.getMessage());
+               // XposedBridge.log( moduleContext.getResources().getString(R.string.Block_Profile_Reload) + e.getMessage());
             }
             return profiles;
         }
@@ -1779,7 +1779,7 @@ public class EmbedOptions implements IHook {
                     profiles.add(new ProfileInfo(contactMid, profileName));
                 }
             } catch (Exception e) {
-                XposedBridge.log("非表示プロファイル読込エラー: " + e.getMessage());
+               // XposedBridge.log("非表示プロファイル読込エラー: " + e.getMessage());
             }
             return profiles;
         }
@@ -1881,7 +1881,7 @@ public class EmbedOptions implements IHook {
                 try {
                     storageFile.createNewFile();
                 } catch (IOException e) {
-                    XposedBridge.log("ファイル作成エラー: " + e.getMessage());
+                   // XposedBridge.log("ファイル作成エラー: " + e.getMessage());
                 }
             }
         }
@@ -1893,7 +1893,7 @@ public class EmbedOptions implements IHook {
                     bw.write(contactMid);
                     bw.newLine();
                 } catch (IOException e) {
-                    XposedBridge.log("非設定追加エラー: " + e.getMessage());
+                   // XposedBridge.log("非設定追加エラー: " + e.getMessage());
                 }
             }).start();
         }
@@ -1907,7 +1907,7 @@ public class EmbedOptions implements IHook {
                         hidden.add(line.trim());
                     }
                 } catch (IOException e) {
-                    XposedBridge.log("非表示リスト読込エラー: " + e.getMessage());
+                   // XposedBridge.log("非表示リスト読込エラー: " + e.getMessage());
                 }
             }
             return hidden;
@@ -1924,7 +1924,7 @@ public class EmbedOptions implements IHook {
                             bw.newLine();
                         }
                     } catch (IOException e) {
-                        XposedBridge.log("非表示解除エラー: " + e.getMessage());
+                       // XposedBridge.log("非表示解除エラー: " + e.getMessage());
                     }
                 }
             }).start();
@@ -2209,11 +2209,11 @@ public class EmbedOptions implements IHook {
         try {
             contextV = AndroidAppHelper.currentApplication();
             if (contextV != null) {
-                XposedBridge.log("Lime: Got context via AndroidAppHelper: " + contextV.getPackageName());
+               // XposedBridge.log("Lime: Got context via AndroidAppHelper: " + contextV.getPackageName());
                 return contextV;
             }
         } catch (Throwable t) {
-            XposedBridge.log("Lime: AndroidAppHelper failed: " + t.toString());
+           // XposedBridge.log("Lime: AndroidAppHelper failed: " + t.toString());
         }
 
         
@@ -2225,13 +2225,11 @@ public class EmbedOptions implements IHook {
             contextV = (Context) XposedHelpers.callMethod(activityThread, "getSystemContext");
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                XposedBridge.log("Lime: Context via ActivityThread: "
-                        + contextV.getPackageName()
-                        + " | DataDir: " + contextV.getDataDir());
+               // XposedBridge.log("Lime: Context via ActivityThread: "+ contextV.getPackageName() + " | DataDir: " + contextV.getDataDir());
             }
             return contextV;
         } catch (Throwable t) {
-            XposedBridge.log("Lime: ActivityThread method failed: " + t.toString());
+           // XposedBridge.log("Lime: ActivityThread method failed: " + t.toString());
         }
 
         
@@ -2250,11 +2248,10 @@ public class EmbedOptions implements IHook {
                     Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY
             );
 
-            XposedBridge.log("Lime: Fallback context created: "
-                    + (contextV != null ? contextV.getPackageName() : "null"));
+           // XposedBridge.log("Lime: Fallback context created: "+ (contextV != null ? contextV.getPackageName() : "null"));
             return contextV;
         } catch (Throwable t) {
-            XposedBridge.log("Lime: Fallback context failed: " + t.toString());
+           // XposedBridge.log("Lime: Fallback context failed: " + t.toString());
         }
 
         return null;

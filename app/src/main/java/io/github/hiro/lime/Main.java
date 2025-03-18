@@ -23,11 +23,8 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
 
     public static String modulePath;
     public static CustomPreferences customPreferences;
-    public static XSharedPreferences xModulePrefs;
-    public static XSharedPreferences xPackagePrefs;
-    public static XSharedPreferences xPrefs;
     public static LimeOptions limeOptions = new LimeOptions();
-
+    private static Context context; // Static context to be shared
     static final IHook[] hooks = {
             new OutputResponse(),
             new ModifyRequest(),
@@ -68,20 +65,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     };
 
 
-    private Context context;
-    private void initializePreferences() {
-        if (context == null) {
-            XposedBridge.log("Lime: Context not available for preferences");
-            return;
-        }
 
-        try {
-            customPreferences = new CustomPreferences(context);
-            createDefaultSettings();
-        } catch (Exception e) {
-            XposedBridge.log("Lime: Failed to initialize preferences: " + e);
-        }
-    }
 
     private void createDefaultSettings() {
         for (LimeOptions.Option option : limeOptions.options) {
@@ -91,51 +75,48 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             }
         }
     }
-
-
-
-
     @Override
     public void handleLoadPackage(@NonNull XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         if (!lpparam.packageName.equals(Constants.PACKAGE_NAME)) return;
 
-        Context context = getTargetAppContext(lpparam);
+        context = getTargetAppContext(lpparam);
 
         if (context == null) {
-            XposedBridge.log("Lime: Context acquisition failed after all methods");
+           // XposedBridge.log("Lime: Context acquisition failed after all methods");
             return;
         }
         try {
             customPreferences = new CustomPreferences(context);
             createDefaultSettings();
         } catch (Exception e) {
-            XposedBridge.log("Lime: Preferences init failed: " + e);
+     XposedBridge.log("Lime: Preferences init failed: " + e);
             return;
         }
 
         Constants.initializeHooks(lpparam);
 
-        xModulePrefs = new XSharedPreferences(Constants.MODULE_NAME, "options");
-        xModulePrefs.reload();
-        xPrefs = xModulePrefs;
+        loadSettings();
+        for (IHook hook : hooks) {
+            hook.hook(limeOptions, lpparam);
+        }
+    }
 
-        // 設定値の読み込み
+    private void loadSettings() {
         for (LimeOptions.Option option : limeOptions.options) {
             option.checked = Boolean.parseBoolean(
                     customPreferences.getSetting(option.name, String.valueOf(option.checked))
             );
-        }
+            String defaultValue = String.valueOf(option.checked);
+            String currentValue = customPreferences.getSetting(option.name, defaultValue);
 
-        // フックの実行
-        for (IHook hook : hooks) {
-            hook.hook(limeOptions, lpparam);
+           // XposedBridge.log("Lime: Loaded setting - "+ option.name+ " | Value: " + currentValue+ " | Default: " + defaultValue);
         }
     }
 
     private Context getTargetAppContext(XC_LoadPackage.LoadPackageParam lpparam) {
         Context context = null;
 
-        
+
         try {
             context = AndroidAppHelper.currentApplication();
             if (context != null) {
@@ -146,7 +127,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             XposedBridge.log("Lime: AndroidAppHelper failed: " + t.toString());
         }
 
-        
+
         try {
             Class<?> activityThreadClass = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader);
             Object activityThread = XposedHelpers.callStaticMethod(activityThreadClass, "currentActivityThread");
@@ -164,7 +145,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             XposedBridge.log("Lime: ActivityThread method failed: " + t.toString());
         }
 
-        
+
         try {
             Context systemContext = (Context) XposedHelpers.callStaticMethod(
                     XposedHelpers.findClass("android.app.ContextImpl", lpparam.classLoader),
@@ -190,6 +171,25 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
         return null;
     }
 
+    private Context getTargetAppContextForResources(XC_InitPackageResources.InitPackageResourcesParam resparam) {
+        try {
+            ClassLoader classLoader = resparam.res.getClass().getClassLoader();
+
+            Class<?> activityThreadClass = XposedHelpers.findClass("android.app.ActivityThread", classLoader);
+            Object activityThread = XposedHelpers.callStaticMethod(activityThreadClass, "currentActivityThread");
+
+            Context systemContext = (Context) XposedHelpers.callMethod(activityThread, "getSystemContext");
+
+            return systemContext.createPackageContext(
+                    Constants.PACKAGE_NAME,
+                    Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY
+            );
+
+        } catch (Throwable t) {
+           // XposedBridge.log("Lime (Resources): Context creation failed: " + t);
+            return null;
+        }
+    }
     @Override
     public void initZygote(@NonNull StartupParam startupParam) {
         modulePath = startupParam.modulePath;
@@ -197,7 +197,15 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     @Override
     public void handleInitPackageResources(@NonNull XC_InitPackageResources.InitPackageResourcesParam resparam) throws Throwable {
         if (!resparam.packageName.equals(Constants.PACKAGE_NAME)) return;
-
+        if (customPreferences == null) {
+            try {
+                context = getTargetAppContextForResources(resparam); 
+                customPreferences = new CustomPreferences(context);
+                loadSettings(); 
+            } catch (Exception e) {
+               // XposedBridge.log("Lime: Failed to load settings in handleInitPackageResources: " + e);
+            }
+        }
         XModuleResources xModuleResources = XModuleResources.createInstance(modulePath, resparam.res);
 
         if (limeOptions.removeIconLabels.checked) {

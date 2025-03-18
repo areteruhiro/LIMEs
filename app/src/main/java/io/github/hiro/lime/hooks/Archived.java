@@ -127,7 +127,7 @@ public class Archived implements IHook {
 
         XposedBridge.hookAllMethods(targetClass, "invokeSuspend", new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 Context appContext = AndroidAppHelper.currentApplication();
                 if (appContext == null) {
                     return;

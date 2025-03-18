@@ -92,33 +92,6 @@ public class DarkColor implements IHook {
             }
         });
 
-//        XposedHelpers.findAndHookMethod(
-//                "android.view.View",
-//                loadPackageParam.classLoader,
-//                "onAttachedToWindow",
-//                new XC_MethodHook() {
-//                    @Override
-//                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-//                        // Viewからリソースを取得
-//                        View view = (View) param.thisObject;
-//                        Context context = view.getContext();
-//                        Resources resources = context.getResources();
-//
-//                        // リソースIDを取得
-//                        int resourceId = view.getId(); // ViewのIDを取得
-//
-//                        // リソース名をログに出力
-//                        if (resourceId != View.NO_ID) {
-//                            Log.d("RemovePhotoBooth", "onAttachedToWindow called");
-//                            Log.d("RemovePhotoBooth", "Resource package name: " + resources.getResourcePackageName(resourceId));
-//                            Log.d("RemovePhotoBooth", "Resource name: " + resources.getResourceName(resourceId));
-//                            Log.d("RemovePhotoBooth", "Resource type: " + resources.getResourceTypeName(resourceId));
-//                        } else {
-//                            Log.d("RemovePhotoBooth", "No resource ID found for the view.");
-//                        }
-//                    }
-//                }
-//        );
 
     }
     private boolean isTargetColor(int color, String target) {
@@ -258,42 +231,7 @@ public class DarkColor implements IHook {
     }
 
 
-    private void traverseViewsAndLogG(ViewGroup viewGroup, Activity activity) {
-        Random random = new Random(); // ランダムカラー生成用
 
-        for (int i = 0; i < viewGroup.getChildCount(); i++) {
-            View child = viewGroup.getChildAt(i);
-
-            int resId = child.getId();
-            if (resId != View.NO_ID) {
-                try {
-
-                    String resName = activity.getResources().getResourceEntryName(resId);
-                    String resType = activity.getResources().getResourceTypeName(resId);
-                    String fullResName = activity.getPackageName() + ":" + resType + "/" + resName;
-                    int randomColor = Color.argb(
-                            255,
-                            random.nextInt(256),
-                            random.nextInt(256),
-                            random.nextInt(256)
-                    );
-
-                 //   XposedBridge.log(String.format("Changed Resource: %s → #%08X", fullResName, randomColor));
-                    child.setBackgroundColor(randomColor);
-                    if (child instanceof TextView) {
-                        ((TextView) child).setTextColor(randomColor);
-                    }
-
-                } catch (Resources.NotFoundException e) {
-                 //   XposedBridge.log("Resource not found for ID: 0x" + Integer.toHexString(resId));
-                }
-            }
-
-            if (child instanceof ViewGroup) {
-                traverseViewsAndLogG((ViewGroup) child, activity);
-            }
-        }
-    }
 
     private void applyDarkThemeRecursive(View view) {
         String logPrefix = "[DarkTheme]";
@@ -333,8 +271,6 @@ public class DarkColor implements IHook {
                         textContent.contains("プロフィール表示を設定") || textContent.contains("お気に入りに追加")||
                                 textContent.contains("Set profile to display")|| textContent.contains("Add to favorites")||
                                 textContent.contains("設定個人檔案的顯示")|| textContent.contains("加到我的最愛")
-
-
                 )
 
                 {
