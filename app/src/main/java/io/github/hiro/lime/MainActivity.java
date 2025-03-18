@@ -121,8 +121,8 @@ public class MainActivity extends Activity {
         startActivity(intent);
     }
     private void initializeApp() throws PackageManager.NameNotFoundException, IOException {
-        CustomPreferences customPrefs;
-        customPrefs = new CustomPreferences();
+
+        CustomPreferences customPrefs = new CustomPreferences(this);
 
         for (LimeOptions.Option option : limeOptions.options) {
             option.checked = Boolean.parseBoolean(customPrefs.getSetting(option.name, String.valueOf(option.checked)));

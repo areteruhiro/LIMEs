@@ -87,10 +87,9 @@ public class EmbedOptions implements IHook {
 
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        Context contextV = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
-                                XposedHelpers.findClass("android.app.ActivityThread", null),
-                                "currentActivityThread"
-                        ), "getSystemContext");
+                        Context contextV = getTargetAppContext(loadPackageParam);
+                        Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                                "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
                         try {
                             PackageManager pm = contextV.getPackageManager();
@@ -101,7 +100,7 @@ public class EmbedOptions implements IHook {
                                 e.printStackTrace();
                             }
 
-                            CustomPreferences customPreferences = new CustomPreferences();
+                            CustomPreferences customPreferences = new CustomPreferences(contextV);
                             Set<String> checkedOptions = new HashSet<>(); // 重複をチェックするためのセット
 
                             for (LimeOptions.Option option : limeOptions.options) {
@@ -110,8 +109,6 @@ public class EmbedOptions implements IHook {
                                     checkedOptions.add(option.name);
                                 }
                             }
-                            Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                                    "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
                             ViewGroup viewGroup = ((ViewGroup) param.args[0]);
                             Context context = viewGroup.getContext();
                             Utils.addModuleAssetPath(context);
@@ -461,8 +458,10 @@ public class EmbedOptions implements IHook {
                                             // CustomPreferencesのインスタンスを作成
                                             CustomPreferences customPreferences = null;
                                             try {
-                                                customPreferences = new CustomPreferences();
+                                                customPreferences = new CustomPreferences(contextV);
                                             } catch (PackageManager.NameNotFoundException e) {
+                                                throw new RuntimeException(e);
+                                            } catch (IOException e) {
                                                 throw new RuntimeException(e);
                                             }
                                             // Base64エンコードして設定を保存
@@ -697,21 +696,32 @@ public class EmbedOptions implements IHook {
                             frameLayout.addView(button);
                             viewGroup.addView(frameLayout);
 
-                    } catch (Exception ignored) {
-                        // エラー発生時の処理
-                        try {
+                        } catch (Exception e) {
+                            // エラー情報を詳細にログ出力
+                            XposedBridge.log("設定作成エラー: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                            for (StackTraceElement ste : e.getStackTrace()) {
+                                XposedBridge.log("  at " + ste.toString());
+                            }
 
-
-                            // UIスレッドでToastを表示
-                            new Handler(Looper.getMainLooper()).post(() -> {
-                                Toast.makeText(contextV,
-                                        contextV.getString(R.string.Error_Create_setting_Button) ,
-                                        Toast.LENGTH_LONG).show();
-                            });
-                        } catch (Throwable t) {
-                            XposedBridge.log("Toast表示に失敗: " + t);
+                            try {
+                                // UIスレッドでToastを表示
+                                new Handler(Looper.getMainLooper()).post(() -> {
+                                    if (moduleContext != null) {
+                                        Toast.makeText(
+                                                moduleContext,
+                                                moduleContext.getString(R.string.Error_Create_setting_Button)
+                                                        + "\nError: " + e.getClass().getSimpleName(),
+                                                Toast.LENGTH_LONG
+                                        ).show();
+                                    } else {
+                                        XposedBridge.log("Toast表示失敗: moduleContextがnullです");
+                                    }
+                                });
+                            } catch (Throwable t) {
+                                XposedBridge.log("Toast表示中に例外発生: " + t);
+                                t.printStackTrace();
+                            }
                         }
-                    }
                 }
                 });
 
@@ -2192,5 +2202,61 @@ public class EmbedOptions implements IHook {
         }
     }
 
+    private Context getTargetAppContext(XC_LoadPackage.LoadPackageParam lpparam) {
+        Context contextV = null;
 
+        
+        try {
+            contextV = AndroidAppHelper.currentApplication();
+            if (contextV != null) {
+                XposedBridge.log("Lime: Got context via AndroidAppHelper: " + contextV.getPackageName());
+                return contextV;
+            }
+        } catch (Throwable t) {
+            XposedBridge.log("Lime: AndroidAppHelper failed: " + t.toString());
+        }
+
+        
+        try {
+            Class<?> activityThreadClass = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader);
+            Object activityThread = XposedHelpers.callStaticMethod(activityThreadClass, "currentActivityThread");
+            Object loadedApk = XposedHelpers.getObjectField(activityThread, "mBoundApplication");
+            Object appInfo = XposedHelpers.getObjectField(loadedApk, "info");
+            contextV = (Context) XposedHelpers.callMethod(activityThread, "getSystemContext");
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                XposedBridge.log("Lime: Context via ActivityThread: "
+                        + contextV.getPackageName()
+                        + " | DataDir: " + contextV.getDataDir());
+            }
+            return contextV;
+        } catch (Throwable t) {
+            XposedBridge.log("Lime: ActivityThread method failed: " + t.toString());
+        }
+
+        
+        try {
+            Context systemContext = (Context) XposedHelpers.callStaticMethod(
+                    XposedHelpers.findClass("android.app.ContextImpl", lpparam.classLoader),
+                    "createSystemContext",
+                    XposedHelpers.callStaticMethod(
+                            XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader),
+                            "currentActivityThread"
+                    )
+            );
+
+            contextV = systemContext.createPackageContext(
+                    Constants.PACKAGE_NAME,
+                    Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY
+            );
+
+            XposedBridge.log("Lime: Fallback context created: "
+                    + (contextV != null ? contextV.getPackageName() : "null"));
+            return contextV;
+        } catch (Throwable t) {
+            XposedBridge.log("Lime: Fallback context failed: " + t.toString());
+        }
+
+        return null;
+    }
 }

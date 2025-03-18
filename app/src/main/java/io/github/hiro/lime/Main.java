@@ -1,7 +1,10 @@
 package io.github.hiro.lime;
 
+import android.app.AndroidAppHelper;
+import android.content.Context;
 import android.content.res.XModuleResources;
 
+import android.os.Build;
 import android.view.View;
 
 import androidx.annotation.NonNull;
@@ -10,6 +13,7 @@ import de.robv.android.xposed.IXposedHookLoadPackage;
 import de.robv.android.xposed.IXposedHookZygoteInit;
 import de.robv.android.xposed.XSharedPreferences;
 import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_InitPackageResources;
 import de.robv.android.xposed.callbacks.XC_LayoutInflated;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
@@ -63,27 +67,19 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new Removebutton(),
     };
 
-    @Override
-    public void initZygote(@NonNull StartupParam startupParam) {
-        modulePath = startupParam.modulePath;
-        if (customPreferences == null) {
-            try {
-                customPreferences = new CustomPreferences();
-                createDefaultSettings();
-            } catch (Exception e) {
-                XposedBridge.log("Failed to initialize preferences: " + e);
-            }
-        }
-    }
 
+    private Context context;
     private void initializePreferences() {
-        if (customPreferences == null) {
-            try {
-                customPreferences = new CustomPreferences();
-                createDefaultSettings();
-            } catch (Exception e) {
-                XposedBridge.log("Failed to initialize preferences: " + e);
-            }
+        if (context == null) {
+            XposedBridge.log("Lime: Context not available for preferences");
+            return;
+        }
+
+        try {
+            customPreferences = new CustomPreferences(context);
+            createDefaultSettings();
+        } catch (Exception e) {
+            XposedBridge.log("Lime: Failed to initialize preferences: " + e);
         }
     }
 
@@ -96,27 +92,107 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
         }
     }
 
+
+
+
     @Override
     public void handleLoadPackage(@NonNull XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         if (!lpparam.packageName.equals(Constants.PACKAGE_NAME)) return;
+
+        Context context = getTargetAppContext(lpparam);
+
+        if (context == null) {
+            XposedBridge.log("Lime: Context acquisition failed after all methods");
+            return;
+        }
+        try {
+            customPreferences = new CustomPreferences(context);
+            createDefaultSettings();
+        } catch (Exception e) {
+            XposedBridge.log("Lime: Preferences init failed: " + e);
+            return;
+        }
+
         Constants.initializeHooks(lpparam);
-        initializePreferences();
 
         xModulePrefs = new XSharedPreferences(Constants.MODULE_NAME, "options");
         xModulePrefs.reload();
-
         xPrefs = xModulePrefs;
-        XposedBridge.log("Using module preferences");
 
+        // 設定値の読み込み
         for (LimeOptions.Option option : limeOptions.options) {
             option.checked = Boolean.parseBoolean(
                     customPreferences.getSetting(option.name, String.valueOf(option.checked))
             );
         }
 
+        // フックの実行
         for (IHook hook : hooks) {
             hook.hook(limeOptions, lpparam);
         }
+    }
+
+    private Context getTargetAppContext(XC_LoadPackage.LoadPackageParam lpparam) {
+        Context context = null;
+
+        
+        try {
+            context = AndroidAppHelper.currentApplication();
+            if (context != null) {
+                XposedBridge.log("Lime: Got context via AndroidAppHelper: " + context.getPackageName());
+                return context;
+            }
+        } catch (Throwable t) {
+            XposedBridge.log("Lime: AndroidAppHelper failed: " + t.toString());
+        }
+
+        
+        try {
+            Class<?> activityThreadClass = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader);
+            Object activityThread = XposedHelpers.callStaticMethod(activityThreadClass, "currentActivityThread");
+            Object loadedApk = XposedHelpers.getObjectField(activityThread, "mBoundApplication");
+            Object appInfo = XposedHelpers.getObjectField(loadedApk, "info");
+            context = (Context) XposedHelpers.callMethod(activityThread, "getSystemContext");
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                XposedBridge.log("Lime: Context via ActivityThread: "
+                        + context.getPackageName()
+                        + " | DataDir: " + context.getDataDir());
+            }
+            return context;
+        } catch (Throwable t) {
+            XposedBridge.log("Lime: ActivityThread method failed: " + t.toString());
+        }
+
+        
+        try {
+            Context systemContext = (Context) XposedHelpers.callStaticMethod(
+                    XposedHelpers.findClass("android.app.ContextImpl", lpparam.classLoader),
+                    "createSystemContext",
+                    XposedHelpers.callStaticMethod(
+                            XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader),
+                            "currentActivityThread"
+                    )
+            );
+
+            context = systemContext.createPackageContext(
+                    Constants.PACKAGE_NAME,
+                    Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY
+            );
+
+            XposedBridge.log("Lime: Fallback context created: "
+                    + (context != null ? context.getPackageName() : "null"));
+            return context;
+        } catch (Throwable t) {
+            XposedBridge.log("Lime: Fallback context failed: " + t.toString());
+        }
+
+        return null;
+    }
+
+    @Override
+    public void initZygote(@NonNull StartupParam startupParam) {
+        modulePath = startupParam.modulePath;
     }
     @Override
     public void handleInitPackageResources(@NonNull XC_InitPackageResources.InitPackageResourcesParam resparam) throws Throwable {

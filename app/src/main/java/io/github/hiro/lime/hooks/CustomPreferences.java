@@ -1,91 +1,185 @@
 package io.github.hiro.lime.hooks;
 
-import android.app.AndroidAppHelper;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Environment;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Properties;
-import java.util.Set;
+
 public class CustomPreferences {
     private static final String SETTINGS_DIR = "LimeBackup/Setting";
     private static final String SETTINGS_FILE = "settings.properties";
-    private final File settingsFile;
-    private File settingsDir = null;
 
-    public CustomPreferences() throws PackageManager.NameNotFoundException {
-        File settingsDir1;
-        File baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
-        settingsDir1 = new File(baseDir, SETTINGS_DIR);
+    private final File settingsFileInternal; // Only used in Xposed context
+    private final File settingsFileExternal;
+    private final boolean isXposedContext;
 
-        // 初期ディレクトリ作成試行
-        if (!settingsDir1.exists() && !settingsDir1.mkdirs()) {
-            // フォールバックディレクトリ
-            File fallbackDir = new File(
-                    Environment.getExternalStorageDirectory(),
-                    "Android/data/jp.naver.line.android/"
-            );
-            settingsDir1 = new File(fallbackDir, SETTINGS_DIR);
-            if (!settingsDir.exists() && !settingsDir.mkdirs()) {
-                throw new PackageManager.NameNotFoundException(
-                        "Directory creation failed: " + settingsDir.getAbsolutePath()
-                );
+    public CustomPreferences(Context context) throws PackageManager.NameNotFoundException, IOException {
+        if (context != null) {
+
+            this.isXposedContext = true;
+
+            File internalDir = new File(context.getFilesDir(), SETTINGS_DIR);
+            if (!internalDir.exists() && !internalDir.mkdirs()) {
+                throw new IOException("Failed to create internal directory: "
+                        + internalDir.getAbsolutePath()
+                        + " | Permission: "
+                        + (internalDir.getParentFile().canWrite() ? "granted" : "denied"));
+            }
+            settingsFileInternal = new File(internalDir, SETTINGS_FILE);
+
+            File externalBaseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File externalDir = new File(externalBaseDir, SETTINGS_DIR);
+            if (!externalDir.exists() && !externalDir.mkdirs()) {
+                throw new IOException("Failed to create external directory: "
+                        + externalDir.getAbsolutePath()
+                        + " | Storage state: "
+                        + Environment.getExternalStorageState());
+            }
+            settingsFileExternal = new File(externalDir, SETTINGS_FILE);
+
+
+            if (!settingsFileInternal.exists() && settingsFileExternal.exists()) {
+                copyFile(settingsFileExternal, settingsFileInternal);
+            } else if (!settingsFileExternal.exists() && settingsFileInternal.exists()) {
+                copyFile(settingsFileInternal, settingsFileExternal);
+            }
+
+        } else {
+
+            this.isXposedContext = false;
+
+
+            File externalBaseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+            File externalDir = new File(externalBaseDir, SETTINGS_DIR);
+            settingsFileExternal = new File(externalDir, SETTINGS_FILE);
+
+
+            if (!settingsFileExternal.exists()) {
+                throw new FileNotFoundException("External settings file not found at: "
+                        + settingsFileExternal.getAbsolutePath()
+                        + "\nPlease ensure the file exists or run the hooked app first");
+            }
+
+            settingsFileInternal = null;
+
+        }
+
+        syncFiles();
+    }
+
+    private void syncFiles() {
+        if (!isXposedContext || settingsFileInternal == null) return;
+
+        boolean internalExists = settingsFileInternal.exists();
+        boolean externalExists = settingsFileExternal.exists();
+
+        try {
+            if (externalExists) {
+                if (internalExists) {
+                    if (filesDiffer(settingsFileInternal, settingsFileExternal)) {
+                        copyFile(settingsFileExternal, settingsFileInternal);
+                    }
+                } else {
+                    copyFile(settingsFileExternal, settingsFileInternal);
+                }
+            } else if (internalExists) {
+                copyFile(settingsFileInternal, settingsFileExternal);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private boolean filesDiffer(File file1, File file2) throws IOException {
+        if (file1.length() != file2.length()) return true;
+
+        try (FileInputStream fis1 = new FileInputStream(file1);
+             FileInputStream fis2 = new FileInputStream(file2)) {
+            int byte1, byte2;
+            do {
+                byte1 = fis1.read();
+                byte2 = fis2.read();
+                if (byte1 != byte2) return true;
+            } while (byte1 != -1);
+        }
+        return false;
+    }
+
+    private void copyFile(File source, File dest) throws IOException {
+        try (FileInputStream in = new FileInputStream(source);
+             FileOutputStream out = new FileOutputStream(dest)) {
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = in.read(buffer)) > 0) {
+                out.write(buffer, 0, length);
             }
         }
-        settingsDir = settingsDir1;
-        settingsFile = new File(settingsDir, SETTINGS_FILE);
     }
 
     public boolean saveSetting(String key, String value) {
-        Properties properties = new Properties();
-        boolean success = false;
+        if (isXposedContext && settingsFileInternal != null) {
+            boolean successInternal = saveToFile(settingsFileInternal, key, value, false);
+            boolean successExternal = saveToFile(settingsFileExternal, key, value, true);
+            return successInternal && successExternal;
+        } else {
+            return saveToFile(settingsFileExternal, key, value, false);
+        }
+    }
 
-        if (settingsFile.exists()) {
-            try (FileInputStream fis = new FileInputStream(settingsFile)) {
+    private boolean saveToFile(File file, String key, String value, boolean allowRetry) {
+        Properties properties = new Properties();
+        if (file.exists()) {
+            try (FileInputStream fis = new FileInputStream(file)) {
                 properties.load(fis);
             } catch (IOException ignored) {}
         }
 
         properties.setProperty(key, value);
-        for (int attempt = 0; attempt < 2; attempt++) {
-            try (FileOutputStream fos = new FileOutputStream(settingsFile)) {
+
+        int maxAttempts = allowRetry ? 2 : 1;
+        boolean success = false;
+        for (int attempt = 0; attempt < maxAttempts; attempt++) {
+            try (FileOutputStream fos = new FileOutputStream(file)) {
                 properties.store(fos, "Updated: " + new Date());
                 success = true;
                 break;
             } catch (IOException e) {
-                handleSaveError(e);
-                if (attempt == 0) prepareRetryEnvironment();
+                if (attempt == 0) {
+                    handleSaveError(e, file);
+                    prepareRetryEnvironment(file.getParentFile());
+                }
             }
         }
         return success;
     }
 
-    private void handleSaveError(IOException e) {
+    private void handleSaveError(IOException e, File file) {
         e.printStackTrace();
-        if (settingsFile.exists()) {
-            boolean deleted = settingsFile.delete();
-            System.out.println("File deletion " + (deleted ? "successful" : "failed"));
+        if (file.exists() && !file.delete()) {
+            System.out.println("Failed to delete corrupted file");
         }
     }
 
-    private void prepareRetryEnvironment() {
-        // ディレクトリ再作成試行
-        if (!settingsDir.exists()) {
-            boolean dirCreated = settingsDir.mkdirs();
-            System.out.println("Directory recreated: " + dirCreated);
+    private void prepareRetryEnvironment(File dir) {
+        if (!dir.exists() && !dir.mkdirs()) {
+            System.out.println("Failed to recreate directory");
         }
     }
 
     public String getSetting(String key, String defaultValue) {
-        if (!settingsFile.exists()) return defaultValue;
+        File targetFile = isXposedContext && settingsFileInternal != null ? settingsFileInternal : settingsFileExternal;
+        if (!targetFile.exists()) {
+            return defaultValue;
+        }
 
         Properties properties = new Properties();
-        try (FileInputStream fis = new FileInputStream(settingsFile)) {
+        try (FileInputStream fis = new FileInputStream(targetFile)) {
             properties.load(fis);
             return properties.getProperty(key, defaultValue);
         } catch (IOException e) {

@@ -162,6 +162,21 @@ public class Constants {
 
 
     } else if (versionName.equals("15.2.1")) {
+
+        USER_AGENT_HOOK = new HookTarget("Mi1.c", "j");
+        WEBVIEW_CLIENT_HOOK = new HookTarget("sQ0.l", "onPageFinished");
+        MUTE_MESSAGE_HOOK = new HookTarget("Fh1.b", "I");
+        MARK_AS_READ_HOOK = new HookTarget("GP.e$d", "run");
+        Archive = new HookTarget("aC.P", "invokeSuspend");
+        NOTIFICATION_READ_HOOK = new HookTarget("gj1.b", "invokeSuspend");
+        REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+        RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+        RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+        SettingCrash_Hook = new HookTarget("af0.o0", "B0");
+        SettingCrash_Hook_Sub = new HookTarget("Te0.j", "");
+
+
+    } else if (versionName.equals("15.3.0")) {
             /*
             TRADITIONAL_CHINESE
             static  HookTarget USER_AGENT_HOOK = new  HookTarget("qi1.c", "j");
@@ -180,12 +195,12 @@ public class Constants {
             static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
           */
         //BackEventCompat
-        USER_AGENT_HOOK = new HookTarget("Mi1.c", "j");
-        WEBVIEW_CLIENT_HOOK = new HookTarget("sQ0.l", "onPageFinished");
-        MUTE_MESSAGE_HOOK = new HookTarget("Fh1.b", "I");
-        MARK_AS_READ_HOOK = new HookTarget("GP.e$d", "run");
-        Archive = new HookTarget("aC.P", "invokeSuspend");
-        NOTIFICATION_READ_HOOK = new HookTarget("gj1.b", "invokeSuspend");
+        USER_AGENT_HOOK = new HookTarget("ek1.c", "j");
+        WEBVIEW_CLIENT_HOOK = new HookTarget("CR0.m", "onPageFinished");
+        MUTE_MESSAGE_HOOK = new HookTarget("Xi1.b", "I");
+        MARK_AS_READ_HOOK = new HookTarget("aQ.c$d", "run");
+        Archive = new HookTarget("tC.S", "invokeSuspend");
+        NOTIFICATION_READ_HOOK = new HookTarget("yk1.b", "invokeSuspend");
         REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
         RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
         RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
@@ -193,6 +208,9 @@ public class Constants {
         SettingCrash_Hook_Sub = new HookTarget("Te0.j", "");
 
     }
+
+
+
     }
 
     public static class HookTarget {

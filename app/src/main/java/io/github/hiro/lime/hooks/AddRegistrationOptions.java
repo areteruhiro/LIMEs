@@ -2,6 +2,7 @@ package io.github.hiro.lime.hooks;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.view.Gravity;
 import android.view.ViewGroup;
@@ -12,8 +13,11 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.io.IOException;
+
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
+import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 import io.github.hiro.lime.R;
@@ -25,12 +29,17 @@ public class AddRegistrationOptions implements IHook {
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
+
         XposedBridge.hookAllMethods(
                 loadPackageParam.classLoader.loadClass("com.linecorp.registration.ui.fragment.WelcomeFragment"),
                 "onViewCreated",
                 new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        Context context = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
+                                XposedHelpers.findClass("android.app.ActivityThread", null),
+                                "currentActivityThread"
+                        ), "getSystemContext");
                         ViewGroup viewGroup = (ViewGroup) ((ViewGroup) param.args[0]).getChildAt(0);
                         Activity activity = (Activity) viewGroup.getContext();
                         Utils.addModuleAssetPath(activity);
@@ -54,19 +63,21 @@ public class AddRegistrationOptions implements IHook {
                         switchSpoofAndroidId.setText(R.string.switch_spoof_android_id);
                         try {
                             switchSpoofAndroidId.setChecked(Boolean.parseBoolean(
-                                    new CustomPreferences().getSetting("spoof_android_id", "false")));
+                                    new CustomPreferences(context).getSetting("spoof_android_id", "false")));
                         } catch (PackageManager.NameNotFoundException e) {
                             handlePreferencesError(activity, e);
                         }
                         switchSpoofAndroidId.setOnCheckedChangeListener((buttonView, isChecked) -> {
                             if (isChecked) {
-                                showSpoofAndroidIdDialog(activity);
+                                showSpoofAndroidIdDialog(activity,context);
                             } else {
                                 try {
-                                    new CustomPreferences().saveSetting("spoof_android_id", "false");
+                                    new CustomPreferences(context).saveSetting("spoof_android_id", "false");
                                     showRefreshToast(activity);
                                 } catch (PackageManager.NameNotFoundException e) {
                                     handlePreferencesError(activity, e);
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
                                 }
                             }
                         });
@@ -76,18 +87,20 @@ public class AddRegistrationOptions implements IHook {
                         switchAndroidSecondary.setText(R.string.switch_android_secondary);
                         try {
                             switchAndroidSecondary.setChecked(Boolean.parseBoolean(
-                                    new CustomPreferences().getSetting("android_secondary", "false")));
+                                    new CustomPreferences(context).getSetting("android_secondary", "false")));
                         } catch (PackageManager.NameNotFoundException e) {
                             handlePreferencesError(activity, e);
                         }
                         switchAndroidSecondary.setOnCheckedChangeListener((buttonView, isChecked) -> {
                             if (isChecked) {
-                                showSpoofVersionIdDialog(activity);
+                                showSpoofVersionIdDialog(activity,context);
                             } else {
                                 try {
-                                    new CustomPreferences().saveSetting("android_secondary", "false");
+                                    new CustomPreferences(context).saveSetting("android_secondary", "false");
                                 } catch (PackageManager.NameNotFoundException e) {
                                     handlePreferencesError(activity, e);
+                                } catch (IOException e) {
+                                    throw new RuntimeException(e);
                                 }
                             }
                         });
@@ -101,7 +114,8 @@ public class AddRegistrationOptions implements IHook {
         );
     }
 
-    private void showSpoofVersionIdDialog(Activity activity) {
+    private void showSpoofVersionIdDialog(Activity activity,Context context) {
+
         AlertDialog.Builder builder = new AlertDialog.Builder(activity)
                 .setTitle(R.string.options_title);
 
@@ -116,43 +130,51 @@ public class AddRegistrationOptions implements IHook {
         EditText editTextDeviceName = new EditText(activity);
         editTextDeviceName.setHint(R.string.spoof_device_name);
         try {
-            editTextDeviceName.setText(new CustomPreferences().getSetting("device_name", "ANDROID"));
+            editTextDeviceName.setText(new CustomPreferences(context).getSetting("device_name", "ANDROID"));
         } catch (PackageManager.NameNotFoundException e) {
             handlePreferencesError(activity, e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         layout.addView(editTextDeviceName);
 
         EditText editTextOsName = new EditText(activity);
         editTextOsName.setHint(R.string.spoof_os_name);
         try {
-            editTextOsName.setText(new CustomPreferences().getSetting("os_name", "Android OS"));
+            editTextOsName.setText(new CustomPreferences(context).getSetting("os_name", "Android OS"));
         } catch (PackageManager.NameNotFoundException e) {
             handlePreferencesError(activity, e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         layout.addView(editTextOsName);
 
         EditText editTextOsVersion = new EditText(activity);
         editTextOsVersion.setHint(R.string.spoof_os_version);
         try {
-            editTextOsVersion.setText(new CustomPreferences().getSetting("os_version", "14"));
+            editTextOsVersion.setText(new CustomPreferences(context).getSetting("os_version", "14"));
         } catch (PackageManager.NameNotFoundException e) {
             handlePreferencesError(activity, e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         layout.addView(editTextOsVersion);
 
         EditText editTextAndroidVersion = new EditText(activity);
         editTextAndroidVersion.setHint(R.string.spoof_android_version);
         try {
-            editTextAndroidVersion.setText(new CustomPreferences().getSetting("android_version", "14.16.0"));
+            editTextAndroidVersion.setText(new CustomPreferences(context).getSetting("android_version", "14.16.0"));
         } catch (PackageManager.NameNotFoundException e) {
             handlePreferencesError(activity, e);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
         layout.addView(editTextAndroidVersion);
 
         builder.setView(layout);
         builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
             try {
-                CustomPreferences prefs = new CustomPreferences();
+                CustomPreferences prefs = new CustomPreferences(context);
                 prefs.saveSetting("android_secondary", "true");
                 prefs.saveSetting("device_name", editTextDeviceName.getText().toString());
                 prefs.saveSetting("os_name", editTextOsName.getText().toString());
@@ -162,6 +184,8 @@ public class AddRegistrationOptions implements IHook {
                 showRefreshToast(activity);
             } catch (PackageManager.NameNotFoundException e) {
                 handlePreferencesError(activity, e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         });
 
@@ -169,7 +193,7 @@ public class AddRegistrationOptions implements IHook {
         builder.show();
     }
 
-    private void showSpoofAndroidIdDialog(Activity activity) {
+    private void showSpoofAndroidIdDialog(Activity activity,Context context) {
         AlertDialog.Builder builder = new AlertDialog.Builder(activity)
                 .setTitle(R.string.options_title);
 
@@ -180,10 +204,12 @@ public class AddRegistrationOptions implements IHook {
 
         builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
             try {
-                new CustomPreferences().saveSetting("spoof_android_id", "true");
+                new CustomPreferences(context).saveSetting("spoof_android_id", "true");
                 showRefreshToast(activity);
             } catch (PackageManager.NameNotFoundException e) {
                 handlePreferencesError(activity, e);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
             }
         });
 
