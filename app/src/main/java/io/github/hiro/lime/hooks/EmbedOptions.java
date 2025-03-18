@@ -450,6 +450,21 @@ public class EmbedOptions implements IHook {
                                 }
 
 
+                                if (limeOptions.ReadChecker.checked) {
+
+                                    Button ReadChecker_Button = new Button(context);
+                                    ReadChecker_Button.setLayoutParams(buttonParams);
+                                    ReadChecker_Button.setText(moduleContext.getResources().getString(R.string.ReadChecker_BackUp));
+                                    ReadChecker_Button.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            ReadCheckerbackup(context, moduleContext);
+                                        }
+                                    });
+                                    layout.addView(ReadChecker_Button);
+                                }
+
+
                                 builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
                                     @Override
                                     public void onClick(DialogInterface dialog, int which) {
@@ -1361,6 +1376,53 @@ public class EmbedOptions implements IHook {
         }
     }
 
+    private void ReadCheckerbackup(Context appContext, Context moduleContext) {
+        // 元のデータベースファイル
+        File dbFile = new File(appContext.getFilesDir(), "lime_checked_data.db");
+        if (!dbFile.exists()) {
+            Toast.makeText(appContext, "Database file not found", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // バックアップディレクトリの作成
+        File backupDir = new File(
+                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                "LimeBackup"
+        );
+
+        if (!backupDir.exists() && !backupDir.mkdirs()) {
+            Toast.makeText(appContext, "Failed to create backup directory", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        // バックアップファイル名の生成（タイムスタンプ付き）
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault());
+        String timestamp = sdf.format(new Date());
+        File backupFile = new File(backupDir, "lime_checked_data_" + timestamp + ".db");
+
+        try (FileInputStream fis = new FileInputStream(dbFile);
+             FileOutputStream fos = new FileOutputStream(backupFile)) {
+
+            // ファイルコピーの実行
+            byte[] buffer = new byte[1024];
+            int length;
+            while ((length = fis.read(buffer)) > 0) {
+                fos.write(buffer, 0, length);
+            }
+
+            Toast.makeText(
+                    appContext,
+                    moduleContext.getString(R.string.Talk_Back_up_Success),
+                    Toast.LENGTH_LONG
+            ).show();
+
+        } catch (IOException e) {
+            String errorMsg = moduleContext.getString(R.string.Talk_Back_up_Error)
+                    + ": " + e.getMessage();
+            Toast.makeText(appContext, errorMsg, Toast.LENGTH_LONG).show();
+            e.printStackTrace();
+        }
+    }
 
     private void updateMessagesVisibility(Context context, boolean hide,Context moduleContext) {
         SQLiteDatabase db1 = null;
