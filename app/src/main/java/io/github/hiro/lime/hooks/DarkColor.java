@@ -327,8 +327,6 @@ public class DarkColor implements IHook {
                 TextView tv = (TextView) view;
                 // テキスト内容を取得
                 String textContent = tv.getText().toString();
-                XposedBridge.log(textContent);
-
                 if (
                         textContent.contains("プロフィール表示を設定") || textContent.contains("お気に入りに追加")||
                                 textContent.contains("Set profile to display")|| textContent.contains("Add to favorites")||
