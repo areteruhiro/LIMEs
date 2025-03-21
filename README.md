@@ -1,5 +1,11 @@
 # <img src="app/src/main/ic_launcher-playstore.png" width="60px"> LIMEs: Adkiller for LINE
 
+# Support Server
+https://t.me/LsPosedLIMEs
+
+GitHubは更新を頻繁にしません、テレグラムで最新の情報を確認してください
+
+
  # 導入方法
  
  [ROOT](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20root.md) 
@@ -87,10 +93,6 @@ hiro_1114
 * [GitHub Sponsors](https://github.com/sponsors/areteruhiro)
 
 * [PayPal](Contact us / お問い合わせください)
-
-
-# Support Server
-https://t.me/LsPosedLIMEs
 
 
 # 更新について
