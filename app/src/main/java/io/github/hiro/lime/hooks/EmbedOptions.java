@@ -3,6 +3,7 @@ package io.github.hiro.lime.hooks;
 
 import static io.github.hiro.lime.Main.limeOptions;
 
+import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AndroidAppHelper;
@@ -19,6 +20,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
@@ -29,10 +31,8 @@ import android.text.InputType;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Base64;
 import android.util.Log;
-import android.util.Pair;
 import android.util.TypedValue;
 import android.view.Gravity;
-import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
@@ -41,7 +41,6 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -58,10 +57,12 @@ import java.io.IOException;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -80,6 +81,8 @@ public class EmbedOptions implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (limeOptions.removeOption.checked) return;
+
+
         XposedBridge.hookAllMethods(
                 loadPackageParam.classLoader.loadClass("com.linecorp.line.settings.main.LineUserMainSettingsFragment"),
                 "onViewCreated",
@@ -91,620 +94,75 @@ public class EmbedOptions implements IHook {
                         Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                 "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
-                        try {
-                            PackageManager pm = contextV.getPackageManager();
-                            String versionName = ""; // 初期化
-                            try {
-                                versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
-                            } catch (PackageManager.NameNotFoundException e) {
-                                e.printStackTrace();
-                            }
-
-                            CustomPreferences customPreferences = new CustomPreferences(contextV);
-                            Set<String> checkedOptions = new HashSet<>(); // 重複をチェックするためのセット
-
-                            for (LimeOptions.Option option : limeOptions.options) {
-                                if (!checkedOptions.contains(option.name)) {
-                                    option.checked = Boolean.parseBoolean(customPreferences.getSetting(option.name, String.valueOf(option.checked)));
-                                    checkedOptions.add(option.name);
-                                }
-                            }
-                            ViewGroup viewGroup = ((ViewGroup) param.args[0]);
-                            Context context = viewGroup.getContext();
-                            Utils.addModuleAssetPath(context);
-
-                            LinearLayout layout = new LinearLayout(context);
-                            layout.setLayoutParams(new LinearLayout.LayoutParams(
-                                    LinearLayout.LayoutParams.MATCH_PARENT,
-                                    LinearLayout.LayoutParams.MATCH_PARENT));
-                            layout.setOrientation(LinearLayout.VERTICAL);
-                            layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
-                            Switch switchRedirectWebView = null;
-                            Switch photoAddNotificationView = null;
-                            Switch ReadCheckerView = null;
-                            Switch preventUnsendMessageView = null;
-                            Switch DarkModeView = null;
-                            List<Switch> webViewChildSwitches = new ArrayList<>();
-                            List<Switch> photoNotificationChildSwitches = new ArrayList<>();
-                            List<Switch> ReadCheckerSwitches = new ArrayList<>();
-                            List<Switch> preventUnsendMessageSwitches = new ArrayList<>();
-                            List<Switch> DarkModeSwitches = new ArrayList<>();
-                            for (LimeOptions.Option option : limeOptions.options) {
-                                final String name = option.name;
-
-                                Switch switchView = new Switch(context);
-                                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                                        LinearLayout.LayoutParams.WRAP_CONTENT
-                                );
-                                params.topMargin = Utils.dpToPx(20, context);
-                                switchView.setLayoutParams(params);
-                                switchView.setText(option.id);
-                                switchView.setChecked(option.checked);
-
-                                switch (name) {
-                                    case "redirect_webview":
-                                        switchRedirectWebView = switchView;
-                                        switchRedirectWebView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                            for (Switch child : webViewChildSwitches) {
-                                                child.setEnabled(isChecked);
-                                                if (!isChecked) child.setChecked(false);
-                                            }
-                                        });
-                                        break;
-                                    case "PhotoAddNotification":
-                                        photoAddNotificationView = switchView;
-                                        photoAddNotificationView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                            for (Switch child : photoNotificationChildSwitches) {
-                                                child.setEnabled(isChecked);
-                                                if (!isChecked) child.setChecked(false);
-                                            }
-                                        });
-                                        break;
-                                    case "ReadChecker":
-                                        ReadCheckerView = switchView;
-                                        ReadCheckerView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                            for (Switch child : ReadCheckerSwitches) {
-                                                child.setEnabled(isChecked);
-                                                if (!isChecked) child.setChecked(false);
-                                            }
-                                        });
-                                        break;
-                                    case "prevent_unsend_message":
-                                        preventUnsendMessageView = switchView;
-                                        preventUnsendMessageView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                            for (Switch child : preventUnsendMessageSwitches) {
-                                                child.setEnabled(isChecked);
-                                                if (!isChecked) child.setChecked(false);
-                                            }
-                                        });
-                                        break;
-
-                                    case "DarkColor":
-                                        DarkModeView = switchView;
-                                        DarkModeView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                            for (Switch child : DarkModeSwitches) {
-                                                child.setEnabled(isChecked);
-                                                if (!isChecked) child.setChecked(false);
-                                            }
-                                        });
-                                        break;
-
-                                    case "open_in_browser":
-                                        webViewChildSwitches.add(switchView);
-                                        switchView.setEnabled(switchRedirectWebView != null && switchRedirectWebView.isChecked());
-                                        break;
-
-                                    case "hide_canceled_message":
-                                        preventUnsendMessageSwitches.add(switchView);
-                                        switchView.setEnabled(preventUnsendMessageView != null && preventUnsendMessageView.isChecked());
-                                        break;
-
-
-                                    case "GroupNotification":
-                                    case "CansellNotification":
-                                    case "AddCopyAction":
-                                        photoNotificationChildSwitches.add(switchView);
-                                        switchView.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked());
-                                        break;
-
-                                    case "MySendMessage":
-                                    case "ReadCheckerChatdataDelete":
-                                        ReadCheckerSwitches.add(switchView);
-                                        switchView.setEnabled(ReadCheckerView != null && ReadCheckerView.isChecked());
-                                        break;
-
-                                    case "DarkModSync":
-                                        DarkModeSwitches.add(switchView);
-                                        switchView.setEnabled(DarkModeView != null && DarkModeView.isChecked());
-                                        break;
-
-                                }
-
-                                layout.addView(switchView);
-                            }
-
-                            if (switchRedirectWebView != null) {
-                                switchRedirectWebView.setChecked(switchRedirectWebView.isChecked());
-                            }
-                            if (photoAddNotificationView != null) {
-                                photoAddNotificationView.setChecked(photoAddNotificationView.isChecked());
-
-                            }
-
-                            {
-                                final String script = new String(Base64.decode(customPreferences.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP));
-                                LinearLayout layoutModifyRequest = new LinearLayout(context);
-                                layoutModifyRequest.setLayoutParams(new LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.MATCH_PARENT,
-                                        LinearLayout.LayoutParams.MATCH_PARENT));
-                                layoutModifyRequest.setOrientation(LinearLayout.VERTICAL);
-                                layoutModifyRequest.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
-
-                                EditText editText = new EditText(context);
-                                editText.setLayoutParams(new LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.MATCH_PARENT,
-                                        LinearLayout.LayoutParams.WRAP_CONTENT));
-                                editText.setTypeface(Typeface.MONOSPACE);
-                                editText.setInputType(InputType.TYPE_CLASS_TEXT |
-                                        InputType.TYPE_TEXT_FLAG_MULTI_LINE |
-                                        InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
-                                        InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE);
-                                editText.setMovementMethod(new ScrollingMovementMethod());
-                                editText.setTextIsSelectable(true);
-                                editText.setHorizontallyScrolling(true);
-                                editText.setVerticalScrollBarEnabled(true);
-                                editText.setHorizontalScrollBarEnabled(true);
-                                editText.setText(script);
-
-                                layoutModifyRequest.addView(editText);
-
-                                LinearLayout buttonLayout = new LinearLayout(context);
-                                LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.MATCH_PARENT,
-                                        LinearLayout.LayoutParams.WRAP_CONTENT);
-                                buttonParams.topMargin = Utils.dpToPx(10, context);
-                                buttonLayout.setLayoutParams(buttonParams);
-                                buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
-
-                                Button copyButton = new Button(context);
-                                copyButton.setText(R.string.button_copy);
-                                copyButton.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                        ClipData clip = ClipData.newPlainText("", editText.getText().toString());
-                                        clipboard.setPrimaryClip(clip);
-                                    }
-                                });
-
-                                buttonLayout.addView(copyButton);
-
-                                Button pasteButton = new Button(context);
-                                pasteButton.setText(R.string.button_paste);
-                                pasteButton.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                        if (clipboard != null && clipboard.hasPrimaryClip()) {
-                                            ClipData clip = clipboard.getPrimaryClip();
-                                            if (clip != null && clip.getItemCount() > 0) {
-                                                CharSequence pasteData = clip.getItemAt(0).getText();
-                                                editText.setText(pasteData);
-                                            }
-                                        }
-                                    }
-                                });
-
-                                buttonLayout.addView(pasteButton);
-                                layoutModifyRequest.addView(buttonLayout);
-                                ScrollView scrollView = new ScrollView(context);
-                                scrollView.addView(layoutModifyRequest);
-                                AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                                        .setTitle(R.string.modify_request);
-                                builder.setView(scrollView);
-                                Button backupButton = new Button(context);
-                                buttonParams.topMargin = Utils.dpToPx(20, context);
-                                backupButton.setLayoutParams(buttonParams);
-                                backupButton.setText(moduleContext.getResources().getString(R.string.Back_Up));
-                                backupButton.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        backupChatHistory(context, moduleContext);
-                                    }
-                                });
-                                layout.addView(backupButton);
-                                Button restoreButton = new Button(context);
-                                restoreButton.setLayoutParams(buttonParams);
-                                restoreButton.setText(moduleContext.getResources().getString(R.string.Restore));
-                                restoreButton.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        restoreChatHistory(context, moduleContext);
-                                    }
-                                });
-                                layout.addView(restoreButton);
-                                Button backupfolderButton = new Button(context);
-                                backupfolderButton.setLayoutParams(buttonParams);
-                                backupfolderButton.setText(moduleContext.getResources().getString(R.string.Talk_Picture_Back_up));
-                                backupfolderButton.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        backupChatsFolder(context, moduleContext);
-                                    }
-                                });
-                                layout.addView(backupfolderButton);
-                                Button restorefolderButton = new Button(context);
-                                restorefolderButton.setLayoutParams(buttonParams);
-                                restorefolderButton.setText(moduleContext.getResources().getString(R.string.Picure_Restore));
-                                restorefolderButton.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        restoreChatsFolder(context, moduleContext);
-                                    }
-                                });
-                                layout.addView(restorefolderButton);
-                                if (limeOptions.MuteGroup.checked) {
-                                    Button MuteGroups_Button = new Button(context);
-                                    MuteGroups_Button.setLayoutParams(buttonParams);
-                                    MuteGroups_Button.setText(moduleContext.getResources().getString(R.string.Mute_Group));
-                                    MuteGroups_Button.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            MuteGroups_Button(context, moduleContext);
-                                        }
-                                    });
-                                    layout.addView(MuteGroups_Button);
-                                }
-
-                                Button KeepUnread_Button = new Button(context);
-                                KeepUnread_Button.setLayoutParams(buttonParams);
-                                KeepUnread_Button.setText(moduleContext.getResources().getString(R.string.edit_margin_settings));
-                                KeepUnread_Button.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        KeepUnread_Button(context, moduleContext);
-                                    }
-                                });
-                                layout.addView(KeepUnread_Button);
-
-                                if (limeOptions.preventUnsendMessage.checked) {
-                                    Button canceled_message_Button = new Button(context);
-                                    canceled_message_Button.setLayoutParams(buttonParams);
-                                    canceled_message_Button.setText(moduleContext.getResources().getString(R.string.canceled_message));
-                                    canceled_message_Button.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            Cancel_Message_Button(context, moduleContext);
-                                        }
-                                    });
-                                    layout.addView(canceled_message_Button);
-                                }
-                                if (limeOptions.CansellNotification.checked) {
-
-                                    Button CansellNotification_Button = new Button(context);
-                                    CansellNotification_Button.setLayoutParams(buttonParams);
-                                    CansellNotification_Button.setText(moduleContext.getResources().getString(R.string.CansellNotification));
-                                    CansellNotification_Button.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            CansellNotification(context, moduleContext);
-                                        }
-                                    });
-                                    layout.addView(CansellNotification_Button);
-                                }
-
-                                if (limeOptions.BlockCheck.checked) {
-
-                                    Button BlockCheck_Button = new Button(context);
-                                    BlockCheck_Button.setLayoutParams(buttonParams);
-                                    BlockCheck_Button.setText(moduleContext.getResources().getString(R.string.BlockCheck));
-                                    BlockCheck_Button.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            Blocklist(context, moduleContext);
-                                        }
-                                    });
-                                    layout.addView(BlockCheck_Button);
-                                }
-                                if (limeOptions.preventUnsendMessage.checked) {
-                                    Button hide_canceled_message_Button = new Button(context);
-                                    hide_canceled_message_Button.setLayoutParams(buttonParams);
-                                    hide_canceled_message_Button.setText(moduleContext.getResources().getString(R.string.hide_canceled_message));
-                                    hide_canceled_message_Button.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-
-                                            new AlertDialog.Builder(context)
-                                                    .setTitle(moduleContext.getResources().getString(R.string.HideSetting))
-                                                    .setMessage(moduleContext.getResources().getString(R.string.HideSetting_selection))
-                                                    .setPositiveButton(moduleContext.getResources().getString(R.string.Hide), new DialogInterface.OnClickListener() {
-                                                        public void onClick(DialogInterface dialog, int which) {
-                                                            updateMessagesVisibility(context, true, moduleContext);
-                                                        }
-                                                    })
-                                                    .setNegativeButton(moduleContext.getResources().getString(R.string.Show), new DialogInterface.OnClickListener() {
-                                                        public void onClick(DialogInterface dialog, int which) {
-                                                            updateMessagesVisibility(context, false,moduleContext);
-                                                        }
-                                                    })
-                                                    .setIcon(android.R.drawable.ic_dialog_info)
-                                                    .show();
-                                        }
-                                    });
-                                    layout.addView(hide_canceled_message_Button);
-                                }
-
-                                if (limeOptions.PinList.checked) {
-
-                                    Button PinList_Button = new Button(context);
-                                    PinList_Button.setLayoutParams(buttonParams);
-                                    PinList_Button.setText(moduleContext.getResources().getString(R.string.PinList));
-                                    PinList_Button.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            PinListButton(context, moduleContext);
-                                        }
-                                    });
-                                    layout.addView(PinList_Button);
-                                }
-
-
-                                builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        String code = editText.getText().toString();
-                                        if (!code.equals(script)) {
-                                            // CustomPreferencesのインスタンスを作成
-                                            CustomPreferences customPreferences = null;
-                                            try {
-                                                customPreferences = new CustomPreferences(contextV);
-                                            } catch (PackageManager.NameNotFoundException e) {
-                                                throw new RuntimeException(e);
-                                            } catch (IOException e) {
-                                                throw new RuntimeException(e);
-                                            }
-                                            // Base64エンコードして設定を保存
-                                            String encodedCode = Base64.encodeToString(code.getBytes(), Base64.NO_WRAP);
-                                            customPreferences.saveSetting("encoded_js_modify_request", encodedCode);
-
-                                            Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                                            Process.killProcess(Process.myPid());
-                                            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
-                                        }
-                                    }
-                                });
-
-                                builder.setNegativeButton(R.string.negative_button, null);
-
-                                builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                                    @Override
-                                    public void onDismiss(DialogInterface dialog) {
-                                        editText.setText(script);
-                                    }
-                                });
-
-                                AlertDialog dialog = builder.create();
-                                Button button = new Button(context);
-                                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                                        LinearLayout.LayoutParams.WRAP_CONTENT);
-                                params.topMargin = Utils.dpToPx(20, context);
-                                button.setLayoutParams(params);
-                                button.setText(R.string.modify_request);
-                                button.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View view) {
-                                        dialog.show();
-                                    }
-                                });
-                                layout.addView(button);
-                            }
-
-                            {
-                                final String script = new String(Base64.decode(customPreferences.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP));
-                                LinearLayout layoutModifyResponse = new LinearLayout(context);
-                                layoutModifyResponse.setLayoutParams(new LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.MATCH_PARENT,
-                                        LinearLayout.LayoutParams.MATCH_PARENT));
-                                layoutModifyResponse.setOrientation(LinearLayout.VERTICAL);
-                                layoutModifyResponse.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
-                                EditText editText = new EditText(context);
-                                editText.setLayoutParams(new LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.MATCH_PARENT,
-                                        LinearLayout.LayoutParams.WRAP_CONTENT));
-                                editText.setTypeface(Typeface.MONOSPACE);
-                                editText.setInputType(InputType.TYPE_CLASS_TEXT |
-                                        InputType.TYPE_TEXT_FLAG_MULTI_LINE |
-                                        InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
-                                        InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE);
-                                editText.setMovementMethod(new ScrollingMovementMethod());
-                                editText.setTextIsSelectable(true);
-                                editText.setHorizontallyScrolling(true);
-                                editText.setVerticalScrollBarEnabled(true);
-                                editText.setHorizontalScrollBarEnabled(true);
-                                editText.setText(script);
-                                layoutModifyResponse.addView(editText);
-                                LinearLayout buttonLayout = new LinearLayout(context);
-                                LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.MATCH_PARENT,
-                                        LinearLayout.LayoutParams.WRAP_CONTENT);
-                                buttonParams.topMargin = Utils.dpToPx(10, context);
-                                buttonLayout.setLayoutParams(buttonParams);
-                                buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
-
-                                Button copyButton = new Button(context);
-                                copyButton.setText(R.string.button_copy);
-                                copyButton.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                        ClipData clip = ClipData.newPlainText("", editText.getText().toString());
-                                        clipboard.setPrimaryClip(clip);
-                                    }
-                                });
-
-                                buttonLayout.addView(copyButton);
-
-                                Button pasteButton = new Button(context);
-                                pasteButton.setText(R.string.button_paste);
-                                pasteButton.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View v) {
-                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                        if (clipboard != null && clipboard.hasPrimaryClip()) {
-                                            ClipData clip = clipboard.getPrimaryClip();
-                                            if (clip != null && clip.getItemCount() > 0) {
-                                                CharSequence pasteData = clip.getItemAt(0).getText();
-                                                editText.setText(pasteData);
-                                            }
-                                        }
-                                    }
-                                });
-
-
-                                buttonLayout.addView(pasteButton);
-                                layoutModifyResponse.addView(buttonLayout);
-                                ScrollView scrollView = new ScrollView(context);
-                                scrollView.addView(layoutModifyResponse);
-                                AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                                        .setTitle(R.string.modify_response);
-                                builder.setView(scrollView);
-                                builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        String code = editText.getText().toString();
-                                        if (!code.equals(script)) {
-                                            customPreferences.saveSetting("encoded_js_modify_response", Base64.encodeToString(code.getBytes(), Base64.NO_WRAP));
-                                            Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                                            Process.killProcess(Process.myPid());
-                                            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
-                                        }
-                                    }
-                                });
-
-                                builder.setNegativeButton(R.string.negative_button, null);
-
-                                builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                                    @Override
-                                    public void onDismiss(DialogInterface dialog) {
-                                        editText.setText(script);
-                                    }
-                                });
-                                AlertDialog dialog = builder.create();
-                                Button button = new Button(context);
-                                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.WRAP_CONTENT,
-                                        LinearLayout.LayoutParams.WRAP_CONTENT);
-                                params.topMargin = Utils.dpToPx(20, context);
-                                button.setLayoutParams(params);
-                                button.setText(R.string.modify_response);
-                                button.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View view) {
-                                        dialog.show();
-                                    }
-                                });
-
-                                layout.addView(button);
-                            }
-                            String LIMEs_versionName = BuildConfig.VERSION_NAME; // versionNameを取得
-                            ScrollView scrollView = new ScrollView(context);
-                            scrollView.addView(layout);
-                            AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                                    .setTitle("LIMEs" + " (" + LIMEs_versionName + ")");
-                            builder.setView(scrollView);
-                            builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    boolean optionChanged = false;
-                                    boolean saveSuccess = true; // 保存成功フラグ
-
-                                    for (int i = 0; i < limeOptions.options.length; ++i) {
-                                        Switch switchView = (Switch) layout.getChildAt(i);
-                                        boolean isChecked = switchView.isChecked();
-
-                                        // 変更があったかチェック
-                                        if (limeOptions.options[i].checked != isChecked) {
-                                            optionChanged = true;
-                                        }
-
-                                        // 保存処理の結果をチェック
-                                        if (!customPreferences.saveSetting(limeOptions.options[i].name, String.valueOf(isChecked))) {
-                                            saveSuccess = false;
-                                        }
-                                    }
-
-                                    if (!saveSuccess) {
-                                        Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();
-                                    }
-                                    else if (optionChanged) {
-                                        Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                                        Process.killProcess(Process.myPid());
-                                        context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
-                                    }
-                                }
-                            });
-
-                            builder.setNegativeButton(R.string.negative_button, null);
-
-                            builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                                @Override
-                                public void onDismiss(DialogInterface dialog) {
-                                    for (int i = 0; i < limeOptions.options.length; ++i) {
-                                        Switch switchView = (Switch) layout.getChildAt(i);
-                                        switchView.setChecked(limeOptions.options[i].checked);
-                                    }
-                                }
-                            });
-
-                            AlertDialog dialog = builder.create();
-                            Button button = new Button(context);
-                            button.setText(R.string.app_name);
-
-                            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-                                    FrameLayout.LayoutParams.WRAP_CONTENT,
-                                    FrameLayout.LayoutParams.WRAP_CONTENT);
-                            layoutParams.gravity = Gravity.TOP | Gravity.END;
-                            layoutParams.rightMargin = Utils.dpToPx(10, context);
-
-// ステータスバーの高さを取得
-                            int statusBarHeight = getStatusBarHeight(context);
-
-// ステータスバーの高さに係数（0.1）を掛けて調整
-
-
-                            String versionNameStr = String.valueOf(versionName);
-                            String majorVersionStr = versionNameStr.split("\\.")[0]; // Extract the major version number
-                            int versionNameInt = Integer.parseInt(majorVersionStr); // Convert the major version to an integer
-
-                            if (versionNameInt >= 15) {
-                                layoutParams.topMargin = (int) (statusBarHeight); // Set margin to status bar height
-                            } else {
-                                layoutParams.topMargin = Utils.dpToPx(5, context); // Set margin to 5dp
-                            }
-                            button.setLayoutParams(layoutParams);
-                            button.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View view) {
-                                    dialog.show();
-                                }
-                            });
-
-                            FrameLayout frameLayout = new FrameLayout(context);
-                            frameLayout.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                            frameLayout.addView(button);
-                            viewGroup.addView(frameLayout);
-
-                        } catch (Exception e) {
-                            // エラー情報を詳細にログ出力
-                           // XposedBridge.log("設定作成エラー: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-                            for (StackTraceElement ste : e.getStackTrace()) {
-                               // XposedBridge.log("  at " + ste.toString());
-                            }
+                        if (limeOptions.NewOption.checked) {
 
                             try {
-                                // UIスレッドでToastを表示
+                                PackageManager pm = contextV.getPackageManager();
+                                String versionName = ""; // 初期化
+                                try {
+                                    versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
+                                } catch (PackageManager.NameNotFoundException e) {
+                                    e.printStackTrace();
+                                }
+
+                                CustomPreferences customPreferences = new CustomPreferences(contextV);
+                                Set<String> checkedOptions = new HashSet<>(); // 重複をチェックするためのセット
+
+                                for (LimeOptions.Option option : limeOptions.options) {
+                                    if (!checkedOptions.contains(option.name)) {
+                                        option.checked = Boolean.parseBoolean(customPreferences.getSetting(option.name, String.valueOf(option.checked)));
+                                        checkedOptions.add(option.name);
+                                    }
+                                }
+
+                                ViewGroup viewGroup = ((ViewGroup) param.args[0]);
+                                Context context = viewGroup.getContext();
+                                Utils.addModuleAssetPath(context);
+
+                                // 画面全体に表示するためのレイアウト
+                                FrameLayout rootLayout = new FrameLayout(context);
+                                rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
+                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                        ViewGroup.LayoutParams.MATCH_PARENT));
+
+                                // ボタンの設定
+                                Button button = new Button(context);
+                                button.setText(R.string.app_name);
+
+                                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                                        FrameLayout.LayoutParams.WRAP_CONTENT);
+                                layoutParams.gravity = Gravity.TOP | Gravity.END;
+                                layoutParams.rightMargin = Utils.dpToPx(10, context);
+
+                                // ステータスバーの高さを取得
+                                int statusBarHeight = getStatusBarHeight(context);
+
+                                String versionNameStr = String.valueOf(versionName);
+                                String majorVersionStr = versionNameStr.split("\\.")[0]; // Extract the major version number
+                                int versionNameInt = Integer.parseInt(majorVersionStr); // Convert the major version to an integer
+
+                                if (versionNameInt >= 15) {
+                                    layoutParams.topMargin = statusBarHeight; // Set margin to status bar height
+                                } else {
+                                    layoutParams.topMargin = Utils.dpToPx(5, context); // Set margin to 5dp
+                                }
+                                button.setLayoutParams(layoutParams);
+
+                                button.setOnClickListener(view -> {
+                                    // カテゴリ一覧画面を生成
+                                    LinearLayout categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
+                                    showView(rootLayout, categoryLayout);
+                                });
+
+                                // ボタンを追加
+                                rootLayout.addView(button);
+
+                                // ルートレイアウトを表示
+                                viewGroup.addView(rootLayout);
+
+                            } catch (Exception e) {
+                                // エラー処理
                                 new Handler(Looper.getMainLooper()).post(() -> {
                                     if (moduleContext != null) {
                                         Toast.makeText(
@@ -713,20 +171,1269 @@ public class EmbedOptions implements IHook {
                                                         + "\nError: " + e.getClass().getSimpleName(),
                                                 Toast.LENGTH_LONG
                                         ).show();
-                                    } else {
-                                       // XposedBridge.log("Toast表示失敗: moduleContextがnullです");
                                     }
                                 });
-                            } catch (Throwable t) {
-                               // XposedBridge.log("Toast表示中に例外発生: " + t);
-                                t.printStackTrace();
+                            }
+
+
+                        } else {
+                            try {
+                                PackageManager pm = contextV.getPackageManager();
+                                String versionName = ""; // 初期化
+                                try {
+                                    versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
+                                } catch (PackageManager.NameNotFoundException e) {
+                                    e.printStackTrace();
+                                }
+
+                                CustomPreferences customPreferences = new CustomPreferences(contextV);
+                                Set<String> checkedOptions = new HashSet<>(); // 重複をチェックするためのセット
+
+                                for (LimeOptions.Option option : limeOptions.options) {
+                                    if (!checkedOptions.contains(option.name)) {
+                                        option.checked = Boolean.parseBoolean(customPreferences.getSetting(option.name, String.valueOf(option.checked)));
+                                        checkedOptions.add(option.name);
+                                    }
+                                }
+                                ViewGroup viewGroup = ((ViewGroup) param.args[0]);
+                                Context context = viewGroup.getContext();
+                                Utils.addModuleAssetPath(context);
+
+                                LinearLayout layout = new LinearLayout(context);
+                                layout.setLayoutParams(new LinearLayout.LayoutParams(
+                                        LinearLayout.LayoutParams.MATCH_PARENT,
+                                        LinearLayout.LayoutParams.MATCH_PARENT));
+                                layout.setOrientation(LinearLayout.VERTICAL);
+                                layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
+                                Switch switchRedirectWebView = null;
+                                Switch photoAddNotificationView = null;
+                                Switch ReadCheckerView = null;
+                                Switch preventUnsendMessageView = null;
+                                Switch DarkModeView = null;
+                                List<Switch> webViewChildSwitches = new ArrayList<>();
+                                List<Switch> photoNotificationChildSwitches = new ArrayList<>();
+                                List<Switch> ReadCheckerSwitches = new ArrayList<>();
+                                List<Switch> preventUnsendMessageSwitches = new ArrayList<>();
+                                List<Switch> DarkModeSwitches = new ArrayList<>();
+                                for (LimeOptions.Option option : limeOptions.options) {
+                                    final String name = option.name;
+
+                                    Switch switchView = new Switch(context);
+                                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                                            LinearLayout.LayoutParams.WRAP_CONTENT
+                                    );
+                                    params.topMargin = Utils.dpToPx(20, context);
+                                    switchView.setLayoutParams(params);
+                                    switchView.setText(option.id);
+                                    switchView.setChecked(option.checked);
+                                    switchView.setTextColor(Color.WHITE);
+                                    switch (name) {
+                                        case "redirect_webview":
+                                            switchRedirectWebView = switchView;
+                                            switchRedirectWebView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                                                for (Switch child : webViewChildSwitches) {
+                                                    child.setEnabled(isChecked);
+                                                    if (!isChecked) child.setChecked(false);
+                                                }
+                                            });
+                                            break;
+                                        case "PhotoAddNotification":
+                                            photoAddNotificationView = switchView;
+                                            photoAddNotificationView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                                                for (Switch child : photoNotificationChildSwitches) {
+                                                    child.setEnabled(isChecked);
+                                                    if (!isChecked) child.setChecked(false);
+                                                }
+                                            });
+                                            break;
+                                        case "ReadChecker":
+                                            ReadCheckerView = switchView;
+                                            ReadCheckerView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                                                for (Switch child : ReadCheckerSwitches) {
+                                                    child.setEnabled(isChecked);
+                                                    if (!isChecked) child.setChecked(false);
+                                                }
+                                            });
+                                            break;
+                                        case "prevent_unsend_message":
+                                            preventUnsendMessageView = switchView;
+                                            preventUnsendMessageView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                                                for (Switch child : preventUnsendMessageSwitches) {
+                                                    child.setEnabled(isChecked);
+                                                    if (!isChecked) child.setChecked(false);
+                                                }
+                                            });
+                                            break;
+
+                                        case "DarkColor":
+                                            DarkModeView = switchView;
+                                            DarkModeView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                                                for (Switch child : DarkModeSwitches) {
+                                                    child.setEnabled(isChecked);
+                                                    if (!isChecked) child.setChecked(false);
+                                                }
+                                            });
+                                            break;
+
+                                        case "open_in_browser":
+                                            webViewChildSwitches.add(switchView);
+                                            switchView.setEnabled(switchRedirectWebView != null && switchRedirectWebView.isChecked());
+                                            break;
+
+                                        case "hide_canceled_message":
+                                            preventUnsendMessageSwitches.add(switchView);
+                                            switchView.setEnabled(preventUnsendMessageView != null && preventUnsendMessageView.isChecked());
+                                            break;
+
+                                        case "GroupNotification":
+                                        case "CansellNotification":
+                                        case "AddCopyAction":
+                                            photoNotificationChildSwitches.add(switchView);
+                                            switchView.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked());
+                                            break;
+
+                                        case "MySendMessage":
+                                        case "ReadCheckerChatdataDelete":
+                                            ReadCheckerSwitches.add(switchView);
+                                            switchView.setEnabled(ReadCheckerView != null && ReadCheckerView.isChecked());
+                                            break;
+
+                                        case "DarkModSync":
+                                            DarkModeSwitches.add(switchView);
+                                            switchView.setEnabled(DarkModeView != null && DarkModeView.isChecked());
+                                            break;
+                                    }
+
+                                    layout.addView(switchView);
+                                }
+
+                                if (switchRedirectWebView != null) {
+                                    switchRedirectWebView.setChecked(switchRedirectWebView.isChecked());
+                                }
+                                if (photoAddNotificationView != null) {
+                                    photoAddNotificationView.setChecked(photoAddNotificationView.isChecked());
+                                }
+
+                                {
+                                    final String script = new String(Base64.decode(customPreferences.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP));
+                                    LinearLayout layoutModifyRequest = new LinearLayout(context);
+                                    layoutModifyRequest.setLayoutParams(new LinearLayout.LayoutParams(
+                                            LinearLayout.LayoutParams.MATCH_PARENT,
+                                            LinearLayout.LayoutParams.MATCH_PARENT));
+                                    layoutModifyRequest.setOrientation(LinearLayout.VERTICAL);
+                                    layoutModifyRequest.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
+
+                                    EditText editText = new EditText(context);
+                                    editText.setLayoutParams(new LinearLayout.LayoutParams(
+                                            LinearLayout.LayoutParams.MATCH_PARENT,
+                                            LinearLayout.LayoutParams.WRAP_CONTENT));
+                                    editText.setTypeface(Typeface.MONOSPACE);
+                                    editText.setInputType(InputType.TYPE_CLASS_TEXT |
+                                            InputType.TYPE_TEXT_FLAG_MULTI_LINE |
+                                            InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
+                                            InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE);
+                                    editText.setMovementMethod(new ScrollingMovementMethod());
+                                    editText.setTextIsSelectable(true);
+                                    editText.setHorizontallyScrolling(true);
+                                    editText.setVerticalScrollBarEnabled(true);
+                                    editText.setHorizontalScrollBarEnabled(true);
+                                    editText.setText(script);
+
+                                    layoutModifyRequest.addView(editText);
+
+                                    LinearLayout buttonLayout = new LinearLayout(context);
+                                    LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                                            LinearLayout.LayoutParams.MATCH_PARENT,
+                                            LinearLayout.LayoutParams.WRAP_CONTENT);
+                                    buttonParams.topMargin = Utils.dpToPx(10, context);
+                                    buttonLayout.setLayoutParams(buttonParams);
+                                    buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
+
+                                    Button copyButton = new Button(context);
+                                    copyButton.setText(R.string.button_copy);
+                                    copyButton.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                                            ClipData clip = ClipData.newPlainText("", editText.getText().toString());
+                                            clipboard.setPrimaryClip(clip);
+                                        }
+                                    });
+
+                                    buttonLayout.addView(copyButton);
+
+                                    Button pasteButton = new Button(context);
+                                    pasteButton.setText(R.string.button_paste);
+                                    pasteButton.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                                            if (clipboard != null && clipboard.hasPrimaryClip()) {
+                                                ClipData clip = clipboard.getPrimaryClip();
+                                                if (clip != null && clip.getItemCount() > 0) {
+                                                    CharSequence pasteData = clip.getItemAt(0).getText();
+                                                    editText.setText(pasteData);
+                                                }
+                                            }
+                                        }
+                                    });
+
+                                    buttonLayout.addView(pasteButton);
+                                    layoutModifyRequest.addView(buttonLayout);
+                                    ScrollView scrollView = new ScrollView(context);
+                                    scrollView.addView(layoutModifyRequest);
+                                    AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
+                                            .setTitle(R.string.modify_request);
+                                    builder.setView(scrollView);
+                                    Button backupButton = new Button(context);
+                                    buttonParams.topMargin = Utils.dpToPx(20, context);
+                                    backupButton.setLayoutParams(buttonParams);
+                                    backupButton.setText(moduleContext.getResources().getString(R.string.Back_Up));
+                                    backupButton.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            backupChatHistory(context, moduleContext);
+                                        }
+                                    });
+                                    layout.addView(backupButton);
+                                    Button restoreButton = new Button(context);
+                                    restoreButton.setLayoutParams(buttonParams);
+                                    restoreButton.setText(moduleContext.getResources().getString(R.string.Restore));
+                                    restoreButton.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            restoreChatHistory(context, moduleContext);
+                                        }
+                                    });
+                                    layout.addView(restoreButton);
+                                    Button backupfolderButton = new Button(context);
+                                    backupfolderButton.setLayoutParams(buttonParams);
+                                    backupfolderButton.setText(moduleContext.getResources().getString(R.string.Talk_Picture_Back_up));
+                                    backupfolderButton.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            backupChatsFolder(context, moduleContext);
+                                        }
+                                    });
+                                    layout.addView(backupfolderButton);
+                                    Button restorefolderButton = new Button(context);
+                                    restorefolderButton.setLayoutParams(buttonParams);
+                                    restorefolderButton.setText(moduleContext.getResources().getString(R.string.Picure_Restore));
+                                    restorefolderButton.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            restoreChatsFolder(context, moduleContext);
+                                        }
+                                    });
+                                    layout.addView(restorefolderButton);
+                                    if (limeOptions.MuteGroup.checked) {
+                                        Button MuteGroups_Button = new Button(context);
+                                        MuteGroups_Button.setLayoutParams(buttonParams);
+                                        MuteGroups_Button.setText(moduleContext.getResources().getString(R.string.Mute_Group));
+                                        MuteGroups_Button.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View v) {
+                                                MuteGroups_Button(context, moduleContext);
+                                            }
+                                        });
+                                        layout.addView(MuteGroups_Button);
+                                    }
+
+                                    Button KeepUnread_Button = new Button(context);
+                                    KeepUnread_Button.setLayoutParams(buttonParams);
+                                    KeepUnread_Button.setText(moduleContext.getResources().getString(R.string.edit_margin_settings));
+                                    KeepUnread_Button.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            KeepUnread_Button(context, moduleContext);
+                                        }
+                                    });
+                                    layout.addView(KeepUnread_Button);
+
+                                    if (limeOptions.preventUnsendMessage.checked) {
+                                        Button canceled_message_Button = new Button(context);
+                                        canceled_message_Button.setLayoutParams(buttonParams);
+                                        canceled_message_Button.setText(moduleContext.getResources().getString(R.string.canceled_message));
+                                        canceled_message_Button.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View v) {
+                                                Cancel_Message_Button(context, moduleContext);
+                                            }
+                                        });
+                                        layout.addView(canceled_message_Button);
+                                    }
+                                    if (limeOptions.CansellNotification.checked) {
+
+                                        Button CansellNotification_Button = new Button(context);
+                                        CansellNotification_Button.setLayoutParams(buttonParams);
+                                        CansellNotification_Button.setText(moduleContext.getResources().getString(R.string.CansellNotification));
+                                        CansellNotification_Button.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View v) {
+                                                CansellNotification(context, moduleContext);
+                                            }
+                                        });
+                                        layout.addView(CansellNotification_Button);
+                                    }
+
+                                    if (limeOptions.BlockCheck.checked) {
+
+                                        Button BlockCheck_Button = new Button(context);
+                                        BlockCheck_Button.setLayoutParams(buttonParams);
+                                        BlockCheck_Button.setText(moduleContext.getResources().getString(R.string.BlockCheck));
+                                        BlockCheck_Button.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View v) {
+                                                Blocklist(context, moduleContext);
+                                            }
+                                        });
+                                        layout.addView(BlockCheck_Button);
+                                    }
+                                    if (limeOptions.preventUnsendMessage.checked) {
+                                        Button hide_canceled_message_Button = new Button(context);
+                                        hide_canceled_message_Button.setLayoutParams(buttonParams);
+                                        hide_canceled_message_Button.setText(moduleContext.getResources().getString(R.string.hide_canceled_message));
+                                        hide_canceled_message_Button.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View v) {
+
+                                                new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
+                                                        .setTitle(moduleContext.getResources().getString(R.string.HideSetting))
+                                                        .setMessage(moduleContext.getResources().getString(R.string.HideSetting_selection))
+                                                        .setPositiveButton(moduleContext.getResources().getString(R.string.Hide), new DialogInterface.OnClickListener() {
+                                                            public void onClick(DialogInterface dialog, int which) {
+                                                                updateMessagesVisibility(context, true, moduleContext);
+                                                            }
+                                                        })
+                                                        .setNegativeButton(moduleContext.getResources().getString(R.string.Show), new DialogInterface.OnClickListener() {
+                                                            public void onClick(DialogInterface dialog, int which) {
+                                                                updateMessagesVisibility(context, false, moduleContext);
+                                                            }
+                                                        })
+                                                        .setIcon(android.R.drawable.ic_dialog_info)
+                                                        .show();
+                                            }
+                                        });
+                                        layout.addView(hide_canceled_message_Button);
+                                    }
+
+                                    if (limeOptions.PinList.checked) {
+
+                                        Button PinList_Button = new Button(context);
+                                        PinList_Button.setLayoutParams(buttonParams);
+                                        PinList_Button.setText(moduleContext.getResources().getString(R.string.PinList));
+                                        PinList_Button.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View v) {
+                                                PinListButton(context, moduleContext);
+                                            }
+                                        });
+                                        layout.addView(PinList_Button);
+                                    }
+
+                                    builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            String code = editText.getText().toString();
+                                            if (!code.equals(script)) {
+                                                // CustomPreferencesのインスタンスを作成
+                                                CustomPreferences customPreferences = null;
+                                                try {
+                                                    customPreferences = new CustomPreferences(contextV);
+                                                } catch (
+                                                        PackageManager.NameNotFoundException e) {
+                                                    throw new RuntimeException(e);
+                                                } catch (IOException e) {
+                                                    throw new RuntimeException(e);
+                                                }
+                                                // Base64エンコードして設定を保存
+                                                String encodedCode = Base64.encodeToString(code.getBytes(), Base64.NO_WRAP);
+                                                customPreferences.saveSetting("encoded_js_modify_request", encodedCode);
+
+                                                Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+                                                Process.killProcess(Process.myPid());
+                                                context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+                                            }
+                                        }
+                                    });
+
+                                    builder.setNegativeButton(R.string.negative_button, null);
+
+                                    builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                                        @Override
+                                        public void onDismiss(DialogInterface dialog) {
+                                            editText.setText(script);
+                                        }
+                                    });
+
+                                    AlertDialog dialog = builder.create();
+                                    Button button = new Button(context);
+                                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                                            LinearLayout.LayoutParams.WRAP_CONTENT);
+                                    params.topMargin = Utils.dpToPx(20, context);
+                                    button.setLayoutParams(params);
+                                    button.setText(R.string.modify_request);
+                                    button.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View view) {
+                                            dialog.show();
+                                        }
+                                    });
+                                    layout.addView(button);
+                                }
+
+                                {
+                                    final String script = new String(Base64.decode(customPreferences.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP));
+                                    LinearLayout layoutModifyResponse = new LinearLayout(context);
+                                    layoutModifyResponse.setLayoutParams(new LinearLayout.LayoutParams(
+                                            LinearLayout.LayoutParams.MATCH_PARENT,
+                                            LinearLayout.LayoutParams.MATCH_PARENT));
+                                    layoutModifyResponse.setOrientation(LinearLayout.VERTICAL);
+                                    layoutModifyResponse.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
+                                    EditText editText = new EditText(context);
+                                    editText.setLayoutParams(new LinearLayout.LayoutParams(
+                                            LinearLayout.LayoutParams.MATCH_PARENT,
+                                            LinearLayout.LayoutParams.WRAP_CONTENT));
+                                    editText.setTypeface(Typeface.MONOSPACE);
+                                    editText.setInputType(InputType.TYPE_CLASS_TEXT |
+                                            InputType.TYPE_TEXT_FLAG_MULTI_LINE |
+                                            InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
+                                            InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE);
+                                    editText.setMovementMethod(new ScrollingMovementMethod());
+                                    editText.setTextIsSelectable(true);
+                                    editText.setHorizontallyScrolling(true);
+                                    editText.setVerticalScrollBarEnabled(true);
+                                    editText.setHorizontalScrollBarEnabled(true);
+                                    editText.setText(script);
+                                    layoutModifyResponse.addView(editText);
+                                    LinearLayout buttonLayout = new LinearLayout(context);
+                                    LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                                            LinearLayout.LayoutParams.MATCH_PARENT,
+                                            LinearLayout.LayoutParams.WRAP_CONTENT);
+                                    buttonParams.topMargin = Utils.dpToPx(10, context);
+                                    buttonLayout.setLayoutParams(buttonParams);
+                                    buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
+
+                                    Button copyButton = new Button(context);
+                                    copyButton.setText(R.string.button_copy);
+                                    copyButton.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                                            ClipData clip = ClipData.newPlainText("", editText.getText().toString());
+                                            clipboard.setPrimaryClip(clip);
+                                        }
+                                    });
+
+                                    buttonLayout.addView(copyButton);
+
+                                    Button pasteButton = new Button(context);
+                                    pasteButton.setText(R.string.button_paste);
+                                    pasteButton.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                                            if (clipboard != null && clipboard.hasPrimaryClip()) {
+                                                ClipData clip = clipboard.getPrimaryClip();
+                                                if (clip != null && clip.getItemCount() > 0) {
+                                                    CharSequence pasteData = clip.getItemAt(0).getText();
+                                                    editText.setText(pasteData);
+                                                }
+                                            }
+                                        }
+                                    });
+
+                                    buttonLayout.addView(pasteButton);
+                                    layoutModifyResponse.addView(buttonLayout);
+                                    ScrollView scrollView = new ScrollView(context);
+                                    scrollView.addView(layoutModifyResponse);
+                                    AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
+                                            .setTitle(R.string.modify_response);
+                                    builder.setView(scrollView);
+                                    builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface dialog, int which) {
+                                            String code = editText.getText().toString();
+                                            if (!code.equals(script)) {
+                                                customPreferences.saveSetting("encoded_js_modify_response", Base64.encodeToString(code.getBytes(), Base64.NO_WRAP));
+                                                Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+                                                Process.killProcess(Process.myPid());
+                                                context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+                                            }
+                                        }
+                                    });
+
+                                    builder.setNegativeButton(R.string.negative_button, null);
+
+                                    builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                                        @Override
+                                        public void onDismiss(DialogInterface dialog) {
+                                            editText.setText(script);
+                                        }
+                                    });
+                                    AlertDialog dialog = builder.create();
+                                    Button button = new Button(context);
+                                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                                            LinearLayout.LayoutParams.WRAP_CONTENT,
+                                            LinearLayout.LayoutParams.WRAP_CONTENT);
+                                    params.topMargin = Utils.dpToPx(20, context);
+                                    button.setLayoutParams(params);
+                                    button.setText(R.string.modify_response);
+                                    button.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View view) {
+                                            dialog.show();
+                                        }
+                                    });
+
+                                    layout.addView(button);
+                                }
+                                String LIMEs_versionName = BuildConfig.VERSION_NAME; // versionNameを取得
+                                ScrollView scrollView = new ScrollView(context);
+                                scrollView.addView(layout);
+                                AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
+                                        .setTitle("LIMEs" + " (" + LIMEs_versionName + ")");
+                                builder.setView(scrollView);
+                                builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
+                                    @Override
+                                    public void onClick(DialogInterface dialog, int which) {
+                                        boolean optionChanged = false;
+                                        boolean saveSuccess = true; // 保存成功フラグ
+
+                                        for (int i = 0; i < limeOptions.options.length; ++i) {
+                                            Switch switchView = (Switch) layout.getChildAt(i);
+                                            boolean isChecked = switchView.isChecked();
+
+                                            // 変更があったかチェック
+                                            if (limeOptions.options[i].checked != isChecked) {
+                                                optionChanged = true;
+                                            }
+
+                                            // 保存処理の結果をチェック
+                                            if (!customPreferences.saveSetting(limeOptions.options[i].name, String.valueOf(isChecked))) {
+                                                saveSuccess = false;
+                                            }
+                                        }
+
+                                        if (!saveSuccess) {
+                                            Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();
+                                        } else if (optionChanged) {
+                                            Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+                                            Process.killProcess(Process.myPid());
+                                            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+                                        }
+                                    }
+                                });
+
+                                builder.setNegativeButton(R.string.negative_button, null);
+
+                                builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
+                                    @Override
+                                    public void onDismiss(DialogInterface dialog) {
+                                        for (int i = 0; i < limeOptions.options.length; ++i) {
+                                            Switch switchView = (Switch) layout.getChildAt(i);
+                                            switchView.setChecked(limeOptions.options[i].checked);
+                                        }
+                                    }
+                                });
+
+                                AlertDialog dialog = builder.create();
+                                Button button = new Button(context);
+                                button.setText(R.string.app_name);
+
+                                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                                        FrameLayout.LayoutParams.WRAP_CONTENT);
+                                layoutParams.gravity = Gravity.TOP | Gravity.END;
+                                layoutParams.rightMargin = Utils.dpToPx(10, context);
+
+                                // ステータスバーの高さを取得
+                                int statusBarHeight = getStatusBarHeight(context);
+
+                                // ステータスバーの高さに係数（0.1）を掛けて調整
+
+                                String versionNameStr = String.valueOf(versionName);
+                                String majorVersionStr = versionNameStr.split("\\.")[0]; // Extract the major version number
+                                int versionNameInt = Integer.parseInt(majorVersionStr); // Convert the major version to an integer
+
+                                if (versionNameInt >= 15) {
+                                    layoutParams.topMargin = statusBarHeight; // Set margin to status bar height
+                                } else {
+                                    layoutParams.topMargin = Utils.dpToPx(5, context); // Set margin to 5dp
+                                }
+                                button.setLayoutParams(layoutParams);
+                                button.setOnClickListener(new View.OnClickListener() {
+                                    @Override
+                                    public void onClick(View view) {
+                                        dialog.show();
+                                    }
+                                });
+
+                                FrameLayout frameLayout = new FrameLayout(context);
+                                frameLayout.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                                frameLayout.addView(button);
+                                viewGroup.addView(frameLayout);
+
+                            } catch (Exception e) {
+                                // エラー情報を詳細にログ出力
+                                // XposedBridge.log("設定作成エラー: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                                for (StackTraceElement ste : e.getStackTrace()) {
+                                    // XposedBridge.log("  at " + ste.toString());
+                                }
+
+                                try {
+                                    // UIスレッドでToastを表示
+                                    new Handler(Looper.getMainLooper()).post(() -> {
+                                        if (moduleContext != null) {
+                                            Toast.makeText(
+                                                    moduleContext,
+                                                    moduleContext.getString(R.string.Error_Create_setting_Button)
+                                                            + "\nError: " + e.getClass().getSimpleName(),
+                                                    Toast.LENGTH_LONG
+                                            ).show();
+                                        } else {
+                                            // XposedBridge.log("Toast表示失敗: moduleContextがnullです");
+                                        }
+                                    });
+                                } catch (Throwable t) {
+                                    // XposedBridge.log("Toast表示中に例外発生: " + t);
+                                    t.printStackTrace();
+                                }
                             }
                         }
+                    }
+                    });
+    }
+
+
+    private void showView(ViewGroup parent, View view) {
+
+        ViewGroup currentParent = (ViewGroup) view.getParent();
+        if (currentParent != null) {
+
+            currentParent.removeView(view);
+        }
+        parent.removeAllViews();
+        parent.addView(view);
+    }
+
+    private LinearLayout createCategoryListLayout(Context context, List<LimeOptions.Option> options, CustomPreferences customPreferences, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
+        LinearLayout layout = new LinearLayout(context);
+        layout.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT));
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
+        layout.setBackgroundColor(Color.BLACK);
+        layout.setClickable(true);
+        layout.setFocusable(true);
+
+        String LIMEs_versionName = BuildConfig.VERSION_NAME; // versionNameを取得
+        TextView versionTextView = new TextView(context);
+        versionTextView.setText("LIMEs" + " (" + LIMEs_versionName + ")");
+        versionTextView.setTextSize(16);
+        versionTextView.setTextColor(Color.WHITE);
+        versionTextView.setGravity(Gravity.CENTER); // 中央揃え
+        versionTextView.setPadding(0, Utils.dpToPx(10, context), 0, Utils.dpToPx(10, context)); // 上下に10dpのパディングを設定
+        layout.addView(versionTextView);
+
+
+        Map<LimeOptions.OptionCategory, List<LimeOptions.Option>> categorizedOptions = new LinkedHashMap<>();
+
+        List<LimeOptions.OptionCategory> categoryOrder = Arrays.asList(
+                LimeOptions.OptionCategory.GENERAL,
+                LimeOptions.OptionCategory.NOTIFICATIONS,
+                LimeOptions.OptionCategory.CHAT,
+                LimeOptions.OptionCategory.Ad,
+                LimeOptions.OptionCategory.CALL,
+                LimeOptions.OptionCategory.Theme,
+                LimeOptions.OptionCategory.OTHER
+        );
+
+
+        for (LimeOptions.OptionCategory category : categoryOrder) {
+            categorizedOptions.put(category, new ArrayList<>());
+        }
+
+        for (LimeOptions.Option option : options) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                categorizedOptions
+                        .computeIfAbsent(option.category, k -> new ArrayList<>())
+                        .add(option);
+            }
+        }
+
+        for (Map.Entry<LimeOptions.OptionCategory, List<LimeOptions.Option>> entry : categorizedOptions.entrySet()) {
+            LimeOptions.OptionCategory category = entry.getKey();
+            List<LimeOptions.Option> optionsInCategory = entry.getValue();
+
+            TextView categoryTitle = new TextView(context);
+            categoryTitle.setText(category.getName(context));
+            categoryTitle.setTextSize(18);
+            categoryTitle.setPadding(0, Utils.dpToPx(10, context), 0, Utils.dpToPx(5, context));
+            categoryTitle.setTextColor(Color.WHITE);
+            categoryTitle.setClickable(true);
+            categoryTitle.setOnClickListener(v -> {
+
+                LinearLayout optionsLayout = createOptionsLayout(context, optionsInCategory, customPreferences, moduleContext, loadPackageParam);
+                showView((ViewGroup) layout.getParent(), optionsLayout);
+            });
+
+            layout.addView(categoryTitle);
+        }
+
+        addAdditionalButtons(context, layout, customPreferences, moduleContext);
+
+        Button saveButton = new Button(context);
+        saveButton.setText("再起動");
+        saveButton.setTextColor(Color.WHITE); // テキスト色を白色に設定
+        saveButton.setBackgroundColor(Color.DKGRAY); // ボタンの背景色を暗い灰色に設定
+        saveButton.setOnClickListener(v -> {
+            boolean optionChanged = false;
+            boolean saveSuccess = true; // 保存成功フラグ
+
+            // すべてのオプションを走査して保存処理を実行
+            for (LimeOptions.Option option : limeOptions.options) {
+                boolean isChecked = option.checked;
+
+                // 変更があったかチェック
+                if (option.checked != isChecked) {
+                    optionChanged = true;
                 }
-                });
 
-}
+                // 保存処理の結果をチェック
+                if (!customPreferences.saveSetting(option.name, String.valueOf(isChecked))) {
+                    saveSuccess = false;
+                }
 
+                // 保存結果に応じてトーストを表示
+                if (!saveSuccess) {
+                    Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();
+                    context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity")); // アプリを再起動
+                }
+
+                Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+                Process.killProcess(Process.myPid()); // プロセスを終了
+                context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity")); // アプリを再起動
+
+            }
+        });
+        layout.addView(saveButton);
+
+        // 一覧を非表示にするボタン
+        Button hideButton = new Button(context);
+        hideButton.setText("戻る");
+        hideButton.setTextColor(Color.WHITE); // テキスト色を白色に設定
+        hideButton.setBackgroundColor(Color.DKGRAY); // ボタンの背景色を暗い灰色に設定
+        hideButton.setOnClickListener(v -> {
+            // 一覧を非表示にする
+            showView((ViewGroup) layout.getParent(), createButtonLayout(context, customPreferences, moduleContext, loadPackageParam, loadPackageParam));
+        });
+        layout.addView(hideButton);
+
+        ScrollView scrollView = new ScrollView(context);
+        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        scrollView.addView(layout);
+
+        return layout;
+    }
+    private LinearLayout createOptionsLayout(Context context, List<LimeOptions.Option> options, CustomPreferences customPreferences, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
+        LinearLayout layout = new LinearLayout(context);
+        layout.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT));
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
+        layout.setBackgroundColor(Color.BLACK);
+        layout.setClickable(true);
+        layout.setFocusable(true);
+
+        String LIMEs_versionName = BuildConfig.VERSION_NAME; // versionNameを取得
+        TextView versionTextView = new TextView(context);
+        versionTextView.setText("LIMEs" + " (" + LIMEs_versionName + ")");
+        versionTextView.setTextSize(16);
+        versionTextView.setTextColor(Color.WHITE);
+        versionTextView.setGravity(Gravity.CENTER);
+        versionTextView.setPadding(0, Utils.dpToPx(10, context), 0, Utils.dpToPx(10, context)); // 上下に10dpのパディングを設定
+        layout.addView(versionTextView);
+
+        Switch switchRedirectWebView = null;
+        Switch photoAddNotificationView = null;
+        Switch ReadCheckerView = null;
+        Switch preventUnsendMessageView = null;
+        Switch DarkModeView = null;
+        List<Switch> webViewChildSwitches = new ArrayList<>();
+        List<Switch> photoNotificationChildSwitches = new ArrayList<>();
+        List<Switch> ReadCheckerSwitches = new ArrayList<>();
+        List<Switch> preventUnsendMessageSwitches = new ArrayList<>();
+        List<Switch> DarkModeSwitches = new ArrayList<>();
+
+
+        for (LimeOptions.Option option : options) {
+            Switch switchView = new Switch(context);
+            LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+            );
+            params.topMargin = Utils.dpToPx(10, context);
+            switchView.setLayoutParams(params);
+            switchView.setText(option.id);
+            switchView.setTextColor(Color.WHITE);
+            switchView.setChecked(option.checked);
+
+            switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                option.checked = isChecked;
+            });
+
+
+            switch (option.name) {
+                case "redirect_webview":
+                    switchRedirectWebView = switchView;
+                    switchRedirectWebView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                        for (Switch child : webViewChildSwitches) {
+                            child.setEnabled(isChecked);
+                            if (!isChecked) child.setChecked(false);
+                        }
+                    });
+                    break;
+                case "PhotoAddNotification":
+                    photoAddNotificationView = switchView;
+                    photoAddNotificationView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                        for (Switch child : photoNotificationChildSwitches) {
+                            child.setEnabled(isChecked);
+                            if (!isChecked) child.setChecked(false);
+                        }
+                    });
+                    break;
+                case "ReadChecker":
+                    ReadCheckerView = switchView;
+                    ReadCheckerView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                        for (Switch child : ReadCheckerSwitches) {
+                            child.setEnabled(isChecked);
+                            if (!isChecked) child.setChecked(false);
+                        }
+                    });
+                    break;
+                case "prevent_unsend_message":
+                    preventUnsendMessageView = switchView;
+                    preventUnsendMessageView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                        for (Switch child : preventUnsendMessageSwitches) {
+                            child.setEnabled(isChecked);
+                            if (!isChecked) child.setChecked(false);
+                        }
+                    });
+                    break;
+                case "DarkColor":
+                    DarkModeView = switchView;
+                    DarkModeView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                        for (Switch child : DarkModeSwitches) {
+                            child.setEnabled(isChecked);
+                            if (!isChecked) child.setChecked(false);
+                        }
+                    });
+                    break;
+                case "open_in_browser":
+                    webViewChildSwitches.add(switchView);
+                    switchView.setEnabled(switchRedirectWebView != null && switchRedirectWebView.isChecked());
+                    break;
+                case "hide_canceled_message":
+                    preventUnsendMessageSwitches.add(switchView);
+                    switchView.setEnabled(preventUnsendMessageView != null && preventUnsendMessageView.isChecked());
+                    break;
+                case "GroupNotification":
+                case "CansellNotification":
+                case "AddCopyAction":
+                    photoNotificationChildSwitches.add(switchView);
+                    switchView.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked());
+                    break;
+                case "MySendMessage":
+                case "ReadCheckerChatdataDelete":
+                    ReadCheckerSwitches.add(switchView);
+                    switchView.setEnabled(ReadCheckerView != null && ReadCheckerView.isChecked());
+                    break;
+                case "DarkModSync":
+                    DarkModeSwitches.add(switchView);
+                    switchView.setEnabled(DarkModeView != null && DarkModeView.isChecked());
+                    break;
+            }
+
+            layout.addView(switchView);
+        }
+
+
+
+        Button saveButton = new Button(context);
+        saveButton.setText("再起動");
+        saveButton.setTextColor(Color.WHITE); // テキスト色を白色に設定
+        saveButton.setBackgroundColor(Color.DKGRAY); // ボタンの背景色を暗い灰色に設定
+        saveButton.setOnClickListener(v -> {
+            boolean optionChanged = false;
+            boolean saveSuccess = true; // 保存成功フラグ
+
+            // すべてのオプションを走査して保存処理を実行
+            for (LimeOptions.Option option : limeOptions.options) {
+                boolean isChecked = option.checked;
+
+                // 変更があったかチェック
+                if (option.checked != isChecked) {
+                    optionChanged = true;
+                }
+
+                // 保存処理の結果をチェック
+                if (!customPreferences.saveSetting(option.name, String.valueOf(isChecked))) {
+                    saveSuccess = false;
+                }
+
+
+
+                // 保存結果に応じてトーストを表示
+                if (!saveSuccess) {
+                    Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();}
+            }
+            Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+            Process.killProcess(Process.myPid()); // プロセスを終了
+            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity")); // アプリを再起動
+
+        });
+        layout.addView(saveButton);
+
+
+
+        Button backButton = new Button(context);
+        backButton.setText("戻る");
+        backButton.setTextColor(Color.WHITE);
+        backButton.setBackgroundColor(Color.DKGRAY);
+        backButton.setOnClickListener(v -> {
+
+            LinearLayout categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
+            showView((ViewGroup) layout.getParent(), categoryLayout);
+        });
+        layout.addView(backButton);
+
+
+        ScrollView scrollView = new ScrollView(context);
+        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+        scrollView.addView(layout);
+
+        return layout;
+    }
+
+    private View createButtonLayout(Context context, CustomPreferences customPreferences, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam, XC_LoadPackage.LoadPackageParam viewGroup) {
+        PackageManager pm = context.getPackageManager();
+        String versionName = ""; // 初期化
+        try {
+            versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+
+        FrameLayout rootLayout = new FrameLayout(context);
+        rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
+
+        Button button = new Button(context);
+        button.setText(R.string.app_name);
+
+        FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
+                FrameLayout.LayoutParams.WRAP_CONTENT,
+                FrameLayout.LayoutParams.WRAP_CONTENT);
+        layoutParams.gravity = Gravity.TOP | Gravity.END;
+        layoutParams.rightMargin = Utils.dpToPx(10, context);
+
+
+        int statusBarHeight = getStatusBarHeight(context);
+
+        String versionNameStr = String.valueOf(versionName);
+        String majorVersionStr = versionNameStr.split("\\.")[0];
+        int versionNameInt = Integer.parseInt(majorVersionStr);
+
+        if (versionNameInt >= 15) {
+            layoutParams.topMargin = statusBarHeight;
+        } else {
+            layoutParams.topMargin = Utils.dpToPx(5, context);
+        }
+        button.setLayoutParams(layoutParams);
+
+        button.setOnClickListener(view -> {
+
+            LinearLayout categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
+            showView(rootLayout, categoryLayout);
+        });
+
+
+        rootLayout.addView(button);
+
+        return rootLayout;
+    }
+
+    private void addAdditionalButtons(Context context, LinearLayout layout, CustomPreferences customPreferences, Context moduleContext) {
+
+        Button backupButton = new Button(context);
+        backupButton.setText(moduleContext.getResources().getString(R.string.Back_Up));
+        backupButton.setOnClickListener(v -> backupChatHistory(context, moduleContext));
+        layout.addView(backupButton);
+
+        Button restoreButton = new Button(context);
+        restoreButton.setText(moduleContext.getResources().getString(R.string.Restore));
+        restoreButton.setOnClickListener(v -> restoreChatHistory(context, moduleContext));
+        layout.addView(restoreButton);
+
+
+        Button backupfolderButton = new Button(context);
+        backupfolderButton.setText(moduleContext.getResources().getString(R.string.Talk_Picture_Back_up));
+        backupfolderButton.setOnClickListener(v -> backupChatsFolder(context, moduleContext));
+        layout.addView(backupfolderButton);
+
+        Button restorefolderButton = new Button(context);
+        restorefolderButton.setText(moduleContext.getResources().getString(R.string.Picure_Restore));
+        restorefolderButton.setOnClickListener(v -> restoreChatsFolder(context, moduleContext));
+        layout.addView(restorefolderButton);
+
+        if (limeOptions.MuteGroup.checked) {
+            Button muteGroupsButton = new Button(context);
+            muteGroupsButton.setText(moduleContext.getResources().getString(R.string.Mute_Group));
+            muteGroupsButton.setOnClickListener(v -> MuteGroups_Button(context, moduleContext));
+            layout.addView(muteGroupsButton);
+        }
+
+
+        Button keepUnreadButton = new Button(context);
+        keepUnreadButton.setText(moduleContext.getResources().getString(R.string.edit_margin_settings));
+        keepUnreadButton.setOnClickListener(v -> KeepUnread_Button(context, moduleContext));
+        layout.addView(keepUnreadButton);
+
+
+        if (limeOptions.preventUnsendMessage.checked) {
+            Button canceledMessageButton = new Button(context);
+            canceledMessageButton.setText(moduleContext.getResources().getString(R.string.canceled_message));
+            canceledMessageButton.setOnClickListener(v -> Cancel_Message_Button(context, moduleContext));
+            layout.addView(canceledMessageButton);
+        }
+
+        if (limeOptions.CansellNotification.checked) {
+            Button cansellNotificationButton = new Button(context);
+            cansellNotificationButton.setText(moduleContext.getResources().getString(R.string.CansellNotification));
+            cansellNotificationButton.setOnClickListener(v -> CansellNotification(context, moduleContext));
+            layout.addView(cansellNotificationButton);
+        }
+
+
+        if (limeOptions.BlockCheck.checked) {
+            Button blockCheckButton = new Button(context);
+            blockCheckButton.setText(moduleContext.getResources().getString(R.string.BlockCheck));
+            blockCheckButton.setOnClickListener(v -> Blocklist(context, moduleContext));
+            layout.addView(blockCheckButton);
+        }
+
+
+        if (limeOptions.preventUnsendMessage.checked) {
+            Button hideCanceledMessageButton = new Button(context);
+            hideCanceledMessageButton.setText(moduleContext.getResources().getString(R.string.hide_canceled_message));
+            hideCanceledMessageButton.setOnClickListener(v -> {
+                new AlertDialog.Builder(context)
+                        .setTitle(moduleContext.getResources().getString(R.string.HideSetting))
+                        .setMessage(moduleContext.getResources().getString(R.string.HideSetting_selection))
+                        .setPositiveButton(moduleContext.getResources().getString(R.string.Hide), (dialog, which) -> {
+                            updateMessagesVisibility(context, true, moduleContext);
+                        })
+                        .setNegativeButton(moduleContext.getResources().getString(R.string.Show), (dialog, which) -> {
+                            updateMessagesVisibility(context, false, moduleContext);
+                        })
+                        .setIcon(android.R.drawable.ic_dialog_info)
+                        .show();
+            });
+            layout.addView(hideCanceledMessageButton);
+        }
+
+
+        if (limeOptions.PinList.checked) {
+            Button pinListButton = new Button(context);
+            pinListButton.setText(moduleContext.getResources().getString(R.string.PinList));
+            pinListButton.setOnClickListener(v -> PinListButton(context, moduleContext));
+            layout.addView(pinListButton);
+        }
+
+        Button modifyRequestButton = new Button(context);
+        modifyRequestButton.setText(R.string.modify_request);
+        modifyRequestButton.setOnClickListener(v -> showModifyRequestDialog(context, customPreferences, moduleContext));
+        layout.addView(modifyRequestButton);
+
+        Button modifyResponseButton = new Button(context);
+        modifyResponseButton.setText(R.string.modify_response);
+        modifyResponseButton.setOnClickListener(v -> showModifyResponseDialog(context, customPreferences, moduleContext));
+        layout.addView(modifyResponseButton);
+    }
+
+
+    private void showModifyRequestDialog(Context context, CustomPreferences customPreferences, Context moduleContext) {
+        final String script = new String(Base64.decode(customPreferences.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP));
+        LinearLayout layoutModifyRequest = new LinearLayout(context);
+        layoutModifyRequest.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT));
+        layoutModifyRequest.setOrientation(LinearLayout.VERTICAL);
+        layoutModifyRequest.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
+
+        EditText editText = new EditText(context);
+        editText.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        editText.setTypeface(Typeface.MONOSPACE);
+        editText.setInputType(InputType.TYPE_CLASS_TEXT |
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE |
+                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
+                InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE);
+        editText.setMovementMethod(new ScrollingMovementMethod());
+        editText.setTextIsSelectable(true);
+        editText.setHorizontallyScrolling(true);
+        editText.setVerticalScrollBarEnabled(true);
+        editText.setHorizontalScrollBarEnabled(true);
+        editText.setText(script);
+
+        layoutModifyRequest.addView(editText);
+
+        LinearLayout buttonLayout = new LinearLayout(context);
+        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        buttonParams.topMargin = Utils.dpToPx(10, context);
+        buttonLayout.setLayoutParams(buttonParams);
+        buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
+
+        Button copyButton = new Button(context);
+        copyButton.setText(R.string.button_copy);
+        copyButton.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("", editText.getText().toString());
+            clipboard.setPrimaryClip(clip);
+        });
+        buttonLayout.addView(copyButton);
+
+        Button pasteButton = new Button(context);
+        pasteButton.setText(R.string.button_paste);
+        pasteButton.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null && clipboard.hasPrimaryClip()) {
+                ClipData clip = clipboard.getPrimaryClip();
+                if (clip != null && clip.getItemCount() > 0) {
+                    CharSequence pasteData = clip.getItemAt(0).getText();
+                    editText.setText(pasteData);
+                }
+            }
+        });
+        buttonLayout.addView(pasteButton);
+
+        layoutModifyRequest.addView(buttonLayout);
+        ScrollView scrollView = new ScrollView(context);
+        scrollView.addView(layoutModifyRequest);
+        AlertDialog.Builder builder = new AlertDialog.Builder(context)
+                .setTitle(R.string.modify_request)
+                .setView(scrollView)
+                .setPositiveButton(R.string.positive_button, (dialog, which) -> {
+                    String code = editText.getText().toString();
+                    if (!code.equals(script)) {
+                        customPreferences.saveSetting("encoded_js_modify_request", Base64.encodeToString(code.getBytes(), Base64.NO_WRAP));
+                        Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+                        Process.killProcess(Process.myPid());
+                        context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+                    }
+                })
+                .setNegativeButton(R.string.negative_button, null)
+                .setOnDismissListener(dialog -> editText.setText(script));
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
+
+
+    private void showModifyResponseDialog(Context context, CustomPreferences customPreferences, Context moduleContext) {
+        final String script = new String(Base64.decode(customPreferences.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP));
+        LinearLayout layoutModifyResponse = new LinearLayout(context);
+        layoutModifyResponse.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT));
+        layoutModifyResponse.setOrientation(LinearLayout.VERTICAL);
+        layoutModifyResponse.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
+
+        EditText editText = new EditText(context);
+        editText.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT));
+        editText.setTypeface(Typeface.MONOSPACE);
+        editText.setInputType(InputType.TYPE_CLASS_TEXT |
+                InputType.TYPE_TEXT_FLAG_MULTI_LINE |
+                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
+                InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE);
+        editText.setMovementMethod(new ScrollingMovementMethod());
+        editText.setTextIsSelectable(true);
+        editText.setHorizontallyScrolling(true);
+        editText.setVerticalScrollBarEnabled(true);
+        editText.setHorizontalScrollBarEnabled(true);
+        editText.setText(script);
+
+        layoutModifyResponse.addView(editText);
+
+        LinearLayout buttonLayout = new LinearLayout(context);
+        LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT);
+        buttonParams.topMargin = Utils.dpToPx(10, context);
+        buttonLayout.setLayoutParams(buttonParams);
+        buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
+
+        Button copyButton = new Button(context);
+        copyButton.setText(R.string.button_copy);
+        copyButton.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("", editText.getText().toString());
+            clipboard.setPrimaryClip(clip);
+        });
+        buttonLayout.addView(copyButton);
+
+        Button pasteButton = new Button(context);
+        pasteButton.setText(R.string.button_paste);
+        pasteButton.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+            if (clipboard != null && clipboard.hasPrimaryClip()) {
+                ClipData clip = clipboard.getPrimaryClip();
+                if (clip != null && clip.getItemCount() > 0) {
+                    CharSequence pasteData = clip.getItemAt(0).getText();
+                    editText.setText(pasteData);
+                }
+            }
+        });
+        buttonLayout.addView(pasteButton);
+
+        layoutModifyResponse.addView(buttonLayout);
+        ScrollView scrollView = new ScrollView(context);
+        scrollView.addView(layoutModifyResponse);
+        AlertDialog.Builder builder = new AlertDialog.Builder(context)
+                .setTitle(R.string.modify_response)
+                .setView(scrollView)
+                .setPositiveButton(R.string.positive_button, (dialog, which) -> {
+                    String code = editText.getText().toString();
+                    if (!code.equals(script)) {
+                        customPreferences.saveSetting("encoded_js_modify_response", Base64.encodeToString(code.getBytes(), Base64.NO_WRAP));
+                        Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+                        Process.killProcess(Process.myPid());
+                        context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+                    }
+                })
+                .setNegativeButton(R.string.negative_button, null)
+                .setOnDismissListener(dialog -> editText.setText(script));
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+    }
 
     public void CansellNotification(Context context, Context moduleContext) {
         // フォルダのパスを設定
@@ -1715,6 +2422,7 @@ public class EmbedOptions implements IHook {
             return layout;
         }
 
+        @SuppressLint("StaticFieldLeak")
         private void showRestoreDialog(Context context) {
             Set<String> hidden = hiddenManager.getHiddenProfiles();
             if (hidden.isEmpty()) {

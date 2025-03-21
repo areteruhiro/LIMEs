@@ -176,7 +176,7 @@ public class Constants {
         SettingCrash_Hook_Sub = new HookTarget("Te0.j", "");
 
 
-    } else if (versionName.equals("15.3.0")) {
+    } else if (isVersionInRange(versionName, "15.3.0", "15.4.0")) {
             /*
             TRADITIONAL_CHINESE
             static  HookTarget USER_AGENT_HOOK = new  HookTarget("qi1.c", "j");
@@ -211,6 +211,41 @@ public class Constants {
 
 
 
+    }
+
+    private static boolean isVersionInRange(String versionName, String minVersion, String maxVersion) {
+        try {
+
+            int[] currentVersion = parseVersion(versionName);
+            int[] minVersionArray = parseVersion(minVersion);
+            int[] maxVersionArray = parseVersion(maxVersion);
+
+            boolean isGreaterOrEqualMin = compareVersions(currentVersion, minVersionArray) >= 0;
+
+            boolean isLessThanMax = compareVersions(currentVersion, maxVersionArray) < 0;
+
+            return isGreaterOrEqualMin && isLessThanMax;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private static int[] parseVersion(String version) {
+        String[] parts = version.split("\\.");
+        int[] versionArray = new int[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            versionArray[i] = Integer.parseInt(parts[i]);
+        }
+        return versionArray;
+    }
+
+    private static int compareVersions(int[] version1, int[] version2) {
+        for (int i = 0; i < Math.min(version1.length, version2.length); i++) {
+            if (version1[i] < version2[i]) return -1;
+            if (version1[i] > version2[i]) return 1;
+        }
+        return 0;
     }
 
     public static class HookTarget {

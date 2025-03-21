@@ -216,5 +216,13 @@
     <string name="location">Location Message</string>
     <string name="SpoofAndroidId">androidIDを偽装する</string>
     <string name="SpoofUserAgent">デバイス情報を偽装する</string>
+    <string name="general">一般</string>
+    <string name="Ad">広告</string>
+    <string name="notifications">通知</string>
+    <string name="Theme">テーマ</string>
+    <string name="call">着信音/発信音</string>
+    <string name="chat">チャット</string>
+    <string name="other">その他</string>
+    <string name="NewOption">新しい設定画面にする</string>
 
 </resources>
