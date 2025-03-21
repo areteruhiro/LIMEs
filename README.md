@@ -3,11 +3,8 @@
  # 導入方法
  
  [ROOT](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20root.md) 
-
-
+ 
  [LsPatch](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20LsPatch.md) 
-
-
 
 
 ## 概要
@@ -17,12 +14,14 @@
 [機能リスト](https://github.com/areteruhiro/LIMEs/blob/master/FunctionLIST.md) 
  
 
-
 # 確認済みのバグやエラー
 アプリがクラッシュする→トラッキング通信をブロックするを無効にしてください <br>
 ・LIMEの設定ボタンが作成されない <br>
 ・設定が保存されない場合 <br>
 /storage/emulated/0/Download/LimeBackup/Setting/settings.properties を削除
+
+詳しくは
+https://t.me/LsPosedLIMEs/2425/2450
 
 ## トーク履歴のリストアについて
 
@@ -178,6 +177,4 @@ LINEアプリの <kbd>ホーム</kbd> > <kbd>⚙</kbd> から｢**設定**｣に
 新たなバグや修正方法を見つけた場合は、報告 をお願いします。
 
 To foreigners, please translate your report into English and submit it rather than translating it into Japanese.
-
-
 
