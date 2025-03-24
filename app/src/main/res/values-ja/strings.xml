@@ -177,7 +177,7 @@
     <string name="DarkkModSync">ピュアダークモードを端末のダークモードと同期させる</string>
     <string name="UserBlocked">ブロック可能性有</string>
     <string name="BlockCheck">ブロック監視[誤検知可能性有]</string>
-    <string name="SettingClick">LsPatch用設定のホームボタンを開く</string>
+    <string name="SettingClick">"(AntiApk)設定項目トークボタンを開く "</string>
     <string name="UnsendFix">動画送信中にタスクを切るとチャットリストが表示されないのを修正(動作が遅くなります)</string>
     <string name="photoboothButtonOption">通話項目LINEプリを削除</string>
     <string name="voiceButtonOption">通話項目 音声通話項目を非表示に</string>
@@ -210,4 +210,11 @@
     <string name="location">位置情報</string>
     <string name="SpoofAndroidId">androidIDを偽装する</string>
     <string name="SpoofUserAgent">デバイス情報を偽装する</string>
+    <string name="general">一般</string>
+    <string name="Ad">広告</string>
+    <string name="notifications">通知</string>
+    <string name="Theme">テーマ</string>
+    <string name="call">着信音/発信音</string>
+    <string name="chat">チャット</string>
+    <string name="other">その他</string>
 </resources>

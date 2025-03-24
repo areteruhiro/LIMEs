@@ -169,7 +169,7 @@
     <string name="DarkkModSync">將純黑暗模式與設備的黑暗模式同步</string>
     <string name="UserBlocked">可能已被封鎖</string>
     <string name="BlockCheck">區塊監控[可能有誤檢知]</string>
-    <string name="SettingClick">打開 LsPatch 的主按鈕設定。</string>
+    <string name="SettingClick">" 開啟設定項目對話按鈕"</string>
     <string name="UnsendFix">修正視頻傳輸中斷任務時聊天列表不顯示的問題（這可能會降低性能）。</string>
     <string name="AutoUpDateCheck">自動檢查更新。</string>
     <string name="HideSetting">發送撤回通知消息顯示設定。</string>
@@ -200,5 +200,12 @@
     <string name="file">File</string>
     <string name="SpoofAndroidId">androidIDを偽装する</string>
     <string name="SpoofUserAgent">デバイス情報を偽装する</string>
+    <string name="general">一般</string>
+    <string name="Ad">広告</string>
+    <string name="notifications">通知</string>
+    <string name="Theme">テーマ</string>
+    <string name="call">着信音/発信音</string>
+    <string name="chat">チャット</string>
+    <string name="other">その他</string>
 
 </resources>

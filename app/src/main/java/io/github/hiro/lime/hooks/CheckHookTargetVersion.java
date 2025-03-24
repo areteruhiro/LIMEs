@@ -36,13 +36,53 @@ public class CheckHookTargetVersion implements IHook {
 !versionNameStr.equals("15.1.3")&&
 !versionNameStr.equals("15.1.4")&&
 !versionNameStr.equals("15.2.1")&&
-!versionNameStr.equals("15.3.0")
-                        ) {
+ !(isVersionInRange(versionName, "15.3.0", "15.4.0")))
+                        {
                             Utils.addModuleAssetPath(context);
                             Toast.makeText(context.getApplicationContext(), context.getString(R.string.incompatible_version), Toast.LENGTH_SHORT).show();
                         }
                     }
                 }
         );
+    }
+    // バージョン比較用のメソッド
+    private static boolean isVersionInRange(String versionName, String minVersion, String maxVersion) {
+        try {
+            // バージョン文字列を数値に変換
+            int[] currentVersion = parseVersion(versionName);
+            int[] minVersionArray = parseVersion(minVersion);
+            int[] maxVersionArray = parseVersion(maxVersion);
+
+            // バージョンが minVersion 以上かどうかをチェック
+            boolean isGreaterOrEqualMin = compareVersions(currentVersion, minVersionArray) >= 0;
+
+            // バージョンが maxVersion 未満かどうかをチェック
+            boolean isLessThanMax = compareVersions(currentVersion, maxVersionArray) < 0;
+
+            // 両方の条件を満たすかどうかを返す
+            return isGreaterOrEqualMin && isLessThanMax;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // バージョン文字列を数値配列に変換
+    private static int[] parseVersion(String version) {
+        String[] parts = version.split("\\.");
+        int[] versionArray = new int[parts.length];
+        for (int i = 0; i < parts.length; i++) {
+            versionArray[i] = Integer.parseInt(parts[i]);
+        }
+        return versionArray;
+    }
+
+    // バージョン比較用のメソッド
+    private static int compareVersions(int[] version1, int[] version2) {
+        for (int i = 0; i < Math.min(version1.length, version2.length); i++) {
+            if (version1[i] < version2[i]) return -1;
+            if (version1[i] > version2[i]) return 1;
+        }
+        return 0;
     }
 }
