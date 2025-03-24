@@ -4,12 +4,11 @@
 https://t.me/LsPosedLIMEs
 
 GitHubは更新を頻繁にしません、テレグラムで最新の情報を確認してください
-
+（最終更新日JPN Time 2025/03/25  AM 4:38）
 
  # 導入方法
  
  [ROOT](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20root.md) 
- 
  [LsPatch](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20LsPatch.md) 
 
 
