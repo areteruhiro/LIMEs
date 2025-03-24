@@ -10,7 +10,7 @@ android {
         minSdk 22
         targetSdk 35
         versionCode 116160
-        versionName "1.21.0betas"
+        versionName "1.21.1Alpha"
         multiDexEnabled true
         proguardFiles += 'proguard-rules.pro'
         buildConfigField 'String', 'HOOK_TARGET_VERSION', '"141910383"'
@@ -70,8 +70,6 @@ dependencies {
     // implementation 'com.android.support:customtabs:23.0.0'
     compileOnly 'de.robv.android.xposed:api:82'
     implementation 'org.mozilla:rhino:1.7.15'
-    implementation 'androidx.sqlite:sqlite:2.2.1'
-    implementation 'androidx.sqlite:sqlite-framework:2.2.1'
     implementation 'net.zetetic:android-database-sqlcipher:4.5.3'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.0'
     implementation "androidx.work:work-runtime:2.10.0"

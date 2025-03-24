@@ -61,6 +61,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new BlockCheck(),
             new AutoUpdate(),
             new Removebutton(),
+
     };
 
 

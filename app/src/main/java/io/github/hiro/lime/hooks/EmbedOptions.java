@@ -21,6 +21,7 @@ import android.database.sqlite.SQLiteException;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Environment;
@@ -54,6 +55,8 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -397,16 +400,21 @@ public class EmbedOptions implements IHook {
                                         }
                                     });
                                     layout.addView(backupButton);
+
+
                                     Button restoreButton = new Button(context);
                                     restoreButton.setLayoutParams(buttonParams);
                                     restoreButton.setText(moduleContext.getResources().getString(R.string.Restore));
                                     restoreButton.setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
-                                            restoreChatHistory(context, moduleContext);
+                                            // ファイルピッカーを表示
+                                            showFilePicker(context, moduleContext);
                                         }
                                     });
                                     layout.addView(restoreButton);
+
+
                                     Button backupfolderButton = new Button(context);
                                     backupfolderButton.setLayoutParams(buttonParams);
                                     backupfolderButton.setText(moduleContext.getResources().getString(R.string.Talk_Picture_Back_up));
@@ -805,6 +813,68 @@ public class EmbedOptions implements IHook {
                         }
                     }
                     });
+
+        XposedHelpers.findAndHookMethod(
+                "androidx.fragment.app.n",
+                loadPackageParam.classLoader,
+                "onActivityResult",
+                int.class, int.class, Intent.class, // シグネチャ
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                                "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                        int requestCode = (int) param.args[0];
+                        int resultCode = (int) param.args[1];
+                        Intent data = (Intent) param.args[2];
+
+                        // 対象のリクエストコードと結果を確認
+                        if (requestCode == PICK_FILE_REQUEST_CODE
+                                && resultCode == Activity.RESULT_OK
+                                && data != null) {
+
+                            Context context = (Context) param.thisObject;
+                            Uri uri = data.getData();
+
+// バックグラウンドでファイル処理
+                            new Thread(() -> {
+                                File tempFile = null; // 一時ファイルの宣言
+                                try {
+                                    // 一時ファイルの作成
+                                    tempFile = File.createTempFile("restore", ".db", context.getCacheDir());
+
+                                    // URIからInputStreamを開く
+                                    try (InputStream is = context.getContentResolver().openInputStream(uri);
+                                         OutputStream os = new FileOutputStream(tempFile)) {
+
+                                        // ファイルコピー
+                                        byte[] buffer = new byte[1024];
+                                        int length;
+                                        while ((length = is.read(buffer)) > 0) {
+                                            os.write(buffer, 0, length);
+                                        }
+
+                                        // UIスレッドで復元処理
+                                        File finalTempFile = tempFile;
+                                        new Handler(Looper.getMainLooper()).post(() -> {
+                                            restoreChatHistory(context, moduleContext, finalTempFile);
+                                            finalTempFile.delete(); // 必要に応じて削除
+                                        });
+                                    }
+                                } catch (Exception e) {
+                                    // エラーハンドリング
+                                    new Handler(Looper.getMainLooper()).post(() ->
+                                            Toast.makeText(context, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+
+                                    // エラー発生時に一時ファイルを削除
+                                    if (tempFile != null && tempFile.exists()) {
+                                        tempFile.delete();
+                                    }
+                                }
+                            }).start();
+                        }
+                    }
+                });
     }
 
 
@@ -1184,9 +1254,13 @@ public class EmbedOptions implements IHook {
 
         Button restoreButton = new Button(context);
         restoreButton.setText(moduleContext.getResources().getString(R.string.Restore));
-        restoreButton.setOnClickListener(v -> restoreChatHistory(context, moduleContext));
+        restoreButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                showFilePicker(context, moduleContext);
+            }
+        });
         layout.addView(restoreButton);
-
 
         Button backupfolderButton = new Button(context);
         backupfolderButton.setText(moduleContext.getResources().getString(R.string.Talk_Picture_Back_up));
@@ -2042,6 +2116,7 @@ public class EmbedOptions implements IHook {
 
 
     private void backupChatHistory(Context appContext,Context moduleContext) {
+
         File originalDbFile = appContext.getDatabasePath("naver_line");
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
         if (!backupDir.exists()) {
@@ -2639,10 +2714,30 @@ public class EmbedOptions implements IHook {
         }
     }
 
-    private void restoreChatHistory(Context context,Context moduleContext) {
+
+    private static final int PICK_FILE_REQUEST_CODE = 1001;
+    private void showFilePicker(Context context, Context moduleContext) {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("*/*"); // すべてのファイルタイプを許可
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+
+        try {
+            // ファイルピッカーを表示
+            if (context instanceof Activity) {
+                ((Activity) context).startActivityForResult(Intent.createChooser(intent, "Select a file to restore"), PICK_FILE_REQUEST_CODE);
+            } else {
+                Toast.makeText(context, "Context is not an Activity", Toast.LENGTH_SHORT).show();
+            }
+        } catch (android.content.ActivityNotFoundException ex) {
+            Toast.makeText(context, "Please install a File Manager.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+
+    private void restoreChatHistory(Context context,Context moduleContext,File finalTempFile) {
 
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-        File backupDbFile = new File(backupDir, "naver_line_backup.db");
+        File backupDbFile = new File(String.valueOf(finalTempFile));
 
         if (!backupDbFile.exists()) {
             Toast.makeText(context,moduleContext.getResources().getString(R.string.Backup_file_not_found), Toast.LENGTH_SHORT).show();
