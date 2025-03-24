@@ -70,20 +70,25 @@ https://github.com/areteruhiro/LIMEs/issues/10
 以下の方々のおかげで開発を継続できています。大変感謝しています。<br>
 We are very grateful to the following people for making this possible:
 
-@Akira Kansaki
-@ハチワレ
+@Kansakitw 
+@ハチワレ 
 @WE ZARD
 @Imada
+@匿名希望さん
+@ユウさん
+@Yukiさん
+@Fuku5656 さん
+@としさん
 
 継続した開発時間の確保のため寄付のほどお願いいたします<br>
 Please donate to ensure continued development time.
 
-* [100円 PayPay](https://qr.paypay.ne.jp/p2p01_ubl01Ai8og514kXo)<br>
+* [100円 PayPay](https://qr.paypay.ne.jp/p2p01_0NFrOjV8MQET1P3O)<br>
 * [300円
-PayPay](https://qr.paypay.ne.jp/p2p01_R3ArtRGFheTBTId3)<br>
+PayPay](https://qr.paypay.ne.jp/p2p01_w1SIM5yqMfIH97xo)<br>
 
 * [Free yen 
-PayPay〜3/2](https://qr.paypay.ne.jp/p2p01_cAiX6AGzTTzmtxkZ)<br>
+PayPay〜3/2](https://qr.paypay.ne.jp/p2p01_ovPEIR2hzIq9T3lc)<br>
 
 *PayPay ID
 hiro_1114
