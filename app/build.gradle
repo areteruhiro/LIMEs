@@ -41,7 +41,6 @@ android {
         release {
             if (file('release.jks').exists()) {
                 signingConfig signingConfigs.release
-                isMinifyEnabled = true
             }
         }
     }
