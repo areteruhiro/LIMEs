@@ -20,8 +20,8 @@ public class CustomPreferences {
     private final boolean isXposedContext;
 
     public CustomPreferences(Context context) throws PackageManager.NameNotFoundException, IOException {
-        File settingsFileExternal1;
         if (context != null) {
+
             this.isXposedContext = true;
 
             File internalDir = new File(context.getFilesDir(), SETTINGS_DIR);
@@ -41,32 +41,38 @@ public class CustomPreferences {
                         + " | Storage state: "
                         + Environment.getExternalStorageState());
             }
-            settingsFileExternal1 = new File(externalDir, SETTINGS_FILE);
+            settingsFileExternal = new File(externalDir, SETTINGS_FILE);
 
-            if (!settingsFileInternal.exists() && settingsFileExternal1.exists()) {
-                copyFile(settingsFileExternal1, settingsFileInternal);
-            } else if (!settingsFileExternal1.exists() && settingsFileInternal.exists()) {
-                copyFile(settingsFileInternal, settingsFileExternal1);
+
+            if (!settingsFileInternal.exists() && settingsFileExternal.exists()) {
+                copyFile(settingsFileExternal, settingsFileInternal);
+            } else if (!settingsFileExternal.exists() && settingsFileInternal.exists()) {
+                copyFile(settingsFileInternal, settingsFileExternal);
             }
 
         } else {
+
             this.isXposedContext = false;
+
 
             File externalBaseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
             File externalDir = new File(externalBaseDir, SETTINGS_DIR);
-            settingsFileExternal1 = new File(externalDir, SETTINGS_FILE);
+            settingsFileExternal = new File(externalDir, SETTINGS_FILE);
 
-            // ファイルが存在しない場合、作成しない
-            if (!settingsFileExternal1.exists()) {
-                settingsFileExternal1 = null; // ファイルを作成しないことを示す
+
+            if (!settingsFileExternal.exists()) {
+                throw new FileNotFoundException("External settings file not found at: "
+                        + settingsFileExternal.getAbsolutePath()
+                        + "\nPlease ensure the file exists or run the hooked app first");
             }
 
             settingsFileInternal = null;
+
         }
 
-        settingsFileExternal = settingsFileExternal1;
         syncFiles();
     }
+
     private void syncFiles() {
         if (!isXposedContext || settingsFileInternal == null) return;
 
@@ -83,56 +89,13 @@ public class CustomPreferences {
                     copyFile(settingsFileExternal, settingsFileInternal);
                 }
             } else if (internalExists) {
-
-                if (!canAccessExternalStorage()) {
-
-                    if (settingsFileExternal.exists()) {
-                        if (!settingsFileExternal.delete()) {
-
-                            File renamedFile = new File(settingsFileExternal.getParent(), "old_" + settingsFileExternal.getName());
-                            if (!settingsFileExternal.renameTo(renamedFile)) {
-                                System.out.println("Failed to delete or rename external file");
-                            }
-                        }
-                    }
-
-                    copyFile(settingsFileInternal, settingsFileExternal);
-                } else {
-                    copyFile(settingsFileInternal, settingsFileExternal);
-                }
+                copyFile(settingsFileInternal, settingsFileExternal);
             }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
-    /**
-     * 外部ストレージにアクセスできるかどうかを確認するメソッド
-     */
-    private boolean canAccessExternalStorage() {
-        String state = Environment.getExternalStorageState();
-        if (!Environment.MEDIA_MOUNTED.equals(state)) {
-
-            return false;
-        }
-
-        File externalDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        if (!externalDir.exists() && !externalDir.mkdirs()) {
-
-            return false;
-        }
-
-        File testFile = new File(externalDir, "test.tmp");
-        try {
-            if (!testFile.createNewFile()) {
-                return false;
-            }
-            testFile.delete();
-            return true;
-        } catch (IOException e) {
-            return false;
-        }
-    }
     private boolean filesDiffer(File file1, File file2) throws IOException {
         if (file1.length() != file2.length()) return true;
 
@@ -155,19 +118,20 @@ public class CustomPreferences {
             int length;
             while ((length = in.read(buffer)) > 0) {
                 out.write(buffer, 0, length);
-
- }
+            }
         }
     }
+
     public boolean saveSetting(String key, String value) {
         if (isXposedContext && settingsFileInternal != null) {
             boolean successInternal = saveToFile(settingsFileInternal, key, value, false);
-            boolean successExternal = settingsFileExternal != null ? saveToFile(settingsFileExternal, key, value, true) : true;
+            boolean successExternal = saveToFile(settingsFileExternal, key, value, true);
             return successInternal && successExternal;
         } else {
-            return settingsFileExternal != null ? saveToFile(settingsFileExternal, key, value, false) : false;
+            return saveToFile(settingsFileExternal, key, value, false);
         }
     }
+
     private boolean saveToFile(File file, String key, String value, boolean allowRetry) {
         Properties properties = new Properties();
         if (file.exists()) {
@@ -210,7 +174,7 @@ public class CustomPreferences {
 
     public String getSetting(String key, String defaultValue) {
         File targetFile = isXposedContext && settingsFileInternal != null ? settingsFileInternal : settingsFileExternal;
-        if (targetFile == null || !targetFile.exists()) {
+        if (!targetFile.exists()) {
             return defaultValue;
         }
 

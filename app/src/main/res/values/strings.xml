@@ -224,5 +224,6 @@
     <string name="chat">チャット</string>
     <string name="other">その他</string>
     <string name="NewOption">新しい設定画面にする</string>
+    <string name="PhotoSave">PhotoSave(DevNow)</string>
 
 </resources>

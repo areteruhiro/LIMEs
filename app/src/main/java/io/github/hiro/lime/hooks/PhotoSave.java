@@ -56,8 +56,8 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 
 public class PhotoSave implements IHook {
-    private SQLiteDatabase db3 = null;
-    private SQLiteDatabase db4 = null;
+    private SQLiteDatabase db = null;
+    private SQLiteDatabase dbContact = null;
 
     private volatile boolean isDh1Invoked = false;
     private volatile boolean isDh1Invoked2 = false;
@@ -65,9 +65,10 @@ public class PhotoSave implements IHook {
     private long currentTimeMillisValue = 0;
     private String currentCreatedTime = "";
     private String currentContentType = "";
-
-
-
+    private String serverMessageId = "";
+    private String chatid = "";
+    private String senderMid = "";
+    private String mid = "";
     private volatile boolean album1 = false;
     private volatile boolean album2 = false;
     private volatile boolean album3 = false;
@@ -80,7 +81,22 @@ public class PhotoSave implements IHook {
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
+        if (!limeOptions.PhotoSave.checked) return;
 
+        Context context = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
+                XposedHelpers.findClass("android.app.ActivityThread", null),
+                "currentActivityThread"
+        ), "getSystemContext");
+
+        PackageManager pm = context.getPackageManager();
+        String versionName = ""; // 初期化
+        try {
+            versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) {
+            e.printStackTrace();
+        }
+
+        if (!isVersionInRange(versionName, "15.3.0", "15.5.0"))return;
         XposedHelpers.findAndHookMethod(Application.class, "onCreate", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -90,9 +106,9 @@ public class PhotoSave implements IHook {
                 if (appContext == null) {
                     return;
                 }
-                File dbFile3 = appContext.getDatabasePath("naver_line");
-                File dbFile4 = appContext.getDatabasePath("contact");
-                if (dbFile3.exists() && dbFile4.exists()) {
+                File dbFile = appContext.getDatabasePath("naver_line");
+                File dbFileContact = appContext.getDatabasePath("contact");
+                if (dbFile.exists() && dbFileContact.exists()) {
                     SQLiteDatabase.OpenParams.Builder builder1 = new SQLiteDatabase.OpenParams.Builder();
                     builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
                     SQLiteDatabase.OpenParams dbParams1 = builder1.build();
@@ -103,13 +119,13 @@ public class PhotoSave implements IHook {
                     SQLiteDatabase.OpenParams dbParams2 = builder2.build();
 
 
-                    db3 = SQLiteDatabase.openDatabase(dbFile3, dbParams1);
-                    db4 = SQLiteDatabase.openDatabase(dbFile4, dbParams2);
+                    db = SQLiteDatabase.openDatabase(dbFile, dbParams1);
+                    dbContact = SQLiteDatabase.openDatabase(dbFileContact, dbParams2);
 
 
                     Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                             "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
-                    SaveCatch(loadPackageParam, db3, db4, appContext, moduleContext);
+                    SaveCatch(loadPackageParam, db, dbContact, appContext, moduleContext);
                 }
             }
         });
@@ -156,7 +172,7 @@ public class PhotoSave implements IHook {
 
 
 
-    private void SaveCatch(XC_LoadPackage.LoadPackageParam loadPackageParam, SQLiteDatabase db3, SQLiteDatabase db4, Context appContext, Context moduleContext) throws ClassNotFoundException {
+    private void SaveCatch(XC_LoadPackage.LoadPackageParam loadPackageParam, SQLiteDatabase db, SQLiteDatabase dbContact, Context appContext, Context moduleContext) throws ClassNotFoundException {
 
 // チャット内
         XposedBridge.hookAllMethods(
@@ -169,25 +185,27 @@ public class PhotoSave implements IHook {
                             long currentTime = (long) param.getResult();
                             XposedBridge.log("[Dh1.p0] System.currentTimeMillis() returned: " + currentTime);
 
-                            // 新しいタスクを作成してキューに追加
                             synchronized (fileTasks) {
                                 fileTasks.add(new ImageFileTask(
                                         currentTime,
                                         currentCreatedTime,
-                                        currentContentType
+                                        currentContentType,
+                                        serverMessageId,
+                                        chatid,
+                                        senderMid
                                 ));
                             }
 
                             isDh1Invoked = false;
                             isDh1Invoked2 = true;
-                            handleFileRename(); // 即時処理を開始
+                            //handleFileRename(db,dbContact); // 即時処理を開始
                         }
                     }
                 }
         );
 
         XposedBridge.hookAllMethods(
-                loadPackageParam.classLoader.loadClass("Dh1.p0"),
+                loadPackageParam.classLoader.loadClass(Constants.PhotoSave.className),
                 "invokeSuspend",
                 new XC_MethodHook() {
                     @Override
@@ -202,15 +220,16 @@ public class PhotoSave implements IHook {
 
                         String resultStr = result.toString();
                         if (resultStr.startsWith("ChatHistoryMessageData(")) {
-                            // 必要なフィールドを抽出
-                            String serverMessageId = extractField(resultStr, "serverMessageId=");
-                            String chatId = extractField(resultStr, "chatId=");
+
+                            XposedBridge.log(resultStr);
+                            serverMessageId = extractField(resultStr, "serverMessageId=");
+                            chatid = extractField(resultStr, "chatId=");
                             currentContentType = extractField(resultStr, "contentType=");
                             currentCreatedTime = extractField(resultStr, "createdTimeMillis=");
-
+                            senderMid =extractField(resultStr, "senderMid=");
                             String logMessage = String.format(
                                     "[Message]\nServerMsgID: %s\nChatID: %s\nType: %s\nTime: %s",
-                                    serverMessageId, chatId, currentContentType, formatTimestamp(currentCreatedTime)
+                                    serverMessageId, chatid, currentContentType, formatTimestamp(currentCreatedTime)
                             );
                             XposedBridge.log(logMessage);
 
@@ -225,14 +244,14 @@ public class PhotoSave implements IHook {
 
         // Ec1.Uのフック
         XposedBridge.hookAllMethods(
-                loadPackageParam.classLoader.loadClass("Ec1.U"),
+                loadPackageParam.classLoader.loadClass(Constants.PhotoSave1.className),
                 "invokeSuspend",
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         if (isDh1Invoked2 && "IMAGE".equals(currentContentType)) {
                             isDh1Invoked2 = false; // フラグをリセット
-                            handleFileRename();
+                            handleFileRename(db,dbContact);
                         }
                     }
                 }
@@ -247,7 +266,7 @@ public class PhotoSave implements IHook {
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         if (isDh1Invoked2 && "IMAGE".equals(currentContentType)) {
                             isDh1Invoked2 = false; // フラグをリセット
-                            handleFileRename();
+                            handleFileRename(db,dbContact);
                         }
                     }
                 }
@@ -255,11 +274,9 @@ public class PhotoSave implements IHook {
 
 //アルバムの処理
 
-
- ////////////////////////////////////////////////////
-        //albumオリジナルファイル名
+//////////////////////////////////////////////
         XposedBridge.hookAllMethods(
-                loadPackageParam.classLoader.loadClass("XQ.g"),
+                loadPackageParam.classLoader.loadClass(Constants.PhotoSave2.className),
                 "a",
                 new XC_MethodHook() {
                     @Override
@@ -269,26 +286,6 @@ public class PhotoSave implements IHook {
                     }
                 }
         );
-/*
-        XposedBridge.hookAllMethods(
-                System.class,
-                "currentTimeMillis",
-                new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        if (album1) {
-                            long currentTime = (long) param.getResult();
-                            XposedBridge.log("(album) " + currentTime);
-                            album1 = false;
-
-                        }
-                    }
-                }
-        );
-        */
-
-//////////////////////////////////////////////
-
 //album単体
         XposedHelpers.findAndHookMethod(
                 "com.linecorp.line.album.data.model.AlbumPhotoModel",
@@ -302,7 +299,7 @@ public class PhotoSave implements IHook {
                         XposedBridge.log("[AlbumPhotoModel] " + modelInfo);
 
                         // 必要なフィールドを抽出
-                        String mid = extractField(modelInfo, "mid=");
+                       mid = extractField(modelInfo, "mid=");
                         String createdTime = extractField(modelInfo, "createdTime=");
                         String resourceType = extractField(modelInfo, "resourceType=");
                         currentOid = extractField(modelInfo, "oid=");
@@ -351,7 +348,7 @@ public class PhotoSave implements IHook {
         );
 
         XposedBridge.hookAllMethods(
-                loadPackageParam.classLoader.loadClass("lm.K$b"),
+                loadPackageParam.classLoader.loadClass(Constants.PhotoSave3.className),
                 "invokeSuspend",
                 new XC_MethodHook() {
                     @Override
@@ -375,9 +372,9 @@ public class PhotoSave implements IHook {
                         // album2モード判定
                         album2 = containsKotlinUnit;
 
-                        if (album2 && currentAlbumTime != 0) {
+
                             new Handler(Looper.getMainLooper()).post(new Runnable() {
-                                final int MAX_RETRIES = 30; // 最大30回試行
+                                final int MAX_RETRIES = 5; // 最大30回試行
                                 final long RETRY_INTERVAL = 5000; // 500ミリ秒間隔
                                 int retryCount = 0;
 
@@ -392,10 +389,10 @@ public class PhotoSave implements IHook {
                                             XposedBridge.log("Failed to create LINE directory");
                                             return;
                                         }
-
+                                        String SenderNameAlbum = queryDatabase(dbContact, "SELECT profile_name FROM contacts WHERE mid=?", mid);
                                         String tempFileName = currentAlbumTime + ".jpg";
                                         String baseName = currentAlbumFormattedTime.replace(" ", "_").replace(":", "-");
-                                        String newFileName = baseName + ".jpg";
+                                        String newFileName = SenderNameAlbum + "-album-"+ baseName + ".jpg";
 
                                         File tempFile = new File(lineDir, tempFileName);
                                         File newFile = new File(lineDir, newFileName);
@@ -415,7 +412,7 @@ public class PhotoSave implements IHook {
                                                 tryRetry("Failed to rename file");
                                             }
                                         } else {
-                                            tryRetry("Temp file not found: " + tempFileName + " (attempt " + (retryCount + 1) + ")");
+                                           // tryRetry("Temp file not found: " + tempFileName + " (attempt " + (retryCount + 1) + ")");
                                         }
                                     } catch (Exception e) {
                                         tryRetry("Error: " + e.getMessage());
@@ -433,132 +430,91 @@ public class PhotoSave implements IHook {
                                 }
                             });
                         }
-                    }
+
                 }
         );
 
 
 
-        XposedBridge.hookAllMethods(
-                loadPackageParam.classLoader.loadClass("nl.c"),
-                "invokeSuspend",
-                new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        StringBuilder argsString = new StringBuilder("Args: ");
-                        for (int i = 0; i < param.args.length; i++) {
-                            Object arg = param.args[i];
-                            argsString.append("Arg[").append(i).append("]: ")
-                                    .append(arg != null ? arg.toString() : "null")
-                                    .append(", ");
-                        }
+//        XposedBridge.hookAllMethods(
+//                loadPackageParam.classLoader.loadClass("nl.c"),
+//                "invokeSuspend",
+//                new XC_MethodHook() {
+//                    @Override
+//                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+//                        StringBuilder argsString = new StringBuilder("Args: ");
+//                        for (int i = 0; i < param.args.length; i++) {
+//                            Object arg = param.args[i];
+//                            argsString.append("Arg[").append(i).append("]: ")
+//                                    .append(arg != null ? arg.toString() : "null")
+//                                    .append(", ");
+//                        }
+//                        Object result = param.getResult();
+//                        String resultStr = result != null ? result.toString() : "null";
+//                        XposedBridge.log(resultStr);
+//                        if (album3) {
+//                            album3 = false;
+//
+//
+//
+//                            String oid2 = extractField(resultStr, "oid=");
+//
+//                            if (currentOid.equals(oid2)) {
+//                                album4 = true;
+//
+//                            }
+//                        }
+//                    }
+//                }
+//        );
 
-                        if (album3) {
-                            album3 = false;
-                            Object result = param.getResult();
-                            String resultStr = result != null ? result.toString() : "null";
-                            XposedBridge.log("[nl.c] " + resultStr);
-
-                            String oid2 = extractField(resultStr, "oid=");
-                            XposedBridge.log("OID : " + oid2);
-                            if (currentOid.equals(oid2)) {
-                                album4 = true;
-                                XposedBridge.log("OID matched: " + currentOid);
-                            }
-                        }
-                    }
-                }
-        );
-
-        XposedBridge.hookAllMethods(
-                loadPackageParam.classLoader.loadClass("kl.h"),
-                "invokeSuspend",
-                new XC_MethodHook() {
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        if (album5) {
-                            album5 = false;
-                            XposedBridge.log("[kl.h] Starting file processing");
-
-                            // ファイル処理を開始
-                            processAlbumImageFile();
-                        }
-                    }
-                }
-        );
+//        XposedBridge.hookAllMethods(
+//                loadPackageParam.classLoader.loadClass("kl.h"),
+//                "invokeSuspend",
+//                new XC_MethodHook() {
+//                    @Override
+//                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                        Object result = param.getResult();
+//                        XposedBridge.log("kl.h :: " + result);
+//                        processAlbumImageFile();
+//
+//                    }
+//                }
+//        );
     }
 
 
-    private void processAlbumImageFile() {
-        new Handler(Looper.getMainLooper()).post(new Runnable() {
-            final int MAX_RETRIES = 30;
-            final long RETRY_INTERVAL = 500;
-            int retryCount = 0;
-
-            @Override
-            public void run() {
-                try {
-                    File lineDir = new File(Environment.getExternalStoragePublicDirectory(
-                            Environment.DIRECTORY_PICTURES), "LINE");
-
-                    if (!lineDir.exists() && !lineDir.mkdirs()) {
-                        tryRetry("Failed to create directory");
-                        return;
-                    }
-
-                    String tempFileName = currentAlbumTime + ".jpg";
-                    String baseName = currentAlbumFormattedTime.replace(" ", "_").replace(":", "-");
-                    String newFileName = baseName + ".jpg";
-
-                    File tempFile = new File(lineDir, tempFileName);
-                    File newFile = new File(lineDir, newFileName);
-
-                    if (tempFile.exists()) {
-                        // 重複処理
-                        int counter = 1;
-                        while (newFile.exists()) {
-                            newFileName = baseName + "_" + counter + ".jpg";
-                            newFile = new File(lineDir, newFileName);
-                            counter++;
-                        }
-
-                        if (tempFile.renameTo(newFile)) {
-                            XposedBridge.log("Successfully renamed: " + tempFileName + " -> " + newFileName);
-                        } else {
-                            tryRetry("Failed to rename file");
-                        }
-                    } else {
-                        tryRetry("File not found: " + tempFileName + " (attempt " + (retryCount + 1) + ")");
-                    }
-                } catch (Exception e) {
-                    tryRetry("Error: " + e.getMessage());
-                }
-            }
-
-            private void tryRetry(String message) {
-                XposedBridge.log(message);
-                if (retryCount < MAX_RETRIES) {
-                    retryCount++;
-                    new Handler(Looper.getMainLooper()).postDelayed(this, RETRY_INTERVAL);
-                } else {
-                    XposedBridge.log("Max retries reached for: " + currentAlbumTime + ".jpg");
-                }
-            }
-        });
+    private String queryDatabase(SQLiteDatabase db, String query, String... selectionArgs) {
+        if (db == null) {
+            return null;
+        }
+        Cursor cursor = db.rawQuery(query, selectionArgs);
+        String result = null;
+        if (cursor.moveToFirst()) {
+            result = cursor.getString(0);
+        }
+        cursor.close();
+        return result;
     }
-
 
     private static class ImageFileTask {
         final long tempFileTime;
         final String createdTime;
         final String contentType;
+        final String severid;
+        final  String chatid;
+        final  String senderMid;
+
         boolean processed;
         int retryCount = 0;
 
-        ImageFileTask(long tempFileTime, String createdTime, String contentType) {
+        ImageFileTask(long tempFileTime, String createdTime, String contentType, String Serverid,String chatid,String senderMid) {
             this.tempFileTime = tempFileTime;
             this.createdTime = createdTime;
             this.contentType = contentType;
+            this.severid = Serverid;
+            this.chatid = chatid;
+            this.senderMid = senderMid;
         }
     }
 
@@ -566,7 +522,7 @@ public class PhotoSave implements IHook {
 
     private final ConcurrentLinkedQueue<ImageFileTask> fileTasks = new ConcurrentLinkedQueue<>();
 
-    private void handleFileRename() {
+    private void handleFileRename(SQLiteDatabase db,SQLiteDatabase dbContact) {
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             final int MAX_RETRIES = 3;
             final long RETRY_INTERVAL = 300;
@@ -582,10 +538,15 @@ public class PhotoSave implements IHook {
                             iterator.remove();
                             continue;
                         }
+                        String talkName = queryDatabase(dbContact, "SELECT profile_name FROM contacts WHERE mid=?", chatid);
+                        String groupName = queryDatabase(db, "SELECT name FROM groups WHERE id=?", chatid);
+                        String name = (groupName != null ? groupName : (talkName != null ? talkName : "No Name" + ":" + ":" + "talkId" + chatid));
 
+                        String SenderName = queryDatabase(dbContact, "SELECT profile_name FROM contacts WHERE mid=?", senderMid);
+                        SenderName = SenderName != null ? SenderName : "Self";
                         try {
                             String tempFileName = task.tempFileTime + ".jpg";
-                            String newFileName = formatForFilename(task.createdTime) + ".jpg";
+                            String newFileName = SenderName +"-"+ formatForFilename(task.createdTime) +"-"+name+  ".jpg";
                             File lineDir = new File(Environment.getExternalStoragePublicDirectory(
                                     Environment.DIRECTORY_PICTURES), "LINE");
 
@@ -600,7 +561,7 @@ public class PhotoSave implements IHook {
                                 int counter = 1;
                                 File newFile = new File(lineDir, newFileName);
                                 while (newFile.exists()) {
-                                    newFileName = formatForFilename(task.createdTime) + "_" + counter + ".jpg";
+                                    newFileName = SenderName +"-"+formatForFilename(task.createdTime) + "_" + name+ counter + ".jpg";
                                     newFile = new File(lineDir, newFileName);
                                     counter++;
                                 }
@@ -665,8 +626,46 @@ public class PhotoSave implements IHook {
             return millisStr + " (raw)";
         }
     }
+
+
+
+private static boolean isVersionInRange(String versionName, String minVersion, String maxVersion) {
+    try {
+        // バージョン文字列を数値に変換
+        int[] currentVersion = parseVersion(versionName);
+        int[] minVersionArray = parseVersion(minVersion);
+        int[] maxVersionArray = parseVersion(maxVersion);
+
+        // バージョンが minVersion 以上かどうかをチェック
+        boolean isGreaterOrEqualMin = compareVersions(currentVersion, minVersionArray) >= 0;
+
+        // バージョンが maxVersion 未満かどうかをチェック
+        boolean isLessThanMax = compareVersions(currentVersion, maxVersionArray) < 0;
+
+        // 両方の条件を満たすかどうかを返す
+        return isGreaterOrEqualMin && isLessThanMax;
+    } catch (Exception e) {
+        e.printStackTrace();
+        return false;
+    }
 }
 
+// バージョン文字列を数値配列に変換
+private static int[] parseVersion(String version) {
+    String[] parts = version.split("\\.");
+    int[] versionArray = new int[parts.length];
+    for (int i = 0; i < parts.length; i++) {
+        versionArray[i] = Integer.parseInt(parts[i]);
+    }
+    return versionArray;
+}
 
-
-
+// バージョン比較用のメソッド
+private static int compareVersions(int[] version1, int[] version2) {
+    for (int i = 0; i < Math.min(version1.length, version2.length); i++) {
+        if (version1[i] < version2[i]) return -1;
+        if (version1[i] > version2[i]) return 1;
+    }
+    return 0;
+}
+}

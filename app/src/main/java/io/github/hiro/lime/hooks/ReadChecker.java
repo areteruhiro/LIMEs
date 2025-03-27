@@ -606,48 +606,61 @@ public class ReadChecker implements IHook {
 
     private void processRelatedRecords(String groupId, String currentServerId, String finalcontent) {
         if (limeDatabase == null) return;
-        // 現在のレコードのtrimmed user_name取得
-        String currentTrimmedName = extractTrimmedName(finalcontent);
-        // 同一group_idでserver_idが異なるレコードを検索
-        Cursor cursor = limeDatabase.rawQuery(
+
+        // トランザクション開始（安全な一括処理）
+        limeDatabase.beginTransaction();
+        try (Cursor cursor = limeDatabase.rawQuery(
                 "SELECT server_id, user_name, Sent_User, Send_User, group_name, content, created_time " +
                         "FROM read_message WHERE group_id = ? AND server_id != ?",
                 new String[]{groupId, currentServerId}
-        );
+        )) {
+            String currentTrimmedName = extractTrimmedName(finalcontent);
 
-        while (cursor.moveToNext()) {
-            String targetServerId = cursor.getString(0);
-            String targetUserName = cursor.getString(1);
-            String sentUser = cursor.getString(2);
-            String sendUser = cursor.getString(3);
-            String groupName = cursor.getString(4);
-            String content = cursor.getString(5);
-            String createdTime = cursor.getString(6);
+            while (cursor.moveToNext()) {
+                String targetServerId = cursor.getString(0);
+                String targetUserName = cursor.getString(1);
+                String sentUser = cursor.getString(2);
+                String sendUser = cursor.getString(3);
+                String groupName = cursor.getString(4);
+                String content = cursor.getString(5);
+                String createdTime = cursor.getString(6);
 
-            // 比較対象のtrimmed user_name取得
-            String targetTrimmedName = extractTrimmedName(targetUserName);
+                String targetTrimmedName = extractTrimmedName(targetUserName);
 
-            // 名前比較処理
-            if (currentTrimmedName != null && targetTrimmedName != null &&
-                    !currentTrimmedName.equals(targetTrimmedName)) {
 
-                // 新規レコード作成（元のuser_nameを保持）
-                ContentValues values = new ContentValues();
-                values.put("group_id", groupId);
-                values.put("server_id", targetServerId);
-                values.put("Sent_User", sentUser);
-                values.put("Send_User", sendUser);
-                values.put("group_name", groupName);
-                values.put("content", content);
-                values.put("user_name", targetUserName); // トリミング前の値を保持
-                values.put("created_time", createdTime);
+                if (currentTrimmedName != null && targetTrimmedName != null &&
+                        !currentTrimmedName.equals(targetTrimmedName) &&
+                        !isDuplicateRecord(targetServerId, targetUserName)) {
 
-                limeDatabase.insert("read_message", null, values);
+                    ContentValues values = new ContentValues();
+                    values.put("group_id", groupId);
+                    values.put("server_id", targetServerId);
+                    values.put("Sent_User", sentUser);
+                    values.put("Send_User", sendUser);
+                    values.put("group_name", groupName);
+                    values.put("content", content);
+                    values.put("user_name", targetUserName);
+                    values.put("created_time", createdTime);
+
+                    limeDatabase.insert("read_message", null, values);
+                }
+            }
+            limeDatabase.setTransactionSuccessful();
+        } finally {
+            limeDatabase.endTransaction();
+        }
+    }
+    private boolean isDuplicateRecord(String serverId, String userName) {
+        try (Cursor cursor = limeDatabase.rawQuery(
+                "SELECT COUNT(*) FROM read_message WHERE server_id = ? AND user_name = ?",
+                new String[]{serverId, userName}
+        )) {
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(0) > 0; // 1件以上あれば重複
             }
         }
-        cursor.close();
+        return false;
     }
-
     // ユーザー名トリミングメソッド
     private String extractTrimmedName(String formattedName) {
         if (formattedName == null) return null;
@@ -986,7 +999,7 @@ public class ReadChecker implements IHook {
             limeDatabase.beginTransaction();
             insertRecord(SendUser, groupId, serverId, SentUser, groupName,
                     finalContent, formattedUserName, timeFormatted);
-            copyRelatedRecords(groupId, serverId, SentUser, formattedUserName);
+            copyRelatedRecords(groupId, serverId, SentUser, formattedUserName,timeFormatted);
 
             limeDatabase.setTransactionSuccessful();
         } finally {
@@ -995,7 +1008,7 @@ public class ReadChecker implements IHook {
     }
 
     private void copyRelatedRecords(String groupId, String sourceServerId,
-                                    String SentUser, String user_name) {
+                                    String SentUser, String user_name,String timeFormatted) {
         final String selectQuery =
                 "SELECT server_id, Sent_User, Send_User, group_name, content, created_time " +
                         "FROM read_message " +
@@ -1012,17 +1025,19 @@ public class ReadChecker implements IHook {
 
                 if (!SentUser.equals(otherSentUser)) {
                     String originalName = extractOriginalName(user_name);
-                    if (originalName != null && !isRecordExists(otherServerId, originalName)) {
-                        insertRecord(
-                                otherSendUser,
-                                groupId,
-                                otherServerId,
-                                SentUser,
-                                otherGroupName,
-                                otherContent,
-                                user_name,
-                                otherTime
-                        );
+                    if (!isRecordExists(otherServerId, user_name)) {
+                        if (originalName != null && !isRecordExists(otherServerId, originalName)) {
+                            insertRecord(
+                                    otherSendUser,
+                                    groupId,
+                                    otherServerId,
+                                    SentUser,
+                                    otherGroupName,
+                                    otherContent,
+                                    user_name,
+                                    otherTime
+                            );
+                        }
                     }
                 }
             }

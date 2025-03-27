@@ -2,6 +2,8 @@ package io.github.hiro.lime;
 
 import android.content.Context;
 
+import io.github.hiro.lime.hooks.PhotoSave;
+
 public class LimeOptions {
 
     public class Option {
@@ -49,17 +51,21 @@ public class LimeOptions {
         public Option distributeEvenly = new Option("distribute_evenly", R.string.switch_distribute_evenly, true, OptionCategory.GENERAL);
         public Option extendClickableArea = new Option("extend_clickable_area", R.string.switch_extend_clickable_area, true, OptionCategory.GENERAL);
         public Option removeIconLabels = new Option("remove_icon_labels", R.string.switch_remove_icon_labels, true, OptionCategory.GENERAL);
-        public Option removeAds = new Option("remove_ads", R.string.switch_remove_ads, true, OptionCategory.Ad);
-        public Option removeRecommendation = new Option("remove_recommendation", R.string.switch_remove_recommendation, true, OptionCategory.Ad);
-        public Option removePremiumRecommendation = new Option("remove_premium_recommendation", R.string.switch_remove_premium_recommendation, true, OptionCategory.Ad);
         public Option removeServiceLabels = new Option("remove_service_labels", R.string.switch_remove_service_labels, false, OptionCategory.GENERAL);
         public Option removeSearchBar = new Option("removeSearchBar", R.string.removeSearchBar, false, OptionCategory.GENERAL);
         public Option removeNaviAlbum = new Option("removeNaviAlbum", R.string.removeNaviAlbum, false, OptionCategory.GENERAL);
         public Option removeNaviOpenchat = new Option("removeNaviOpenchat", R.string.removeNaviOpenchat, false, OptionCategory.GENERAL);
-        public Option removeReplyMute = new Option("remove_reply_mute", R.string.switch_remove_reply_mute, true, OptionCategory.GENERAL);
 
         public Option redirectWebView = new Option("redirect_webview", R.string.switch_redirect_webview, true, OptionCategory.GENERAL);
-        public Option openInBrowser = new Option("open_in_browser", R.string.switch_open_in_browser, false, OptionCategory.GENERAL);
+         public Option openInBrowser = new Option("open_in_browser", R.string.switch_open_in_browser, false, OptionCategory.GENERAL);
+        public Option RemoveNotification = new Option("RemoveProfileNotification", R.string.removeNotification, false, OptionCategory.GENERAL);
+
+        public Option removeAds = new Option("remove_ads", R.string.switch_remove_ads, true, OptionCategory.Ad);
+        public Option removeRecommendation = new Option("remove_recommendation", R.string.switch_remove_recommendation, true, OptionCategory.Ad);
+        public Option removePremiumRecommendation = new Option("remove_premium_recommendation", R.string.switch_remove_premium_recommendation, true, OptionCategory.Ad);
+        public Option blockTracking = new Option("block_tracking", R.string.switch_block_tracking, false, OptionCategory.Ad);
+        public Option stopVersionCheck = new Option("stop_version_check", R.string.switch_stop_version_check, false, OptionCategory.Ad);
+
         public Option preventMarkAsRead = new Option("prevent_mark_as_read", R.string.switch_prevent_mark_as_read, false, OptionCategory.CHAT);
         public Option preventUnsendMessage = new Option("prevent_unsend_message", R.string.switch_prevent_unsend_message, false, OptionCategory.CHAT);
         public Option sendMuteMessage = new Option("mute_message", R.string.switch_send_mute_message, false, OptionCategory.CHAT);
@@ -70,29 +76,27 @@ public class LimeOptions {
         public Option ReadCheckerChatdataDelete = new Option("ReadCheckerChatdataDelete", R.string.ReadCheckerChatdataDelete, false, OptionCategory.CHAT);
         public Option MySendMessage = new Option("MySendMessage", R.string.MySendMessage, false, OptionCategory.CHAT);
 
-        public Option blockTracking = new Option("block_tracking", R.string.switch_block_tracking, false, OptionCategory.Ad);
-        public Option stopVersionCheck = new Option("stop_version_check", R.string.switch_stop_version_check, false, OptionCategory.Ad);
-        public Option outputCommunication = new Option("output_communication", R.string.switch_output_communication, false, OptionCategory.OTHER);
+
         public Option BlockCheck = new Option("BlockCheck", R.string.BlockCheck, true, OptionCategory.CHAT);
 
         public Option CansellNotification = new Option("CansellNotification", R.string.CansellNotification, false, OptionCategory.NOTIFICATIONS);
         public Option BlockUpdateProfileNotification = new Option("BlockUpdateProfileNotification", R.string.switch_BlockUpdateProfileNotification, false, OptionCategory.NOTIFICATIONS);
-        public Option RemoveNotification = new Option("RemoveProfileNotification", R.string.removeNotification, false, OptionCategory.GENERAL);
+
         public Option MuteGroup = new Option("Disabled_Group_notification", R.string.MuteGroup, false, OptionCategory.NOTIFICATIONS);
         public Option PhotoAddNotification = new Option("PhotoAddNotification", R.string.PhotoAddNotification, false, OptionCategory.NOTIFICATIONS);
         public Option GroupNotification = new Option("GroupNotification", R.string.GroupNotification, false, OptionCategory.NOTIFICATIONS);
         public Option AddCopyAction = new Option("AddCopyAction", R.string.AddCopyAction, false, OptionCategory.NOTIFICATIONS);
+        public Option removeReplyMute = new Option("remove_reply_mute", R.string.switch_remove_reply_mute, true, OptionCategory.NOTIFICATIONS);
 
         public Option DarkColor = new Option("DarkColor", R.string.DarkColor, false, OptionCategory.Theme);
         public Option DarkModSync = new Option("DarkModSync", R.string.DarkkModSync, true, OptionCategory.Theme);
-        public Option PureDarkCall = new Option("PureDarkCall", R.string.PureDarkCall, false, OptionCategory.Theme);
 
         public Option callTone = new Option("callTone", R.string.callTone, false, OptionCategory.CALL);
         public Option MuteTone = new Option("MuteTone", R.string.MuteTone, false, OptionCategory.CALL);
         public Option DialTone = new Option("DialTone", R.string.DialTone, false, OptionCategory.CALL);
         public Option ringtonevolume = new Option("ringtonevolume", R.string.ringtonevolume, false, OptionCategory.CALL);
 
-        public Option AgeCheckSkip = new Option("AgeCheckSkip", R.string.AgeCheckSkip, false, OptionCategory.OTHER);
+
         public Option RemoveVoiceRecord = new Option("RemoveVoiceRecord", R.string.RemoveVoiceRecord, false, OptionCategory.CHAT);
         public Option CallOpenApplication = new Option("CallOpenApplication", R.string.CallOpenApplication, true, OptionCategory.CALL);
         public Option SettingClick = new Option("SettingClick", R.string.SettingClick, false, OptionCategory.OTHER);
@@ -100,10 +104,16 @@ public class LimeOptions {
         public Option voiceButtonOption = new Option("voiceButtonOption", R.string.voiceButtonOption, false, OptionCategory.CHAT);
         public Option videoButtonOption = new Option("videoButtonOption", R.string.videoButtonOption, true, OptionCategory.CHAT);
         public Option videoSingleButtonOption = new Option("videoSingleButtonOption", R.string.videoSingleButtonOption, true, OptionCategory.CHAT);
-        public Option AutoUpDateCheck = new Option("AutoUpDateCheck", R.string.AutoUpDateCheck, false, OptionCategory.OTHER);
-        public Option PinList = new Option("PinList", R.string.PinList, false, OptionCategory.GENERAL);
 
+        public Option PinList = new Option("PinList", R.string.PinList, false, OptionCategory.CHAT);
+
+        public Option outputCommunication = new Option("output_communication", R.string.switch_output_communication, false, OptionCategory.OTHER);
         public Option NewOption = new Option("NewOption", R.string.NewOption, false, OptionCategory.OTHER);
+        public Option AgeCheckSkip = new Option("AgeCheckSkip", R.string.AgeCheckSkip, false, OptionCategory.OTHER);
+        public Option AutoUpDateCheck = new Option("AutoUpDateCheck", R.string.AutoUpDateCheck, false, OptionCategory.OTHER);
+
+        public Option PhotoSave = new Option("PhotoSave", R.string.PhotoSave, false, OptionCategory.GENERAL);
+
 
     public Option[] options = {
                 removeOption,
@@ -147,7 +157,7 @@ public class LimeOptions {
                 BlockCheck, SettingClick,
                 photoboothButtonOption, voiceButtonOption, videoButtonOption, videoSingleButtonOption,
                 AutoUpDateCheck, PinList,
-                NewOption
+                NewOption, PhotoSave
         };
 
 
