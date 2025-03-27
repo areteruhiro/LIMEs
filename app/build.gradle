@@ -12,6 +12,7 @@ android {
         versionCode 116160
         versionName "1.21.4beta"
         multiDexEnabled true
+
         proguardFiles += 'proguard-rules.pro'
         buildConfigField 'String', 'HOOK_TARGET_VERSION', '"141910383"'
         sourceCompatibility = '13'
@@ -40,6 +41,7 @@ android {
         release {
             if (file('release.jks').exists()) {
                 signingConfig signingConfigs.release
+                isMinifyEnabled = true
             }
         }
     }
