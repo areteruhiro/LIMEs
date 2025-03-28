@@ -26,19 +26,12 @@ public class CheckHookTargetVersion implements IHook {
 
                         String versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
                         String versionNameStr = String.valueOf(versionName);
-                        if (
-!versionNameStr.equals("14.19.1")&&
-!versionNameStr.equals("14.21.1")&&
-!versionNameStr.equals("15.0.0")&&
-
-!(isVersionInRange(versionName, "15.1.0", "15.2.0"))&&
- !(isVersionInRange(versionName, "15.3.0", "15.4.0")&&
-!(isVersionInRange(versionName, "15.4.0", "15.5.0")
-
- )))
-
-
-                        {
+                        if (!versionNameStr.equals("14.19.1") &&
+                                !versionNameStr.equals("14.21.1") &&
+                                !versionNameStr.equals("15.0.0") &&
+                                !(isVersionInRange(versionName, "15.1.0", "15.2.0")) &&
+                                !(isVersionInRange(versionName, "15.3.0", "15.4.0")) &&
+                                !(isVersionInRange(versionName, "15.4.0", "15.5.0"))) {
                             Utils.addModuleAssetPath(context);
                             Toast.makeText(context.getApplicationContext(), context.getString(R.string.incompatible_version), Toast.LENGTH_SHORT).show();
                         }
@@ -46,6 +39,7 @@ public class CheckHookTargetVersion implements IHook {
                 }
         );
     }
+
     // バージョン比較用のメソッド
     private static boolean isVersionInRange(String versionName, String minVersion, String maxVersion) {
         try {

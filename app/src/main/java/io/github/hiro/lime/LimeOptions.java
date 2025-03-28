@@ -142,7 +142,7 @@ public class LimeOptions {
                 ReadChecker, MySendMessage, ReadCheckerChatdataDelete,
                 removeKeepUnread,
                 KeepUnreadLSpatch,
-                blockTracking,
+
                 stopVersionCheck,
                 outputCommunication,
                 callTone, ringtonevolume,

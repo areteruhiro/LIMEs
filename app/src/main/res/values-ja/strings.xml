@@ -159,7 +159,7 @@
     <string name="AddCopyAction">通知にコピーアクションを追加する</string>
     <string name="CallOpenApplication">通話画面にLINEを開くボタンを作成</string>
     <string name="Error_Create_setting_Button">"ボタンの作成に失敗しました "</string>
-    <string name="save_failed"> 設定の保存に失敗しました \n settings.properties を削除してください</string>
+    <string name="save_failed">  \n settings.properties を削除してください</string>
     <string name="NotiFication_Setting">通知設定</string>
     <string name="GroupName">グループ名</string>
     <string name="Add">追加</string>
@@ -217,4 +217,7 @@
     <string name="call">着信音/発信音</string>
     <string name="chat">チャット</string>
     <string name="other">その他</string>
+    <string name="media">Media</string>
+    <string name="media_message_no_sender">%sが送信されました</string>
+    <string name="media_message_with_sender">%sが%sを送信しました</string>
 </resources>

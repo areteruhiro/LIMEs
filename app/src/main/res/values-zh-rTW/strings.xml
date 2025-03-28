@@ -207,5 +207,10 @@
     <string name="call">着信音/発信音</string>
     <string name="chat">チャット</string>
     <string name="other">その他</string>
+    <string name="media">Media</string>
+
+    <string name="media_message_no_sender">已發送%s</string>
+    <string name="media_message_with_sender">%1$s發送了%2$s</string>
+
 
 </resources>

@@ -172,7 +172,7 @@ public class EmbedOptions implements IHook {
                                         Toast.makeText(
                                                 moduleContext,
                                                 moduleContext.getString(R.string.Error_Create_setting_Button)
-                                                        + "\nError: " + e.getClass().getSimpleName(),
+                                                        + "\nError: " +  moduleContext.getString(R.string.save_failed),
                                                 Toast.LENGTH_LONG
                                         ).show();
                                     }

@@ -225,5 +225,10 @@
     <string name="other">その他</string>
     <string name="NewOption">新しい設定画面にする</string>
     <string name="PhotoSave">PhotoSave(DevNow)</string>
+    <string name="media">Media</string>
+    <string name="Send_Message">を送信しました</string>
+
+    <string name="media_message_no_sender">%s was sent</string>
+    <string name="media_message_with_sender">%s sent %s</string>
 
 </resources>

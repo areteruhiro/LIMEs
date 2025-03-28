@@ -2,6 +2,8 @@ package io.github.hiro.lime.hooks;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage.LoadPackageParam;
 
@@ -112,7 +114,7 @@ public class Constants {
 //        null cannot be cast to non-null type androidx.activity.result.ActivityResultCallback<O of androidx.activity.result.ActivityResultRegistry.dispatchResult>
 //            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
 
-    } else if (versionName.equals("15.2.1")) {
+        } else if (isVersionInRange(versionName, "15.2.0", "15.2.1")) {
 
         USER_AGENT_HOOK = new HookTarget("Mi1.c", "j");
         WEBVIEW_CLIENT_HOOK = new HookTarget("sQ0.l", "onPageFinished");
@@ -148,6 +150,9 @@ public class Constants {
 
 
         } else if (isVersionInRange(versionName, "15.4.0", "15.5.0")) {
+
+            XposedBridge.log("15.4.0- 15.5.0 Patched ");
+
                      /*
             TRADITIONAL_CHINESE
             static  HookTarget USER_AGENT_HOOK = new HookTarget("ek1.c", "j");

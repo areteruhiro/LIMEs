@@ -3,6 +3,8 @@ package io.github.hiro.lime.hooks;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.os.Environment;
+import android.widget.Toast;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -10,6 +12,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Properties;
+
+import io.github.hiro.lime.R;
 
 public class CustomPreferences {
     private static final String SETTINGS_DIR = "LimeBackup/Setting";
@@ -26,6 +30,13 @@ public class CustomPreferences {
 
             File internalDir = new File(context.getFilesDir(), SETTINGS_DIR);
             if (!internalDir.exists() && !internalDir.mkdirs()) {
+
+                Toast.makeText(
+                        context,
+                        context.getString(R.string.Error_Create_setting_Button)
+                                + "\nError: " + context.getString(R.string.save_failed),
+                        Toast.LENGTH_LONG
+                ).show();
                 throw new IOException("Failed to create internal directory: "
                         + internalDir.getAbsolutePath()
                         + " | Permission: "
@@ -36,6 +47,8 @@ public class CustomPreferences {
             File externalBaseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
             File externalDir = new File(externalBaseDir, SETTINGS_DIR);
             if (!externalDir.exists() && !externalDir.mkdirs()) {
+
+
                 throw new IOException("Failed to create external directory: "
                         + externalDir.getAbsolutePath()
                         + " | Storage state: "

@@ -32,8 +32,9 @@ import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
+import io.github.hiro.lime.R;
 
-public class Archived implements IHook {
+public class ChatList implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
 
@@ -45,7 +46,8 @@ public class Archived implements IHook {
                 if (appContext == null) {
                     return;
                 }
-                Context moduleContext = appContext;
+                Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                        "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
                 File dbFile = appContext.getDatabasePath("naver_line");
                 if (dbFile.exists()) {
                     SQLiteDatabase.OpenParams.Builder builder = new SQLiteDatabase.OpenParams.Builder();
@@ -53,7 +55,7 @@ public class Archived implements IHook {
                     SQLiteDatabase.OpenParams dbParams = builder.build();
                     SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile, dbParams);
 
-                    hookSAMethod(loadPackageParam, db, appContext);
+                    hookSAMethod(loadPackageParam, db, appContext,moduleContext);
                     hookMessageDeletion(loadPackageParam, appContext, db, moduleContext); // moduleContextを渡す
                 } else {
                 }
@@ -121,7 +123,7 @@ public class Archived implements IHook {
         }
     }
 
-    private void hookSAMethod(XC_LoadPackage.LoadPackageParam loadPackageParam, SQLiteDatabase db, Context context) {
+    private void hookSAMethod(XC_LoadPackage.LoadPackageParam loadPackageParam, SQLiteDatabase db, Context context,Context moduleContext) {
         //ChatListViewModel
         Class<?> targetClass = XposedHelpers.findClass(Constants.Archive.className, loadPackageParam.classLoader);
 
@@ -134,12 +136,23 @@ public class Archived implements IHook {
                 }
                 File dbFile = appContext.getDatabasePath("naver_line");
                 SQLiteDatabase db = null;
+                File dbFile2 = appContext.getDatabasePath("contact");
+                SQLiteDatabase db2 = null;
 
-                if (dbFile.exists()) {
+                if (dbFile.exists() && dbFile2.exists()) {
                     SQLiteDatabase.OpenParams.Builder builder = new SQLiteDatabase.OpenParams.Builder();
                     builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
                     SQLiteDatabase.OpenParams dbParams = builder.build();
+
+
+                    SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
+                    builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    SQLiteDatabase.OpenParams dbParams2 = builder2.build();
+
+
                     db = SQLiteDatabase.openDatabase(dbFile, dbParams);
+                    db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
+
                 } else {
                     return;
                 }
@@ -155,7 +168,7 @@ public class Archived implements IHook {
                     List<Pair<String, Integer>> chatData = PinChatReadFile(appContext);
                     for (Pair<String, Integer> entry : chatData) {
                         if (!entry.first.isEmpty() && entry.second > 0) {
-                            PinListUpdate(db, entry.first, entry.second,context);
+                            PinListUpdate(db,db2, entry.first, entry.second,moduleContext);
                         }
 
                     }
@@ -334,14 +347,12 @@ public class Archived implements IHook {
         } else {
         }
     }
-    private void PinListUpdate(SQLiteDatabase db, String chatId, int number, Context context) {
+    private void PinListUpdate(SQLiteDatabase db,SQLiteDatabase db2, String chatId, int number, Context moduleContext) {
 
-        // 復元処理を最優先で実行
 
         final long UNIX_MAX = 2147483646999L;
         long newTime = UNIX_MAX - number;
 
-        // 元の時間取得（エラーチェック付き）
         long originalTime = getOriginalLastCreatedTime(db, chatId);
         if (originalTime == -1) {
            // XposedBridge.log("エラー: 元の時間取得失敗 - " + chatId);
@@ -357,20 +368,93 @@ public class Archived implements IHook {
             SQLiteStatement statement = db.compileStatement(updateQuery);
             statement.bindLong(1, newTime);
             statement.bindString(2, chatId);
-            int updatedRows = statement.executeUpdateDelete();
-
            // XposedBridge.log("更新成功: " + chatId
 //                    + " | 新時間: " + newTime
 //                    + " | 影響行数: " + updatedRows);
-
+            PinListFix(db,db2, moduleContext,chatId);
         } catch (SQLException e) {
            // XposedBridge.log("更新失敗"
 //                    + " | 詳細: " + e.getMessage()
 //                    + " | chatId: " + chatId);
         }
     }
+    private void PinListFix(SQLiteDatabase db, SQLiteDatabase db2, Context moduleContext, String chatId) {
+        String latestMessageQuery = "SELECT content, parameter, from_mid FROM chat_history WHERE chat_id = ? ORDER BY id DESC LIMIT 1";
 
-    private void restoreMissingEntries(Context context,SQLiteDatabase db) {
+        try (Cursor cursor = db.rawQuery(latestMessageQuery, new String[]{chatId})) {
+            if (cursor != null && cursor.moveToFirst()) {
+                String latestContent = cursor.getString(cursor.getColumnIndexOrThrow("content"));
+                String parameter = cursor.getString(cursor.getColumnIndexOrThrow("parameter"));
+                String fromMid = cursor.getString(cursor.getColumnIndexOrThrow("from_mid"));
+
+                if (latestContent == null || latestContent.isEmpty()) {
+                    String mediaType = getMediaDescription(moduleContext, parameter);
+
+                    if (fromMid == null) {
+
+                        latestContent = String.format(
+                                moduleContext.getString(R.string.media_message_no_sender),
+                                mediaType
+                        );
+                    } else {
+                        String senderName = getSenderName(db2, fromMid);
+                        latestContent = String.format(
+                                moduleContext.getString(R.string.media_message_with_sender),
+                                senderName,
+                                mediaType
+                        );
+                    }
+                   // XposedBridge.log("Formatted media message: " + latestContent);
+                }
+
+
+                updateChatLastMessage(db, chatId, latestContent);
+
+            } else {
+             //   XposedBridge.log("No message found for chat: " + chatId);
+            }
+        } catch (SQLException e) {
+            XposedBridge.log("DB error: " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            XposedBridge.log("Column error: " + e.getMessage());
+        }
+    }
+
+    private void updateChatLastMessage(SQLiteDatabase db, String chatId, String newMessage) {
+        String query = "SELECT last_message FROM chat WHERE chat_id = ?";
+        try (Cursor cursor = db.rawQuery(query, new String[]{chatId})) {
+            if (cursor != null && cursor.moveToFirst()) {
+                String current = cursor.getString(0);
+                if (current == null || !current.equals(newMessage)) {
+                    db.execSQL("UPDATE chat SET last_message = ? WHERE chat_id = ?",
+                            new Object[]{newMessage, chatId});
+                    XposedBridge.log("Updated last message for chat: " + chatId);
+                }
+            }
+        }
+    }
+
+    private String getSenderName(SQLiteDatabase db, String mid) {
+        if (mid == null) return "Unknown";
+        try (Cursor cursor = db.rawQuery(
+                "SELECT profile_name FROM contacts WHERE mid = ?", new String[]{mid})) {
+            return (cursor != null && cursor.moveToFirst()) ?
+                    cursor.getString(0) : "Unknown";
+        }
+    }
+
+    private String getMediaDescription(Context moduleContext, String parameter) {
+        if (parameter == null) return  moduleContext.getResources().getString(R.string.file);
+
+        if (parameter.contains("IMAGE")) return  moduleContext.getResources().getString(R.string.picture);
+        if (parameter.contains("video")) return  moduleContext.getResources().getString(R.string.video);
+        if (parameter.contains("STKPKGID")) return  moduleContext.getResources().getString(R.string.sticker);
+        if (parameter.contains("FILE")) return  moduleContext.getResources().getString(R.string.file);
+        if (parameter.contains("LOCATION")) return  moduleContext.getResources().getString(R.string.location);
+
+        return  moduleContext.getResources().getString(R.string.file);
+    }
+        private void restoreMissingEntries(Context context,SQLiteDatabase db) {
        // XposedBridge.log("復元処理開始");
 
         Map<String, String> chatList = loadChatList(context);
