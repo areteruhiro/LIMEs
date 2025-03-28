@@ -34,7 +34,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 import io.github.hiro.lime.R;
 
-public class ChatList implements IHook {
+public class Archived implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
 
@@ -46,8 +46,7 @@ public class ChatList implements IHook {
                 if (appContext == null) {
                     return;
                 }
-                Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                        "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                Context moduleContext = appContext;
                 File dbFile = appContext.getDatabasePath("naver_line");
                 if (dbFile.exists()) {
                     SQLiteDatabase.OpenParams.Builder builder = new SQLiteDatabase.OpenParams.Builder();
@@ -231,12 +230,12 @@ public class ChatList implements IHook {
                         int number = Integer.parseInt(parts[1].trim());
                         chatData.add(new Pair<>(chatId, number));
                     } catch (NumberFormatException e) {
-                       // XposedBridge.log("数値変換エラー: " + line);
+                        // XposedBridge.log("数値変換エラー: " + line);
                     }
                 }
             }
         } catch (IOException e) {
-           // XposedBridge.log("ファイル読み込みエラー: " + e.getMessage());
+            // XposedBridge.log("ファイル読み込みエラー: " + e.getMessage());
         }
         return chatData;
     }
@@ -355,7 +354,7 @@ public class ChatList implements IHook {
 
         long originalTime = getOriginalLastCreatedTime(db, chatId);
         if (originalTime == -1) {
-           // XposedBridge.log("エラー: 元の時間取得失敗 - " + chatId);
+            // XposedBridge.log("エラー: 元の時間取得失敗 - " + chatId);
             return;
         }
 
@@ -368,12 +367,12 @@ public class ChatList implements IHook {
             SQLiteStatement statement = db.compileStatement(updateQuery);
             statement.bindLong(1, newTime);
             statement.bindString(2, chatId);
-           // XposedBridge.log("更新成功: " + chatId
+            // XposedBridge.log("更新成功: " + chatId
 //                    + " | 新時間: " + newTime
 //                    + " | 影響行数: " + updatedRows);
             PinListFix(db,db2, moduleContext,chatId);
         } catch (SQLException e) {
-           // XposedBridge.log("更新失敗"
+            // XposedBridge.log("更新失敗"
 //                    + " | 詳細: " + e.getMessage()
 //                    + " | chatId: " + chatId);
         }
@@ -404,14 +403,14 @@ public class ChatList implements IHook {
                                 mediaType
                         );
                     }
-                   // XposedBridge.log("Formatted media message: " + latestContent);
+                    // XposedBridge.log("Formatted media message: " + latestContent);
                 }
 
 
                 updateChatLastMessage(db, chatId, latestContent);
 
             } else {
-             //   XposedBridge.log("No message found for chat: " + chatId);
+                //   XposedBridge.log("No message found for chat: " + chatId);
             }
         } catch (SQLException e) {
             XposedBridge.log("DB error: " + e.getMessage());
@@ -454,8 +453,8 @@ public class ChatList implements IHook {
 
         return  moduleContext.getResources().getString(R.string.file);
     }
-        private void restoreMissingEntries(Context context,SQLiteDatabase db) {
-       // XposedBridge.log("復元処理開始");
+    private void restoreMissingEntries(Context context,SQLiteDatabase db) {
+        // XposedBridge.log("復元処理開始");
 
         Map<String, String> chatList = loadChatList(context);
         Map<String, String> changeList = loadChangeList(context);
@@ -467,10 +466,10 @@ public class ChatList implements IHook {
                 String chatId = entry.getKey();
                 String originalTime = entry.getValue();
 
-               // XposedBridge.log("処理中: " + chatId + " | 元時間: " + originalTime);
+                // XposedBridge.log("処理中: " + chatId + " | 元時間: " + originalTime);
 
                 if (chatList.containsKey(chatId)) {
-                   // XposedBridge.log("スキップ: ChatListに存在");
+                    // XposedBridge.log("スキップ: ChatListに存在");
                     continue;
                 }
 
@@ -484,22 +483,22 @@ public class ChatList implements IHook {
                     int result = statement.executeUpdateDelete();
                     if (result > 0) {
                         successCount++;
-                       // XposedBridge.log("復元成功: " + chatId);
+                        // XposedBridge.log("復元成功: " + chatId);
                     } else {
                         failCount++;
-                       // XposedBridge.log("復元失敗: 該当レコードなし");
+                        // XposedBridge.log("復元失敗: 該当レコードなし");
                     }
 
                 } catch (NumberFormatException e) {
-                   // XposedBridge.log("不正な時間形式: " + originalTime);
+                    // XposedBridge.log("不正な時間形式: " + originalTime);
                     failCount++;
                 }
             }
         } catch (SQLException e) {
-           // XposedBridge.log("データベースエラー: " );
+            // XposedBridge.log("データベースエラー: " );
         }
 
-       // XposedBridge.log("復元処理結果: 成功=" + successCount + ", 失敗=" + failCount);
+        // XposedBridge.log("復元処理結果: 成功=" + successCount + ", 失敗=" + failCount);
     }
     private Map<String, String> loadChangeList(Context context) {
         Map<String, String> changeMap = new HashMap<>();
@@ -518,7 +517,7 @@ public class ChatList implements IHook {
                     }
                 }
             } catch (IOException e) {
-               // XposedBridge.log("ChangeList読み込みエラー: " + e.getMessage());
+                // XposedBridge.log("ChangeList読み込みエラー: " + e.getMessage());
             }
         }
         return changeMap;
@@ -540,7 +539,7 @@ public class ChatList implements IHook {
                     }
                 }
             } catch (IOException e) {
-               // XposedBridge.log("ChatList読み込みエラー: " + e.getMessage());
+                // XposedBridge.log("ChatList読み込みエラー: " + e.getMessage());
             }
         }
         return chatMap;
@@ -552,7 +551,7 @@ public class ChatList implements IHook {
                 return cursor.getLong(cursor.getColumnIndex("last_created_time"));
             }
         } catch (SQLiteException e) {
-           // XposedBridge.log("値取得エラー: " + e.getMessage());
+            // XposedBridge.log("値取得エラー: " + e.getMessage());
         }
         return -1; // エラー時は-1を返す
     }
@@ -564,7 +563,7 @@ public class ChatList implements IHook {
         );
 
         if (!dir.exists() && !dir.mkdirs()) {
-           // XposedBridge.log("ディレクトリ作成失敗");
+            // XposedBridge.log("ディレクトリ作成失敗");
             return;
         }
 
@@ -595,14 +594,14 @@ public class ChatList implements IHook {
             if (!existingChatIds.contains(chatId)) {
                 try (FileWriter writer = new FileWriter(file, true)) {
                     writer.append(newEntry).append("\n");
-                   // XposedBridge.log("変更記録を保存: " + file.getPath());
+                    // XposedBridge.log("変更記録を保存: " + file.getPath());
                 }
             } else {
-               // XposedBridge.log("重複chatIdのため保存スキップ: " + chatId);
+                // XposedBridge.log("重複chatIdのため保存スキップ: " + chatId);
             }
 
         } catch (IOException e) {
-           // XposedBridge.log("ファイル操作エラー: " + e.getMessage());
+            // XposedBridge.log("ファイル操作エラー: " + e.getMessage());
         }
     }
 }
