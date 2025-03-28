@@ -44,7 +44,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new KeepUnread(),
             new ModifyResponse(),
             new OutputRequest(),
-            new Archived(),
+            new ChatList(),
             new UnsentRec(),
             new RingTone(),
             new ReadChecker(),

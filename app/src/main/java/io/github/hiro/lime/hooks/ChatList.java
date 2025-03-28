@@ -34,7 +34,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 import io.github.hiro.lime.R;
 
-public class Archived implements IHook {
+public class ChatList implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
 
@@ -46,7 +46,9 @@ public class Archived implements IHook {
                 if (appContext == null) {
                     return;
                 }
-                Context moduleContext = appContext;
+                Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                        "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+
                 File dbFile = appContext.getDatabasePath("naver_line");
                 if (dbFile.exists()) {
                     SQLiteDatabase.OpenParams.Builder builder = new SQLiteDatabase.OpenParams.Builder();
@@ -173,11 +175,11 @@ public class Archived implements IHook {
                     }
                     restoreMissingEntries(context,db);
                 }
-                if (db != null) {
-                    db.close();
-                }
+                if (db != null) db.close();
+                if (db2 != null) db2.close();
             }
         });
+
     }
 
 
@@ -346,35 +348,32 @@ public class Archived implements IHook {
         } else {
         }
     }
-    private void PinListUpdate(SQLiteDatabase db,SQLiteDatabase db2, String chatId, int number, Context moduleContext) {
-
-
+    private void PinListUpdate(SQLiteDatabase db, SQLiteDatabase db2, String chatId, int number, Context moduleContext) {
         final long UNIX_MAX = 2147483646999L;
         long newTime = UNIX_MAX - number;
 
         long originalTime = getOriginalLastCreatedTime(db, chatId);
-        if (originalTime == -1) {
-            // XposedBridge.log("エラー: 元の時間取得失敗 - " + chatId);
-            return;
-        }
+        if (originalTime == -1) return;
 
-        // 変更記録を保存（chatId重複チェック付き）
         saveChangeToFile(chatId, originalTime);
 
-        // データベース更新処理
-        String updateQuery = "UPDATE chat SET last_created_time = ? WHERE chat_id = ?";
+        // トランザクション開始
+        db.beginTransaction();
         try {
+            String updateQuery = "UPDATE chat SET last_created_time = ? WHERE chat_id = ?";
             SQLiteStatement statement = db.compileStatement(updateQuery);
             statement.bindLong(1, newTime);
             statement.bindString(2, chatId);
-            // XposedBridge.log("更新成功: " + chatId
-//                    + " | 新時間: " + newTime
-//                    + " | 影響行数: " + updatedRows);
-            PinListFix(db,db2, moduleContext,chatId);
+
+            int updatedRows = statement.executeUpdateDelete(); // ここが抜けていた
+            db.setTransactionSuccessful();
+
+           // XposedBridge.log("Updated rows: " + updatedRows + " for chat: " + chatId);
+            PinListFix(db, db2, moduleContext, chatId);
         } catch (SQLException e) {
-            // XposedBridge.log("更新失敗"
-//                    + " | 詳細: " + e.getMessage()
-//                    + " | chatId: " + chatId);
+            XposedBridge.log("Update error: " + e.getMessage());
+        } finally {
+            db.endTransaction();
         }
     }
     private void PinListFix(SQLiteDatabase db, SQLiteDatabase db2, Context moduleContext, String chatId) {
