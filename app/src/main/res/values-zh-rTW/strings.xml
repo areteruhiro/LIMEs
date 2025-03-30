@@ -60,7 +60,7 @@
     <string name="Talk_Picture_Back_up_Success">談話圖片資料夾已成功備份</string>
     <string name="Talk_Picture_Back_up_Error">備份談話圖片資料夾時出錯</string>
     <string name="Back_Up">備份</string>
-    <string name="Restore">恢復</string>
+    <string name="Restore">恢復聊天記錄</string>
     <string name="Picure_Restore">恢復談話影像</string>
     <string name="Mute_Group">群組靜音</string>
     <string name="Talk_Back_up_Success">備份成功</string>
@@ -197,20 +197,40 @@
     <string name="videoSingleButtonOption">刪除個人聊天內的視頻通話項目。</string>
     <string name="ringtonevolume">"（發出撥號音）使用鈴聲 "</string>
     <string name="PureDarkCall">（PureDark 底部欄）用於檢視通話記錄</string>
+    <string name="PinList">聊天列表釘選設定</string>
     <string name="file">File</string>
+    <string name="location">Location Message</string>
     <string name="SpoofAndroidId">androidIDを偽装する</string>
-    <string name="SpoofUserAgent">デバイス情報を偽装する</string>
+    <string name="SettingSave">儲存成功</string>
+    <string name="SpoofUserAgent">虛假設備資訊</string>
     <string name="general">一般</string>
-    <string name="Ad">広告</string>
+    <string name="Ad">廣告</string>
     <string name="notifications">通知</string>
-    <string name="Theme">テーマ</string>
-    <string name="call">着信音/発信音</string>
-    <string name="chat">チャット</string>
-    <string name="other">その他</string>
+    <string name="Theme">主題</string>
+    <string name="call">來電/去電鈴聲</string>
+    <string name="chat">聊天</string>
+    <string name="other">其他</string>
+    <string name="PhotoSave">" PhotoSave (DevNow)"</string>
     <string name="media">Media</string>
 
+    <string name="Send_Message">請清除 LINE 快取</string>
     <string name="media_message_no_sender">已發送%s</string>
     <string name="media_message_with_sender">%1$s發送了%2$s</string>
+    <string name="Restore_Cancelled">恢復已取消</string>
+    <string name="original_ID">使用原始通知 ID（回覆錯誤將被修正，但通知會被覆蓋）</string>
+    <string name="NewOption">新的設定畫面</string>
+    <string name="progress_message">%1$d/%2$d 項 (%3$d%%)</string>
+    <string name="processing">處理中</string>
+    <string name="Delete_Cache">無法複製暫存檔案</string>
+    <string name="file_copy_error">恢復聊天列表</string>
+    <string name="restoring_chat">恢復聊天列表</string>
+    <string name="back">返回</string>
+    <string name="UserSet">使用者設定</string>
+    <string name="save">儲存</string>
+    <string name="restoreChatListButton">恢復聊天列表</string>
+    <string name="Restart">重新啟動</string>
+    <string name="restoring_chat_history">正在恢復聊天記錄</string>
+    <string name="preparing">準備中…</string>
 
 
 </resources>

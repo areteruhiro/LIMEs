@@ -2,8 +2,6 @@ package io.github.hiro.lime;
 
 import android.content.Context;
 
-import io.github.hiro.lime.hooks.PhotoSave;
-
 public class LimeOptions {
 
     public class Option {
@@ -64,7 +62,6 @@ public class LimeOptions {
         public Option removeRecommendation = new Option("remove_recommendation", R.string.switch_remove_recommendation, true, OptionCategory.Ad);
         public Option removePremiumRecommendation = new Option("remove_premium_recommendation", R.string.switch_remove_premium_recommendation, true, OptionCategory.Ad);
         public Option blockTracking = new Option("block_tracking", R.string.switch_block_tracking, false, OptionCategory.Ad);
-        public Option stopVersionCheck = new Option("stop_version_check", R.string.switch_stop_version_check, false, OptionCategory.Ad);
 
         public Option preventMarkAsRead = new Option("prevent_mark_as_read", R.string.switch_prevent_mark_as_read, false, OptionCategory.CHAT);
         public Option preventUnsendMessage = new Option("prevent_unsend_message", R.string.switch_prevent_unsend_message, false, OptionCategory.CHAT);
@@ -87,6 +84,8 @@ public class LimeOptions {
         public Option GroupNotification = new Option("GroupNotification", R.string.GroupNotification, false, OptionCategory.NOTIFICATIONS);
         public Option AddCopyAction = new Option("AddCopyAction", R.string.AddCopyAction, false, OptionCategory.NOTIFICATIONS);
         public Option removeReplyMute = new Option("remove_reply_mute", R.string.switch_remove_reply_mute, true, OptionCategory.NOTIFICATIONS);
+        public Option original_ID = new Option("original_ID", R.string.original_ID, false, OptionCategory.NOTIFICATIONS);
+
 
         public Option DarkColor = new Option("DarkColor", R.string.DarkColor, false, OptionCategory.Theme);
         public Option DarkModSync = new Option("DarkModSync", R.string.DarkkModSync, true, OptionCategory.Theme);
@@ -112,7 +111,8 @@ public class LimeOptions {
         public Option AgeCheckSkip = new Option("AgeCheckSkip", R.string.AgeCheckSkip, false, OptionCategory.OTHER);
         public Option AutoUpDateCheck = new Option("AutoUpDateCheck", R.string.AutoUpDateCheck, false, OptionCategory.OTHER);
 
-        public Option PhotoSave = new Option("PhotoSave", R.string.PhotoSave, false, OptionCategory.GENERAL);
+        public Option PhotoSave = new Option("PhotoSave", R.string.PhotoSave, false, OptionCategory.OTHER);
+        public Option stopVersionCheck = new Option("stop_version_check", R.string.switch_stop_version_check, false, OptionCategory.OTHER);
 
 
     public Option[] options = {
@@ -150,7 +150,7 @@ public class LimeOptions {
                 DialTone,
                 DarkColor, DarkModSync,
                 MuteGroup,
-                PhotoAddNotification, GroupNotification, CansellNotification, AddCopyAction,
+                PhotoAddNotification, GroupNotification, CansellNotification, AddCopyAction, original_ID,
                 RemoveVoiceRecord,
                 AgeCheckSkip,
                 CallOpenApplication,

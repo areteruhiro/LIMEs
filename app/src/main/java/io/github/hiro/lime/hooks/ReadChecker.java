@@ -465,18 +465,21 @@ public class ReadChecker implements IHook {
                 }
 
                 content = finalcontent;
+
+                  if (timeFormatted == null || "null".equals(timeFormatted)) {
+                    String timeEpochStr = queryDatabase(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
+                    if (timeEpochStr != null && !"null".equals(timeEpochStr)) {
+                        timeFormatted = formatMessageTime(timeEpochStr);
+                    } else {
+                        timeFormatted = "";
+                    }
+                }
+
+
                 processRelatedRecords(groupId, serverId, finalcontent);
 
             }
 
-
-            // created_time が "null" の場合、chat_history テーブルから取得してフォーマットする
-            if ("null".equals(timeFormatted)) {
-                String timeEpochStr = queryDatabase(db3, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
-                if (timeEpochStr != null && !"null".equals(timeEpochStr)) {
-                    timeFormatted = formatMessageTime(timeEpochStr);
-                }
-            }
 
             List<String> user_nameList = getuser_namesForServerId(serverId, db3);
 
@@ -496,8 +499,10 @@ public class ReadChecker implements IHook {
         cursor.close();
 
         List<DataItem> sortedDataItems = new ArrayList<>(dataItemMap.values());
-        Collections.sort(sortedDataItems, Comparator.comparing(item -> item.timeFormatted));
-
+        Collections.sort(sortedDataItems, Comparator.comparing(
+                item -> item.timeFormatted,
+                Comparator.nullsLast(Comparator.naturalOrder())
+        ));
         StringBuilder resultBuilder = new StringBuilder();
         for (DataItem item : sortedDataItems) {
             resultBuilder.append("Content: ").append(item.content != null ? item.content : "Media").append("\n");

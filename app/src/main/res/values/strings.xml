@@ -109,7 +109,7 @@
     <string name="BackUp_Stat">Start backup</string>
     <string name="Talk_Picture_Back_up_Error">Error occurred while backing up the talk picture folder</string>
     <string name="Back_Up">Backup</string>
-    <string name="Restore">Restore</string>
+    <string name="Restore">Restore chat history</string>
     <string name="Picure_Restore">Restore talk image</string>
     <string name="Mute_Group">Group on mute</string>
     <string name="Talk_Back_up_Success">Backup was successful</string>
@@ -135,7 +135,6 @@
     <string name="Talk_Picture_Back_up_Success">The talk picture folder was successfully backed up</string>
     <string name="RemoveVoiceRecord">Disable microphone button</string>
 
-    <string name="TEST">既読 %S</string>
     <string name="MuteTone">(For Root) Mute ringtone</string>
     <string name="edit_margin_settings">button setting</string>
     <string name="keep_unread_horizontalMarginFactor">Horizontal margin (KeepUnread)</string>
@@ -211,24 +210,40 @@
     <string name="no_reset_name">Could not confirm the friends to reset.</string>
     <string name="ringtonevolume">(Sounds a dial tone)Using a ringtone</string>
     <string name="PureDarkCall">(PureDark bottom bar) for call history</string>
-    <string name="PinList">チャットリストのピン設定</string>
+    <string name="PinList">Chat List Pin Setting</string>
     <string name="file">File</string>
     <string name="location">Location Message</string>
-    <string name="SpoofAndroidId">androidIDを偽装する</string>
-    <string name="SpoofUserAgent">デバイス情報を偽装する</string>
-    <string name="general">一般</string>
-    <string name="Ad">広告</string>
-    <string name="notifications">通知</string>
-    <string name="Theme">テーマ</string>
-    <string name="call">着信音/発信音</string>
-    <string name="chat">チャット</string>
-    <string name="other">その他</string>
-    <string name="NewOption">新しい設定画面にする</string>
-    <string name="PhotoSave">PhotoSave(DevNow)</string>
+    <string name="SpoofAndroidId">偽造你的 Android ID</string>
+    <string name="SpoofUserAgent">虛假設備資訊</string>
+    <string name="general">Spoof Android ID</string>
+    <string name="Ad">Spoof Device Information</string>
+    <string name="notifications">General</string>
+    <string name="Theme">Ads</string>
+    <string name="call">Notifications</string>
+    <string name="chat">Theme</string>
+    <string name="other">Other</string>
+    <string name="NewOption">New Settings Screen</string>
+    <string name="PhotoSave">"PhotoSave (DevNow) "</string>
     <string name="media">Media</string>
-    <string name="Send_Message">を送信しました</string>
 
     <string name="media_message_no_sender">%s was sent</string>
     <string name="media_message_with_sender">%s sent %s</string>
+    <string name="restoring_chat_history">Restoring Chat History</string>
+    <string name="preparing">Preparing...</string>
+    <string name="progress_message">%1$d/%2$d items (%3$d%%)</string>
 
+
+    <string name="processing">処理中</string>
+    <string name="restoring_chat">Restore Chat List</string>
+    <string name="restoreChatListButton">Restore Chat List</string>
+    <string name="Restore_Cancelled">Restore Canceled</string>
+    <string name="original_ID">Use Original Notification ID (Reply bug will be fixed, but notifications will be overwritten)</string>
+    <string name="Restart">Restart</string>
+    <string name="back">Back</string>
+    <string name="UserSet">User Settings</string>
+    <string name="save">Save</string>
+    <string name="SettingSave">保存成功</string>
+    <string name="file_copy_error">Failed to Copy Temporary File</string>
+    <string name="Delete_Cache">Please Clear LINE Cache</string>
+    <string name="Send_Message">was sent</string>
 </resources>

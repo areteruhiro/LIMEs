@@ -60,8 +60,8 @@ public class BlockTracking implements IHook {
         }
          XposedBridge.hookAllMethods(
                 loadPackageParam.classLoader.loadClass("jp.naver.line.android.thrift.client.impl.LegacyTalkServiceClientImpl"),
-                "F2",
-                new XC_MethodHook() {
+                 "F2",
+                 new XC_MethodHook()  {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         param.setResult(null);

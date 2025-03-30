@@ -60,8 +60,8 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new SettingCrash(),
             new BlockCheck(),
             new AutoUpdate(),
-            new Removebutton()
-            ,new PhotoSave()
+            new Removebutton(),
+            new PhotoSave(),
 
     };
 

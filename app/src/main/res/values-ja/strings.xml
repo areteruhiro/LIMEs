@@ -107,7 +107,7 @@
     <string name="Talk_Picture_Back_up_Success">トーク画像フォルダのバックアップが成功しました</string>
     <string name="Talk_Picture_Back_up_Error">トーク画像フォルダのバックアップ中にエラーが発生しました</string>
     <string name="Back_Up">バックアップ</string>
-    <string name="Restore">リストア</string>
+    <string name="Restore">チャット履歴を復元</string>
     <string name="Picure_Restore">トーク画像のリストア</string>
     <string name="Mute_Group">ミュート中のグループ</string>
     <string name="Talk_Back_up_Success">バックアップが成功しました</string>
@@ -206,9 +206,11 @@
 
     <string name="ringtonevolume">(発信音を鳴らす)着信音を利用する</string>
     <string name="PureDarkCall">(PureDarkボトムバー)通話履歴用</string>
+    <string name="PinList">チャットリストのピン設定</string>
     <string name="file">ファイル</string>
     <string name="location">位置情報</string>
     <string name="SpoofAndroidId">androidIDを偽装する</string>
+    <string name="SettingSave">保存成功</string>
     <string name="SpoofUserAgent">デバイス情報を偽装する</string>
     <string name="general">一般</string>
     <string name="Ad">広告</string>
@@ -217,7 +219,26 @@
     <string name="call">着信音/発信音</string>
     <string name="chat">チャット</string>
     <string name="other">その他</string>
+    <string name="PhotoSave">PhotoSave(DevNow)</string>
     <string name="media">Media</string>
+    <string name="Send_Message">を送信しました</string>
     <string name="media_message_no_sender">%sが送信されました</string>
     <string name="media_message_with_sender">%sが%sを送信しました</string>
+
+    <string name="restoring_chat_history">チャット履歴を復元中</string>
+    <string name="preparing">準備中…</string>
+    <string name="progress_message">%1$d/%2$d件 (%3$d%%)</string>
+    <string name="restoreChatListButton">チャットリストを復元</string>
+    <string name="Restore_Cancelled">復元がキャンセルされました</string>
+    <string name="original_ID">オリジナル通知IDを使う(返信バグは修正されますが通知が上書きされます)</string>
+    <string name="NewOption">新しい設定画面にする</string>
+    <string name="processing">処理中</string>
+    <string name="Delete_Cache">LINEのCacheを削除してください</string>
+    <string name="file_copy_error">一時ファイルのコピーが失敗しました</string>
+    <string name="restoring_chat">チャットリストを復元</string>
+    <string name="Restart">再起動</string>
+    <string name="back">戻る</string>
+    <string name="UserSet">ユーザー設定</string>
+    <string name="save">保存</string>
+
 </resources>

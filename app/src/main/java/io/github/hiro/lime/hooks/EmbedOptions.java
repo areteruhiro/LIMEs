@@ -7,6 +7,7 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.AndroidAppHelper;
+import android.app.ProgressDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentValues;
@@ -20,7 +21,6 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -172,7 +172,7 @@ public class EmbedOptions implements IHook {
                                         Toast.makeText(
                                                 moduleContext,
                                                 moduleContext.getString(R.string.Error_Create_setting_Button)
-                                                        + "\nError: " +  moduleContext.getString(R.string.save_failed),
+                                                        + moduleContext.getString(R.string.save_failed),
                                                 Toast.LENGTH_LONG
                                         ).show();
                                     }
@@ -293,6 +293,7 @@ public class EmbedOptions implements IHook {
                                         case "GroupNotification":
                                         case "CansellNotification":
                                         case "AddCopyAction":
+                                        case "original_ID":
                                             photoNotificationChildSwitches.add(switchView);
                                             switchView.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked());
                                             break;
@@ -409,12 +410,23 @@ public class EmbedOptions implements IHook {
                                     restoreButton.setOnClickListener(new View.OnClickListener() {
                                         @Override
                                         public void onClick(View v) {
-                                            // ファイルピッカーを表示
-                                            showFilePicker(context, moduleContext);
+                                            
+                                            showFilePickerChatHistory(context, moduleContext);
                                         }
                                     });
                                     layout.addView(restoreButton);
 
+                                    Button restoreChatListButton = new Button(context);
+                                    restoreChatListButton.setLayoutParams(buttonParams);
+                                    restoreChatListButton.setText(moduleContext.getResources().getString(R.string.restoreChatListButton));
+                                    restoreChatListButton.setOnClickListener(new View.OnClickListener() {
+                                        @Override
+                                        public void onClick(View v) {
+                                            
+                                            showFilePickerChatlist(context, moduleContext);
+                                        }
+                                    });
+                                    layout.addView(restoreChatListButton);
 
                                     Button backupfolderButton = new Button(context);
                                     backupfolderButton.setLayoutParams(buttonParams);
@@ -818,7 +830,7 @@ public class EmbedOptions implements IHook {
         XposedHelpers.findAndHookMethod(
                 loadPackageParam.classLoader.loadClass(Constants.ChatRestore.className),
                 "onActivityResult",
-                int.class, int.class, Intent.class, // シグネチャ
+                int.class, int.class, Intent.class,
                 new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -828,7 +840,6 @@ public class EmbedOptions implements IHook {
                         int resultCode = (int) param.args[1];
                         Intent data = (Intent) param.args[2];
 
-                        // 対象のリクエストコードと結果を確認
                         if (requestCode == PICK_FILE_REQUEST_CODE
                                 && resultCode == Activity.RESULT_OK
                                 && data != null) {
@@ -836,43 +847,93 @@ public class EmbedOptions implements IHook {
                             Context context = (Context) param.thisObject;
                             Uri uri = data.getData();
 
-// バックグラウンドでファイル処理
                             new Thread(() -> {
-                                File tempFile = null; // 一時ファイルの宣言
+                                File tempFile = null;
                                 try {
-                                    // 一時ファイルの作成
                                     tempFile = File.createTempFile("restore", ".db", context.getCacheDir());
 
-                                    // URIからInputStreamを開く
+                                    // ファイル権限を設定
+                                    tempFile.setReadable(true, false);
+
                                     try (InputStream is = context.getContentResolver().openInputStream(uri);
                                          OutputStream os = new FileOutputStream(tempFile)) {
 
-                                        // ファイルコピー
-                                        byte[] buffer = new byte[1024];
+                                        byte[] buffer = new byte[8192];  // バッファサイズを大きくして効率化
                                         int length;
                                         while ((length = is.read(buffer)) > 0) {
                                             os.write(buffer, 0, length);
                                         }
+                                        os.flush();
 
-                                        // UIスレッドで復元処理
+                                        // ファイルが正常にコピーされたか確認
+                                        if (tempFile.length() == 0) {
+                                            throw new IOException("Copied file is empty");
+                                        }
+
                                         File finalTempFile = tempFile;
                                         new Handler(Looper.getMainLooper()).post(() -> {
                                             restoreChatHistory(context, moduleContext, finalTempFile);
-                                            finalTempFile.delete(); // 必要に応じて削除
                                         });
                                     }
                                 } catch (Exception e) {
-                                    // エラーハンドリング
+                                    Log.e("FileCopy", "Error copying file", e);
                                     new Handler(Looper.getMainLooper()).post(() ->
-                                            Toast.makeText(context, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show());
+                                            Toast.makeText(context,
+                                                    moduleContext.getString(R.string.file_copy_error) + ": " + e.getMessage(),
+                                                    Toast.LENGTH_LONG).show());
 
-                                    // エラー発生時に一時ファイルを削除
                                     if (tempFile != null && tempFile.exists()) {
                                         tempFile.delete();
                                     }
                                 }
                             }).start();
                         }
+                        if (requestCode == PICK_FILE_REQUEST_CODE2
+                                && resultCode == Activity.RESULT_OK
+                                && data != null) {
+
+                            Context context = (Context) param.thisObject;
+                            Uri uri = data.getData();
+
+                            new Thread(() -> {
+                                File tempFile = null;
+                                try {
+                                    tempFile = File.createTempFile("restore", ".db", context.getCacheDir());
+
+                                    tempFile.setReadable(true, false);
+
+                                    try (InputStream is = context.getContentResolver().openInputStream(uri);
+                                         OutputStream os = new FileOutputStream(tempFile)) {
+
+                                        byte[] buffer = new byte[8192];
+                                        int length;
+                                        while ((length = is.read(buffer)) > 0) {
+                                            os.write(buffer, 0, length);
+                                        }
+                                        os.flush();
+                                        if (tempFile.length() == 0) {
+                                            throw new IOException("Copied file is empty");
+                                        }
+
+                                        File finalTempFile = tempFile;
+                                        new Handler(Looper.getMainLooper()).post(() -> {
+                                            restoreChatList(context, moduleContext, finalTempFile);
+                                        });
+                                    }
+                                } catch (Exception e) {
+                                    Log.e("FileCopy", "Error copying file", e);
+                                    new Handler(Looper.getMainLooper()).post(() ->
+                                            Toast.makeText(context,
+                                                    moduleContext.getString(R.string.file_copy_error) + ": " + e.getMessage(),
+                                                    Toast.LENGTH_LONG).show());
+
+                                    if (tempFile != null && tempFile.exists()) {
+                                        tempFile.delete();
+                                    }
+                                }
+                            }).start();
+                        }
+
                     }
                 });
     }
@@ -957,44 +1018,33 @@ public class EmbedOptions implements IHook {
         addAdditionalButtons(context, layout, customPreferences, moduleContext);
 
         Button saveButton = new Button(context);
-        saveButton.setText("再起動");
+        saveButton.setText(moduleContext.getString(R.string.Restart));
         saveButton.setTextColor(Color.WHITE); // テキスト色を白色に設定
         saveButton.setBackgroundColor(Color.DKGRAY); // ボタンの背景色を暗い灰色に設定
         saveButton.setOnClickListener(v -> {
             boolean optionChanged = false;
             boolean saveSuccess = true; // 保存成功フラグ
 
-            // すべてのオプションを走査して保存処理を実行
             for (LimeOptions.Option option : limeOptions.options) {
-                boolean isChecked = option.checked;
-
-                // 変更があったかチェック
-                if (option.checked != isChecked) {
-                    optionChanged = true;
-                }
-
-                // 保存処理の結果をチェック
-                if (!customPreferences.saveSetting(option.name, String.valueOf(isChecked))) {
+                if (!customPreferences.saveSetting(option.name, String.valueOf(option.checked))) {
                     saveSuccess = false;
                 }
+            }
 
-                // 保存結果に応じてトーストを表示
-                if (!saveSuccess) {
-                    Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();
-                    context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity")); // アプリを再起動
-                }
-
+            if (!saveSuccess) {
+                Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();
+            } else {
                 Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                Process.killProcess(Process.myPid()); // プロセスを終了
-                context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity")); // アプリを再起動
-
+                // 順序変更: 先に再起動処理を実行
+                context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+                Process.killProcess(Process.myPid());
             }
         });
         layout.addView(saveButton);
 
         // 一覧を非表示にするボタン
         Button hideButton = new Button(context);
-        hideButton.setText("戻る");
+        hideButton.setText(moduleContext.getString(R.string.back));
         hideButton.setTextColor(Color.WHITE); // テキスト色を白色に設定
         hideButton.setBackgroundColor(Color.DKGRAY); // ボタンの背景色を暗い灰色に設定
         hideButton.setOnClickListener(v -> {
@@ -1011,6 +1061,7 @@ public class EmbedOptions implements IHook {
 
         return layout;
     }
+
     private LinearLayout createOptionsLayout(Context context, List<LimeOptions.Option> options, CustomPreferences customPreferences, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
         LinearLayout layout = new LinearLayout(context);
         layout.setLayoutParams(new LinearLayout.LayoutParams(
@@ -1022,13 +1073,13 @@ public class EmbedOptions implements IHook {
         layout.setClickable(true);
         layout.setFocusable(true);
 
-        String LIMEs_versionName = BuildConfig.VERSION_NAME; // versionNameを取得
+        String LIMEs_versionName = BuildConfig.VERSION_NAME;
         TextView versionTextView = new TextView(context);
         versionTextView.setText("LIMEs" + " (" + LIMEs_versionName + ")");
         versionTextView.setTextSize(16);
         versionTextView.setTextColor(Color.WHITE);
         versionTextView.setGravity(Gravity.CENTER);
-        versionTextView.setPadding(0, Utils.dpToPx(10, context), 0, Utils.dpToPx(10, context)); // 上下に10dpのパディングを設定
+        versionTextView.setPadding(0, Utils.dpToPx(10, context), 0, Utils.dpToPx(10, context));
         layout.addView(versionTextView);
 
         Switch switchRedirectWebView = null;
@@ -1042,13 +1093,11 @@ public class EmbedOptions implements IHook {
         List<Switch> preventUnsendMessageSwitches = new ArrayList<>();
         List<Switch> DarkModeSwitches = new ArrayList<>();
 
-
         for (LimeOptions.Option option : options) {
             Switch switchView = new Switch(context);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
-                    LinearLayout.LayoutParams.WRAP_CONTENT
-            );
+                    LinearLayout.LayoutParams.WRAP_CONTENT);
             params.topMargin = Utils.dpToPx(10, context);
             switchView.setLayoutParams(params);
             switchView.setText(option.id);
@@ -1057,8 +1106,8 @@ public class EmbedOptions implements IHook {
 
             switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 option.checked = isChecked;
+                customPreferences.saveSetting(option.name, String.valueOf(isChecked));
             });
-
 
             switch (option.name) {
                 case "redirect_webview":
@@ -1066,65 +1115,112 @@ public class EmbedOptions implements IHook {
                     switchRedirectWebView.setOnCheckedChangeListener((buttonView, isChecked) -> {
                         for (Switch child : webViewChildSwitches) {
                             child.setEnabled(isChecked);
-                            if (!isChecked) child.setChecked(false);
+                            if (!isChecked) {
+                                child.setChecked(false);
+                                // 子スイッチの状態を保存
+                                String childName = getOptionNameFromSwitch(child, options);
+                                if (childName != null) {
+                                    customPreferences.saveSetting(childName, "false");
+                                }
+                            }
                         }
+                        // 親スイッチの状態を保存
+                        customPreferences.saveSetting("redirect_webview", String.valueOf(isChecked));
                     });
                     break;
+
                 case "PhotoAddNotification":
                     photoAddNotificationView = switchView;
                     photoAddNotificationView.setOnCheckedChangeListener((buttonView, isChecked) -> {
                         for (Switch child : photoNotificationChildSwitches) {
                             child.setEnabled(isChecked);
-                            if (!isChecked) child.setChecked(false);
+                            if (!isChecked) {
+                                child.setChecked(false);
+                                String childName = getOptionNameFromSwitch(child, options);
+                                if (childName != null) {
+                                    customPreferences.saveSetting(childName, "false");
+                                }
+                            }
                         }
+                        customPreferences.saveSetting("PhotoAddNotification", String.valueOf(isChecked));
                     });
                     break;
+
                 case "ReadChecker":
                     ReadCheckerView = switchView;
                     ReadCheckerView.setOnCheckedChangeListener((buttonView, isChecked) -> {
                         for (Switch child : ReadCheckerSwitches) {
                             child.setEnabled(isChecked);
-                            if (!isChecked) child.setChecked(false);
+                            if (!isChecked) {
+                                child.setChecked(false);
+                                String childName = getOptionNameFromSwitch(child, options);
+                                if (childName != null) {
+                                    customPreferences.saveSetting(childName, "false");
+                                }
+                            }
                         }
+                        customPreferences.saveSetting("ReadChecker", String.valueOf(isChecked));
                     });
                     break;
+
                 case "prevent_unsend_message":
                     preventUnsendMessageView = switchView;
                     preventUnsendMessageView.setOnCheckedChangeListener((buttonView, isChecked) -> {
                         for (Switch child : preventUnsendMessageSwitches) {
                             child.setEnabled(isChecked);
-                            if (!isChecked) child.setChecked(false);
+                            if (!isChecked) {
+                                child.setChecked(false);
+                                String childName = getOptionNameFromSwitch(child, options);
+                                if (childName != null) {
+                                    customPreferences.saveSetting(childName, "false");
+                                }
+                            }
                         }
+                        customPreferences.saveSetting("prevent_unsend_message", String.valueOf(isChecked));
                     });
                     break;
+
                 case "DarkColor":
                     DarkModeView = switchView;
                     DarkModeView.setOnCheckedChangeListener((buttonView, isChecked) -> {
                         for (Switch child : DarkModeSwitches) {
                             child.setEnabled(isChecked);
-                            if (!isChecked) child.setChecked(false);
+                            if (!isChecked) {
+                                child.setChecked(false);
+                                String childName = getOptionNameFromSwitch(child, options);
+                                if (childName != null) {
+                                    customPreferences.saveSetting(childName, "false");
+                                }
+                            }
                         }
+                        customPreferences.saveSetting("DarkColor", String.valueOf(isChecked));
                     });
                     break;
+
+                // 子スイッチの登録
                 case "open_in_browser":
                     webViewChildSwitches.add(switchView);
                     switchView.setEnabled(switchRedirectWebView != null && switchRedirectWebView.isChecked());
                     break;
+
                 case "hide_canceled_message":
                     preventUnsendMessageSwitches.add(switchView);
                     switchView.setEnabled(preventUnsendMessageView != null && preventUnsendMessageView.isChecked());
                     break;
+
                 case "GroupNotification":
                 case "CansellNotification":
                 case "AddCopyAction":
                     photoNotificationChildSwitches.add(switchView);
                     switchView.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked());
                     break;
+
                 case "MySendMessage":
                 case "ReadCheckerChatdataDelete":
                     ReadCheckerSwitches.add(switchView);
                     switchView.setEnabled(ReadCheckerView != null && ReadCheckerView.isChecked());
                     break;
+
                 case "DarkModSync":
                     DarkModeSwitches.add(switchView);
                     switchView.setEnabled(DarkModeView != null && DarkModeView.isChecked());
@@ -1134,57 +1230,29 @@ public class EmbedOptions implements IHook {
             layout.addView(switchView);
         }
 
-
-
         Button saveButton = new Button(context);
-        saveButton.setText("再起動");
-        saveButton.setTextColor(Color.WHITE); // テキスト色を白色に設定
-        saveButton.setBackgroundColor(Color.DKGRAY); // ボタンの背景色を暗い灰色に設定
+        saveButton.setText(moduleContext.getString(R.string.Restart));
+        saveButton.setTextColor(Color.WHITE);
+        saveButton.setBackgroundColor(Color.DKGRAY);
         saveButton.setOnClickListener(v -> {
-            boolean optionChanged = false;
-            boolean saveSuccess = true; // 保存成功フラグ
-
-            // すべてのオプションを走査して保存処理を実行
-            for (LimeOptions.Option option : limeOptions.options) {
-                boolean isChecked = option.checked;
-
-                // 変更があったかチェック
-                if (option.checked != isChecked) {
-                    optionChanged = true;
-                }
-
-                // 保存処理の結果をチェック
-                if (!customPreferences.saveSetting(option.name, String.valueOf(isChecked))) {
-                    saveSuccess = false;
-                }
-
-
-
-                // 保存結果に応じてトーストを表示
-                if (!saveSuccess) {
-                    Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();}
-            }
-            Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-            Process.killProcess(Process.myPid()); // プロセスを終了
-            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity")); // アプリを再起動
-
+            Toast.makeText(context, context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+            Process.killProcess(Process.myPid());
         });
         layout.addView(saveButton);
 
-
-
+        // 戻るボタン
         Button backButton = new Button(context);
-        backButton.setText("戻る");
+        backButton.setText(moduleContext.getString(R.string.back));
         backButton.setTextColor(Color.WHITE);
         backButton.setBackgroundColor(Color.DKGRAY);
         backButton.setOnClickListener(v -> {
-
             LinearLayout categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
             showView((ViewGroup) layout.getParent(), categoryLayout);
         });
         layout.addView(backButton);
 
-
+        // スクロールビューでラップ
         ScrollView scrollView = new ScrollView(context);
         scrollView.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1194,16 +1262,28 @@ public class EmbedOptions implements IHook {
         return layout;
     }
 
+    private String getOptionNameFromSwitch(Switch switchView, List<LimeOptions.Option> options) {
+        try {
+            int switchTextId = Integer.parseInt(switchView.getText().toString());
+
+            for (LimeOptions.Option option : options) {
+                if (option.id == switchTextId) {
+                    return option.name;
+                }
+            }
+        } catch (NumberFormatException e) {
+            e.printStackTrace();
+        }
+        return null;
+    }
     private View createButtonLayout(Context context, CustomPreferences customPreferences, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam, XC_LoadPackage.LoadPackageParam viewGroup) {
         PackageManager pm = context.getPackageManager();
-        String versionName = ""; // 初期化
+        String versionName = "";
         try {
             versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
-
-
         FrameLayout rootLayout = new FrameLayout(context);
         rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
@@ -1247,30 +1327,34 @@ public class EmbedOptions implements IHook {
 
     private void addAdditionalButtons(Context context, LinearLayout layout, CustomPreferences customPreferences, Context moduleContext) {
 
-        Button backupButton = new Button(context);
-        backupButton.setText(moduleContext.getResources().getString(R.string.Back_Up));
-        backupButton.setOnClickListener(v -> backupChatHistory(context, moduleContext));
-        layout.addView(backupButton);
+
 
         Button restoreButton = new Button(context);
         restoreButton.setText(moduleContext.getResources().getString(R.string.Restore));
         restoreButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                showFilePicker(context, moduleContext);
+                showFilePickerChatHistory(context, moduleContext);
             }
         });
         layout.addView(restoreButton);
+
+        Button restoreChatListButton = new Button(context);
+        restoreChatListButton.setText(moduleContext.getResources().getString(R.string.restoreChatListButton));
+        restoreChatListButton.setOnClickListener(v -> showFilePickerChatlist(context, moduleContext));
+        layout.addView(restoreChatListButton);
+
+
+        Button backupButton = new Button(context);
+        backupButton.setText(moduleContext.getResources().getString(R.string.Back_Up));
+        backupButton.setOnClickListener(v -> backupChatHistory(context, moduleContext));
+        layout.addView(backupButton);
 
         Button backupfolderButton = new Button(context);
         backupfolderButton.setText(moduleContext.getResources().getString(R.string.Talk_Picture_Back_up));
         backupfolderButton.setOnClickListener(v -> backupChatsFolder(context, moduleContext));
         layout.addView(backupfolderButton);
 
-        Button restorefolderButton = new Button(context);
-        restorefolderButton.setText(moduleContext.getResources().getString(R.string.Picure_Restore));
-        restorefolderButton.setOnClickListener(v -> restoreChatsFolder(context, moduleContext));
-        layout.addView(restorefolderButton);
 
         if (limeOptions.MuteGroup.checked) {
             Button muteGroupsButton = new Button(context);
@@ -1510,30 +1594,25 @@ public class EmbedOptions implements IHook {
     }
 
     public void CansellNotification(Context context, Context moduleContext) {
-        // フォルダのパスを設定
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/Setting");
 
-        // 最初のディレクトリを確認
         if (!dir.exists()) {
-            // 次のディレクトリを確認
+
             dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/LimeBackup/Setting");
 
             if (!dir.exists()) {
-                // 内部ストレージを確認
+
                 dir = new File(context.getFilesDir(), "LimeBackup/Setting");
             }
 
-            // 最終的にディレクトリを作成
             if (!dir.exists() && !dir.mkdirs()) {
                 Toast.makeText(context, "Failed to create directory", Toast.LENGTH_SHORT).show();
                 return;
             }
         }
 
-        // ファイルのパスを設定
         File file = new File(dir, "Notification_Setting.txt");
 
-        // 現在のペアを読み取る
         List<String> existingPairs = new ArrayList<>();
         if (file.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -1547,42 +1626,34 @@ public class EmbedOptions implements IHook {
             }
         }
 
-        // 入力欄を表示するダイアログを作成
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(context.getString(R.string.NotiFication_Setting));
 
-        // レイアウトを作成
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
 
-        // グループ名の入力欄
         final EditText groupNameInput = new EditText(context);
         groupNameInput.setHint(context.getString(R.string.GroupName));
         layout.addView(groupNameInput);
 
-        // ユーザー名の入力欄
         final EditText userNameInput = new EditText(context);
         userNameInput.setHint(context.getString(R.string.User_name));
         layout.addView(userNameInput);
 
-        // 追加ボタン
         Button addButton = new Button(context);
         addButton.setText(context.getString(R.string.Add));
         layout.addView(addButton);
 
-        // 追加ボタンのクリックリスナー
         addButton.setOnClickListener(v -> {
             String groupName = groupNameInput.getText().toString();
             String userName = userNameInput.getText().toString();
             String newPair = ": " + groupName + ","+ context.getString(R.string.User_name)+": " + userName;
 
-            // 重複チェック
             if (existingPairs.contains(newPair)) {
                 Toast.makeText(context, context.getString(R.string.Aleady_Pair), Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            // ファイルに保存
             try {
                 FileWriter writer = new FileWriter(file, true); // trueを指定して追記モードにする
                 writer.write(newPair + "\n");
@@ -1597,31 +1668,28 @@ public class EmbedOptions implements IHook {
 
         builder.setView(layout);
 
-        // 現在のペアを表示し、削除できるダイアログ
         builder.setNeutralButton( context.getString(R.string.Registering_Pair), (dialog, which) -> {
             AlertDialog.Builder pairsBuilder = new AlertDialog.Builder(context);
             pairsBuilder.setTitle(context.getString(R.string.Registering_Pair));
 
-            // レイアウトを作成
             LinearLayout pairsLayout = new LinearLayout(context);
             pairsLayout.setOrientation(LinearLayout.VERTICAL);
 
             for (String pair : existingPairs) {
-                // 各ペアの表示用レイアウト
+
                 LinearLayout pairLayout = new LinearLayout(context);
                 pairLayout.setOrientation(LinearLayout.HORIZONTAL);
 
-                // ペアのテキストビュー
+
                 TextView pairTextView = new TextView(context);
                 pairTextView.setText(pair);
                 pairLayout.addView(pairTextView);
 
-                // 削除ボタン
                 Button deleteButton = new Button(context);
                 deleteButton.setText(context.getString(R.string.Delete_Pair));
                 deleteButton.setOnClickListener(v -> {
                     existingPairs.remove(pair);
-                    // ファイルを更新
+
                     try {
                         FileWriter writer = new FileWriter(file);
                         for (String remainingPair : existingPairs) {
@@ -1634,7 +1702,6 @@ public class EmbedOptions implements IHook {
                         e.printStackTrace();
                         Toast.makeText(context,  context.getString(R.string.Error_Deleted_Pair), Toast.LENGTH_SHORT).show();
                     }
-                    // ダイアログを再表示
                     pairsBuilder.setMessage(getCurrentPairsMessage(existingPairs,context));
                 });
                 pairLayout.addView(deleteButton);
@@ -1646,10 +1713,9 @@ public class EmbedOptions implements IHook {
             pairsBuilder.show();
         });
 
-        // キャンセルボタンの設定
+
         builder.setNegativeButton( context.getString(R.string.Cansel), (dialog, which) -> dialog.cancel());
 
-        // ダイアログを表示
         builder.show();
     }
 
@@ -1667,30 +1733,27 @@ public class EmbedOptions implements IHook {
 
 
     private void Cancel_Message_Button(Context context, Context moduleContext) {
-// フォルダのパスを設定
+
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/Setting");
 
-// 最初のディレクトリを確認
+
         if (!dir.exists()) {
-            // 次のディレクトリを確認
+
             dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/LimeBackup/Setting");
 
             if (!dir.exists()) {
-                // 内部ストレージを確認
                 dir = new File(context.getFilesDir(), "LimeBackup/Setting");
             }
 
-            // 最終的にディレクトリを作成
+
             if (!dir.exists() && !dir.mkdirs()) {
                 Toast.makeText(context, "Failed to create directory", Toast.LENGTH_SHORT).show();
                 return;
             }
         }
 
-        // ファイルのパスを設定
         File file = new File(dir, "canceled_message.txt");
 
-        // ファイルが存在しない場合、デフォルトのメッセージを設定
         if (!file.exists()) {
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
                 String defaultMessage = moduleContext.getResources().getString(R.string.canceled_message_txt);
@@ -1701,7 +1764,6 @@ public class EmbedOptions implements IHook {
             }
         }
 
-        // ファイルの内容を読み取る
         StringBuilder fileContent = new StringBuilder();
         if (file.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -1715,14 +1777,12 @@ public class EmbedOptions implements IHook {
             }
         }
 
-        // EditText の設定
         final EditText editText = new EditText(context);
-        editText.setText(fileContent.toString().trim()); // 不要な改行を削除
+        editText.setText(fileContent.toString().trim());
         editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         editText.setMinLines(10);
         editText.setGravity(Gravity.TOP);
 
-        // Save ボタンの設定
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         buttonParams.setMargins(16, 16, 16, 16);
@@ -1742,13 +1802,11 @@ public class EmbedOptions implements IHook {
             }
         });
 
-        // レイアウトの設定
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.addView(editText);
         layout.addView(saveButton);
 
-        // AlertDialog の設定
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(moduleContext.getResources().getString(R.string.canceled_message)); // リソースからタイトルを取得
         builder.setView(layout);
@@ -1773,7 +1831,6 @@ public class EmbedOptions implements IHook {
         }
         File file = new File(dir, "margin_settings.txt");
 
-        // 初期値
         float keep_unread_horizontalMarginFactor = 0.5f;
         int keep_unread_verticalMarginDp = 15;
         float read_button_horizontalMarginFactor = 0.6f;
@@ -1784,7 +1841,6 @@ public class EmbedOptions implements IHook {
         float chat_unread_size = 30.0f;
         float chat_read_check_size = 80.0f;
 
-        // ファイルの内容を読み込む
         if (file.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                 String line;
@@ -1826,7 +1882,7 @@ public class EmbedOptions implements IHook {
 
             }
         } else {
-            // ファイルが存在しない場合は初期値で作成
+
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
                 String defaultSettings = "keep_unread_horizontalMarginFactor=0.5\n" +
                         "keep_unread_verticalMarginDp=15\n" +
@@ -1845,12 +1901,10 @@ public class EmbedOptions implements IHook {
             }
         }
 
-        // レイアウト設定
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         layoutParams.setMargins(16, 16, 16, 16);
 
-        // 各入力フィールドの作成
         TextView keepUnreadSizeLabel = new TextView(context);
         keepUnreadSizeLabel.setText(moduleContext.getResources().getString(R.string.keep_unread_size));
         keepUnreadSizeLabel.setLayoutParams(layoutParams);
@@ -1937,7 +1991,7 @@ public class EmbedOptions implements IHook {
         saveButton.setLayoutParams(layoutParams);
         saveButton.setOnClickListener(v -> {
             try {
-                // 各入力フィールドの値を取得
+
                 String keepUnreadSizeStr = keepUnreadSizeInput.getText().toString().trim();
                 String horizontalMarginStr = horizontalInput.getText().toString().trim();
                 String verticalMarginStr = verticalInput.getText().toString().trim();
@@ -1948,7 +2002,6 @@ public class EmbedOptions implements IHook {
                 String readCheckerHorizontalMarginStr = readCheckerHorizontalInput.getText().toString().trim();
                 String readCheckerVerticalMarginStr = readCheckerVerticalInput.getText().toString().trim();
 
-                // 入力値の検証
                 if (keepUnreadSizeStr.isEmpty() || horizontalMarginStr.isEmpty() || verticalMarginStr.isEmpty() ||
                         chatUnreadSizeStr.isEmpty() || chatReadCheckSizeStr.isEmpty() ||
                         readButtonHorizontalMarginStr.isEmpty() || readButtonVerticalMarginStr.isEmpty() ||
@@ -1957,7 +2010,6 @@ public class EmbedOptions implements IHook {
                     return;
                 }
 
-                // 数値に変換
                 float newKeepUnreadSize = Float.parseFloat(keepUnreadSizeStr); // 修正
                 float newKeepUnreadHorizontalMarginFactor = Float.parseFloat(horizontalMarginStr);
                 int newKeepUnreadVerticalMarginDp = Integer.parseInt(verticalMarginStr);
@@ -1967,7 +2019,7 @@ public class EmbedOptions implements IHook {
                 int newReadButtonVerticalMarginDp = Integer.parseInt(readButtonVerticalMarginStr);
                 float newReadCheckerHorizontalMarginFactor = Float.parseFloat(readCheckerHorizontalMarginStr);
                 int newReadCheckerVerticalMarginDp = Integer.parseInt(readCheckerVerticalMarginStr);
-                // ファイルに保存
+
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
                     writer.write("keep_unread_size=" + newKeepUnreadSize + "\n");
                     writer.write("keep_unread_horizontalMarginFactor=" + newKeepUnreadHorizontalMarginFactor + "\n");
@@ -1994,14 +2046,12 @@ public class EmbedOptions implements IHook {
         resetButton.setText("Reset");
         resetButton.setLayoutParams(layoutParams);
         resetButton.setOnClickListener(v -> {
-            // 確認ダイアログを表示
+
             new AlertDialog.Builder(context)
                     .setMessage(moduleContext.getResources().getString(R.string.really_delete))
                     .setPositiveButton(moduleContext.getResources().getString(R.string.yes), (dialog, which) -> {
                         try {
 
-
-                            // ファイルが存在する場合、削除する
                             if (file.exists()) {
                                 if (file.delete()) {
                                     Toast.makeText(context.getApplicationContext(), moduleContext.getResources().getString(R.string.file_content_deleted), Toast.LENGTH_SHORT).show();
@@ -2022,8 +2072,6 @@ public class EmbedOptions implements IHook {
         });
 
 
-
-        // レイアウトを構築
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.addView(keepUnreadSizeLabel);
@@ -2051,7 +2099,7 @@ public class EmbedOptions implements IHook {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(moduleContext.getResources().getString(R.string.edit_margin_settings));
-        builder.setView(scrollView); // ScrollView をダイアログのビューとして設定
+        builder.setView(scrollView);
         builder.setNegativeButton(moduleContext.getResources().getString(R.string.cancel), null);
         if (context instanceof Activity && !((Activity) context).isFinishing()) {
             builder.show();
@@ -2069,7 +2117,6 @@ public class EmbedOptions implements IHook {
             }
         }
 
-        // ファイルが存在する場合、内容を読み込む
         if (file.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                 String line;
@@ -2192,7 +2239,6 @@ public class EmbedOptions implements IHook {
         List<UserEntry> userEntries = new ArrayList<>();
         Map<String, String> existingSettings = loadExistingSettings(context);
 
-        // データベースからチャットリストを取得
         try (SQLiteDatabase chatListDb = context.openOrCreateDatabase("naver_line", Context.MODE_PRIVATE, null);
              SQLiteDatabase profileDb = context.openOrCreateDatabase("contact", Context.MODE_PRIVATE, null);
              Cursor chatCursor = chatListDb.rawQuery("SELECT chat_id FROM chat WHERE is_archived = 0", null)) {
@@ -2214,7 +2260,6 @@ public class EmbedOptions implements IHook {
             return;
         }
 
-        // ダイアログのレイアウト構成
         ScrollView scrollView = new ScrollView(context);
         LinearLayout mainLayout = new LinearLayout(context);
         mainLayout.setOrientation(LinearLayout.VERTICAL);
@@ -2225,7 +2270,6 @@ public class EmbedOptions implements IHook {
                 context.getResources().getDisplayMetrics()
         );
 
-        // ユーザーエントリーのリスト作成
         LinearLayout contentLayout = new LinearLayout(context);
         contentLayout.setOrientation(LinearLayout.VERTICAL);
         contentLayout.setPadding(padding, padding, padding, padding);
@@ -2268,16 +2312,14 @@ public class EmbedOptions implements IHook {
         scrollView.addView(contentLayout);
         mainLayout.addView(scrollView);
 
-        // ダイアログの表示
         new AlertDialog.Builder(context)
-                .setTitle("ユーザー設定")
+                .setTitle(moduleContext.getString(R.string.UserSet))
                 .setView(mainLayout)
-                .setPositiveButton("保存", (dialog, which) -> saveUserData(context, userEntries))
-                .setNegativeButton("キャンセル", null)
+                .setPositiveButton(moduleContext.getString(R.string.save), (dialog, which) -> saveUserData(context, userEntries,moduleContext))
+                .setNegativeButton(moduleContext.getString(R.string.cancel), null)
                 .show();
     }
 
-    // 設定読み込みメソッド
     private Map<String, String> loadExistingSettings(Context context) {
         Map<String, String> settingsMap = new HashMap<>();
         File settingFile = new File(
@@ -2301,8 +2343,7 @@ public class EmbedOptions implements IHook {
         return settingsMap;
     }
 
-    // データ保存メソッド
-    private void saveUserData(Context context, List<UserEntry> entries) {
+    private void saveUserData(Context context, List<UserEntry> entries,Context moduleContext) {
         File outputDir = new File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                 "LimeBackup/Setting"
@@ -2327,13 +2368,12 @@ public class EmbedOptions implements IHook {
             for (Map.Entry<String, String> entry : newSettings.entrySet()) {
                 writer.write(entry.getKey() + "," + entry.getValue() + "\n");
             }
-            Toast.makeText(context, "設定を保存しました: " + outputFile.getPath(), Toast.LENGTH_LONG).show();
+            Toast.makeText(context, moduleContext.getString(R.string.SettingSave) + outputFile.getPath(), Toast.LENGTH_LONG).show();
         } catch (IOException e) {
-            Toast.makeText(context, "保存失敗: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, moduleContext.getString(R.string.file_save_failed)+ e.getMessage(), Toast.LENGTH_SHORT).show();
         }
     }
 
-    // その他の補助メソッド
     private String getProfileNameFromContacts(SQLiteDatabase db, String contactMid) {
         try (Cursor cursor = db.rawQuery("SELECT profile_name FROM contacts WHERE mid=?", new String[]{contactMid})) {
             return cursor.moveToFirst() ? cursor.getString(0) : "Unknown";
@@ -2484,7 +2524,7 @@ public class EmbedOptions implements IHook {
 
             Button hideBtn = new Button(context);
                 hideBtn.setText(moduleContext.getResources().getString(R.string.Hide));
-            hideBtn.setBackgroundColor(Color.parseColor("#FF9800")); // オレンジ色
+            hideBtn.setBackgroundColor(Color.parseColor("#FF9800"));
             hideBtn.setTextColor(Color.WHITE);
             hideBtn.setOnClickListener(v -> {
                 hiddenManager.addHiddenProfile(profile.contactMid);
@@ -2533,7 +2573,7 @@ public class EmbedOptions implements IHook {
 
                         Button restoreBtn = new Button(context);
                         restoreBtn.setText(moduleContext.getResources().getString(R.string.Redisplay));
-                        restoreBtn.setBackgroundColor(Color.parseColor("#4CAF50")); // 緑色
+                        restoreBtn.setBackgroundColor(Color.parseColor("#4CAF50"));
                         restoreBtn.setTextColor(Color.WHITE);
                         restoreBtn.setOnClickListener(v -> {
                             hiddenManager.removeHiddenProfile(profile.contactMid);
@@ -2591,10 +2631,8 @@ public class EmbedOptions implements IHook {
                         try {
                             ContentValues values = new ContentValues();
                             for (String original : originalValues) {
-                                // 対象文字列を削除
                                 String updatedValue = original.replace(targetPhrase, "");
 
-                                // 更新値が変更されているか確認
                                 if (!original.equals(updatedValue)) {
                                     values.clear();
                                     values.put("overridden_name", updatedValue);
@@ -2716,13 +2754,14 @@ public class EmbedOptions implements IHook {
 
 
     private static final int PICK_FILE_REQUEST_CODE = 1001;
-    private void showFilePicker(Context context, Context moduleContext) {
+
+    private void showFilePickerChatHistory(Context context, Context moduleContext) {
         Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-        intent.setType("*/*"); // すべてのファイルタイプを許可
+        intent.setType("*/*");
         intent.addCategory(Intent.CATEGORY_OPENABLE);
 
         try {
-            // ファイルピッカーを表示
+
             if (context instanceof Activity) {
                 ((Activity) context).startActivityForResult(Intent.createChooser(intent, "Select a file to restore"), PICK_FILE_REQUEST_CODE);
             } else {
@@ -2733,132 +2772,421 @@ public class EmbedOptions implements IHook {
         }
     }
 
+    private static final int PICK_FILE_REQUEST_CODE2 = 1002;
+
+    private void showFilePickerChatlist(Context context, Context moduleContext) {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("*/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+
+        try {
+            if (context instanceof Activity) {
+                ((Activity) context).startActivityForResult(Intent.createChooser(intent, "Select a file to restore"), PICK_FILE_REQUEST_CODE2);
+            } else {
+                Toast.makeText(context, "Context is not an Activity", Toast.LENGTH_SHORT).show();
+            }
+        } catch (android.content.ActivityNotFoundException ex) {
+            Toast.makeText(context, "Please install a File Manager.", Toast.LENGTH_SHORT).show();
+        }
+    }
 
     private void restoreChatHistory(Context context, Context moduleContext, File finalTempFile) {
-        final int BATCH_SIZE = 500;
-        File backupDbFile = new File(String.valueOf(finalTempFile));
+        new AsyncTask<Void, Integer, Boolean>() {
+            private ProgressDialog progressDialog;
+            private int totalRecords = 0;
+            private int processedRecords = 0;
+            private String errorMessage = null;
+            private Exception exception = null;
 
-        if (!backupDbFile.exists()) {
-            showToast(context, moduleContext, R.string.Backup_file_not_found);
-            return;
-        }
+            @Override
+            protected void onPreExecute() {
+                progressDialog = new ProgressDialog(context);
+                progressDialog.setTitle(moduleContext.getString(R.string.restoring_chat_history));
+                progressDialog.setMessage(moduleContext.getString(R.string.preparing));
+                progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                progressDialog.setCancelable(false);
+                progressDialog.setMax(100);
+                progressDialog.setProgress(0);
+                progressDialog.show();
+            }
 
-        SQLiteDatabase backupDb = null;
-        SQLiteDatabase originalDb = null;
-        Cursor cursor = null;
+            @Override
+            protected Boolean doInBackground(Void... voids) {
+                final int BATCH_SIZE = 100;
+                if (finalTempFile == null) {
+                    errorMessage = "Backup file path is null";
+                    return false;
+                }
 
-        try {
-            backupDb = SQLiteDatabase.openDatabase(backupDbFile.getPath(), null, SQLiteDatabase.OPEN_READONLY);
-            originalDb = context.openOrCreateDatabase("naver_line", Context.MODE_PRIVATE, null);
+                File backupDbFile = finalTempFile;
+                if (!backupDbFile.exists()) {
+                    errorMessage = "Backup file not found at: " + backupDbFile.getAbsolutePath();
+                    showToast(context, moduleContext, R.string.Delete_Cache);
+                    return false;
+                }
 
-            originalDb.beginTransaction();
+                SQLiteDatabase backupDb = null;
+                SQLiteDatabase originalDb = null;
+                Cursor countCursor = null;
+                Cursor dataCursor = null;
 
-            cursor = backupDb.rawQuery("SELECT * FROM chat_history", null);
-            if (cursor != null && cursor.moveToFirst()) {
-                int count = 0;
-                do {
-                    String serverId = cursor.getString(cursor.getColumnIndexOrThrow("server_id"));
-                    if (serverId == null) continue;
+                try {
 
-                    if (isRecordExists(originalDb, "chat_history", "server_id", serverId)) {
-                        continue;
+                    backupDb = SQLiteDatabase.openDatabase(
+                            backupDbFile.getAbsolutePath(),
+                            null,
+                            SQLiteDatabase.OPEN_READONLY | SQLiteDatabase.NO_LOCALIZED_COLLATORS
+                    );
+
+                    try {
+                        countCursor = backupDb.rawQuery("SELECT COUNT(*) FROM chat_history", null);
+                        if (countCursor == null || !countCursor.moveToFirst()) {
+                            errorMessage = "Failed to get record count";
+                            return false;
+                        }
+                        totalRecords = countCursor.getInt(0);
+                        publishProgress(0);
+                    } catch (SQLiteException e) {
+                        errorMessage = "Error counting records";
+                        exception = e;
+                        return false;
                     }
 
-                    ContentValues values = extractChatHistoryValues(cursor);
-                    originalDb.insertWithOnConflict("chat_history", null, values, SQLiteDatabase.CONFLICT_IGNORE);
+                    if (totalRecords == 0) {
+                        return true;
+                    }
 
-                    if (++count % BATCH_SIZE == 0) {
-                        originalDb.setTransactionSuccessful();
-                        originalDb.endTransaction();
+                    try {
+                        originalDb = context.openOrCreateDatabase(
+                                "naver_line",
+                                Context.MODE_PRIVATE,
+                                null
+                        );
+                    } catch (SQLiteException e) {
+                        errorMessage = "Failed to open target database";
+                        exception = e;
+                        return false;
+                    }
+
+                    try {
+                        dataCursor = backupDb.rawQuery("SELECT * FROM chat_history", null);
+                        if (dataCursor == null || !dataCursor.moveToFirst()) {
+                            errorMessage = "No data to restore";
+                            return false;
+                        }
+
                         originalDb.beginTransaction();
-                    }
-                } while (cursor.moveToNext());
-            }
 
-            originalDb.setTransactionSuccessful();
-            showToast(context, moduleContext, R.string.Restore_Success);
-        } catch (Exception e) {
-            Log.e("RestoreChatHistory", "Error restoring chat history", e);
-            showToast(context, moduleContext, R.string.Restore_Error);
-        } finally {
-            if (originalDb != null) {
-                originalDb.endTransaction();
-                originalDb.close(); // 明示的にクローズ
-            }
-            closeQuietly(cursor);
-            closeQuietly(backupDb);
-        }
+                        do {
+                            if (isCancelled()) {
+                                errorMessage = "Restoration cancelled";
+                                return false;
+                            }
 
-        // トランザクション終了後にrestoreChatを呼び出し
-        restoreChat(context, moduleContext);
-    }
+                            try {
+                                String serverId = dataCursor.getString(
+                                        dataCursor.getColumnIndexOrThrow("server_id")
+                                );
 
-    private void restoreChat(Context context, Context moduleContext) {
-        final int BATCH_SIZE = 500;
-        File backupDbFile = findBackupFile();
+                                if (serverId == null) continue;
 
-        if (backupDbFile == null || !backupDbFile.exists()) {
-            showToast(context, moduleContext, R.string.Backup_file_not_found);
-            return;
-        }
+                                if (!isRecordExists(originalDb, "chat_history", "server_id", serverId)) {
+                                    ContentValues values = extractChatHistoryValues(dataCursor);
+                                    long rowId = originalDb.insertWithOnConflict(
+                                            "chat_history",
+                                            null,
+                                            values,
+                                            SQLiteDatabase.CONFLICT_IGNORE
+                                    );
 
-        SQLiteDatabase backupDb = null;
-        SQLiteDatabase originalDb = null;
-        Cursor cursor = null;
+                                    if (rowId == -1) {
+                                        Log.w("Restore", "Failed to insert record: " + serverId);
+                                    }
+                                }
 
-        try {
-            backupDb = SQLiteDatabase.openDatabase(backupDbFile.getPath(), null, SQLiteDatabase.OPEN_READONLY);
-            originalDb = context.openOrCreateDatabase("naver_line", Context.MODE_PRIVATE, null);
+                                processedRecords++;
 
-            originalDb.beginTransaction();
 
-            cursor = backupDb.rawQuery("SELECT * FROM chat", null);
-            if (cursor != null && cursor.moveToFirst()) {
-                int count = 0;
-                do {
-                    String chatId = cursor.getString(cursor.getColumnIndexOrThrow("chat_id"));
-                    if (chatId == null) continue;
+                                if (processedRecords % Math.max(1, totalRecords / 100) == 0 ||
+                                        processedRecords % BATCH_SIZE == 0) {
+                                    int progress = (int) ((float) processedRecords / totalRecords * 100);
+                                    publishProgress(progress);
+                                }
+                                if (processedRecords % BATCH_SIZE == 0) {
+                                    originalDb.setTransactionSuccessful();
+                                    originalDb.endTransaction();
+                                    originalDb.beginTransaction();
+                                }
+                            } catch (SQLiteException e) {
+                                Log.e("RestoreRecord", "Error restoring record " + processedRecords, e);
+                                continue;
+                            }
 
-                    ContentValues values = extractChatValues(cursor);
-                    originalDb.insertWithOnConflict("chat", null, values, SQLiteDatabase.CONFLICT_IGNORE);
+                        } while (dataCursor.moveToNext());
 
-                    if (++count % BATCH_SIZE == 0) {
                         originalDb.setTransactionSuccessful();
-                        originalDb.endTransaction();
-                        originalDb.beginTransaction();
+                        return true;
+
+                    } catch (Exception e) {
+                        errorMessage = "Error during data restoration";
+                        exception = e;
+                        return false;
                     }
-                } while (cursor.moveToNext());
+
+                } catch (Exception e) {
+                    errorMessage = "Unexpected error during restoration";
+                    exception = e;
+                    return false;
+                } finally {
+
+                    if (originalDb != null) {
+                        try {
+                            originalDb.endTransaction();
+                            originalDb.close();
+                        } catch (Exception e) {
+                            Log.e("CloseDB", "Error closing original DB", e);
+                        }
+                    }
+                    closeQuietly(countCursor);
+                    closeQuietly(dataCursor);
+                    if (backupDb != null) {
+                        try {
+                            backupDb.close();
+                        } catch (Exception e) {
+                            Log.e("CloseDB", "Error closing backup DB", e);
+                        }
+                    }
+                }
             }
 
-            originalDb.setTransactionSuccessful();
-            showToast(context, moduleContext, R.string.Restore_Chat_Table_Success);
-        } catch (Exception e) {
-            Log.e("RestoreChat", "Error restoring chat", e);
-            showToast(context, moduleContext, R.string.Restore_Chat_Table_Error);
-        } finally {
-            if (originalDb != null) {
-                originalDb.endTransaction();
-                originalDb.close(); // 明示的にクローズ
+            @Override
+            protected void onProgressUpdate(Integer... progress) {
+                if (progressDialog != null && progress.length > 0) {
+                    int percent = progress[0];
+                    progressDialog.setProgress(percent);
+                    progressDialog.setMessage(
+                            String.format(
+                                    moduleContext.getString(R.string.progress_message),
+                                    processedRecords,
+                                    totalRecords,
+                                    percent
+                            )
+                    );
+                }
             }
-            closeQuietly(cursor);
-            closeQuietly(backupDb);
-        }
+
+            @Override
+            protected void onPostExecute(Boolean success) {
+                if (progressDialog != null) {
+                    progressDialog.dismiss();
+                }
+
+                if (success) {
+                    showToast(context, moduleContext, R.string.Restore_Success);
+                } else {
+                    Log.e("RestoreError", errorMessage, exception);
+                    String userMessage = moduleContext.getString(R.string.Restore_Error);
+                    if (exception instanceof SQLiteException) {
+                        userMessage += ": Database error";
+                    } else if (exception != null) {
+                        userMessage += ": System error";
+                    }
+
+                    showToast(context, moduleContext, Integer.parseInt(userMessage));
+                }
+            }
+
+            @Override
+            protected void onCancelled() {
+                if (progressDialog != null) {
+                    progressDialog.dismiss();
+                }
+                showToast(context, moduleContext, R.string.Restore_Cancelled);
+            }
+
+            private void closeQuietly(Closeable closeable) {
+                if (closeable != null) {
+                    try {
+                        closeable.close();
+                    } catch (IOException e) {
+                        Log.e("Close", "Error closing resource", e);
+                    }
+                }
+            }
+        }.execute();
     }
 
-    // ヘルパーメソッド群
-    private File findBackupFile() {
-        File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-        File backupDbFile = new File(backupDir, "naver_line_backup.db");
+    private void restoreChatList(Context context, Context moduleContext, File finalTempFile) {
+        new AsyncTask<Void, Integer, Boolean>() {
+            private ProgressDialog progressDialog;
+            private int totalRecords = 0;
+            private int processedRecords = 0;
 
-        if (!backupDbFile.exists()) {
-            File alternativeDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
-            File alternativeDbFile = new File(alternativeDir, "naver_line_backup.db");
-            if (alternativeDbFile.exists()) {
-                return alternativeDbFile;
+            @Override
+            protected void onPreExecute() {
+                progressDialog = new ProgressDialog(context);
+                progressDialog.setTitle(moduleContext.getString(R.string.restoring_chat));
+                progressDialog.setMessage(moduleContext.getString(R.string.preparing));
+                progressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+                progressDialog.setCancelable(false);
+                progressDialog.setMax(100);
+                progressDialog.setProgress(0);
+                progressDialog.show();
             }
-        }
-        return backupDbFile;
+
+            @Override
+            protected Boolean doInBackground(Void... voids) {
+                final int BATCH_SIZE = 500;
+
+                if (finalTempFile == null || !finalTempFile.exists()) {
+                    Log.e("Restore", "Backup file not found or null");
+                    return false;
+                }
+
+                SQLiteDatabase backupDb = null;
+                SQLiteDatabase originalDb = null;
+                Cursor cursor = null;
+                Cursor countCursor = null;
+
+                try {
+                    if (!finalTempFile.canRead()) {
+                        Log.e("Restore", "No read permission for backup file");
+                        return false;
+                    }
+
+                    backupDb = SQLiteDatabase.openDatabase(
+                            finalTempFile.getAbsolutePath(),
+                            null,
+                            SQLiteDatabase.OPEN_READONLY
+                    );
+                    countCursor = backupDb.rawQuery("SELECT COUNT(*) FROM chat", null);
+                    if (countCursor != null && countCursor.moveToFirst()) {
+                        totalRecords = countCursor.getInt(0);
+                        publishProgress(0); // 初期進捗更新
+                    }
+
+                    originalDb = context.openOrCreateDatabase(
+                            "naver_line",
+                            Context.MODE_PRIVATE,
+                            null
+                    );
+
+                    originalDb.beginTransaction();
+                    cursor = backupDb.rawQuery("SELECT * FROM chat", null);
+
+                    if (cursor != null && cursor.moveToFirst()) {
+                        do {
+                            if (isCancelled()) return false;
+
+                            String chatId = cursor.getString(
+                                    cursor.getColumnIndexOrThrow("chat_id")
+                            );
+                            if (chatId == null) continue;
+
+                            ContentValues values = extractChatValues(cursor);
+                            originalDb.insertWithOnConflict(
+                                    "chat",
+                                    null,
+                                    values,
+                                    SQLiteDatabase.CONFLICT_IGNORE
+                            );
+
+                            processedRecords++;
+                            if (processedRecords % Math.max(1, totalRecords / 100) == 0 ||
+                                    processedRecords % BATCH_SIZE == 0) {
+                                int progress = (int) ((float) processedRecords / totalRecords * 100);
+                                publishProgress(progress);
+                            }
+                            if (processedRecords % BATCH_SIZE == 0) {
+                                originalDb.setTransactionSuccessful();
+                                originalDb.endTransaction();
+                                originalDb.beginTransaction();
+                            }
+
+                        } while (cursor.moveToNext());
+                    }
+
+                    originalDb.setTransactionSuccessful();
+                    return true;
+
+                } catch (Exception e) {
+                    Log.e("RestoreChat", "Error restoring chat list", e);
+                    return false;
+                } finally {
+                    if (originalDb != null) {
+                        try {
+                            originalDb.endTransaction();
+                            originalDb.close();
+                        } catch (Exception e) {
+                            Log.e("Restore", "Error closing original DB", e);
+                        }
+                    }
+                    closeQuietly(cursor);
+                    closeQuietly(countCursor);
+                    if (backupDb != null) {
+                        try {
+                            backupDb.close();
+                        } catch (Exception e) {
+                            Log.e("Restore", "Error closing backup DB", e);
+                        }
+                    }
+
+                    if (finalTempFile != null && finalTempFile.exists()) {
+                        finalTempFile.delete();
+                    }
+                }
+            }
+
+            @Override
+            protected void onProgressUpdate(Integer... progress) {
+                if (progressDialog != null && progress.length > 0) {
+                    int percent = progress[0];
+                    progressDialog.setProgress(percent);
+                    progressDialog.setMessage(
+                            String.format(
+                                    "%s: %d/%d (%d%%)",
+                                    moduleContext.getString(R.string.processing),
+                                    processedRecords,
+                                    totalRecords,
+                                    percent
+                            )
+                    );
+                }
+            }
+
+            @Override
+            protected void onPostExecute(Boolean success) {
+                if (progressDialog != null) {
+                    progressDialog.dismiss();
+                }
+
+                if (success) {
+                    showToast(context, moduleContext, R.string.Restore_Chat_Table_Success);
+                } else {
+                    showToast(context, moduleContext, R.string.Restore_Chat_Table_Error);
+                }
+            }
+
+            @Override
+            protected void onCancelled() {
+                if (progressDialog != null) {
+                    progressDialog.dismiss();
+                }
+                showToast(context, moduleContext, R.string.Restore_Cancelled);
+            }
+
+            private void closeQuietly(Closeable closeable) {
+                if (closeable != null) {
+                    try {
+                        closeable.close();
+                    } catch (IOException e) {
+                        Log.e("Restore", "Error closing resource", e);
+                    }
+                }
+            }
+        }.execute();
     }
+
 
     private ContentValues extractChatHistoryValues(Cursor cursor) {
         ContentValues values = new ContentValues();
@@ -2942,14 +3270,6 @@ public class EmbedOptions implements IHook {
         Toast.makeText(context, moduleContext.getResources().getString(resId), Toast.LENGTH_SHORT).show();
     }
 
-    private void closeQuietly(Closeable closeable) {
-        if (closeable != null) {
-            try {
-                closeable.close();
-            } catch (Exception ignored) {
-            }
-        }
-    }
     private void backupChatsFolder(Context context,Context moduleContext) {
         File originalChatsDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/files/chats");
         File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");

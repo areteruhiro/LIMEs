@@ -1,6 +1,5 @@
 package io.github.hiro.lime.hooks;
 
-import static android.content.ContentValues.TAG;
 import static io.github.hiro.lime.Main.limeOptions;
 
 import android.app.AndroidAppHelper;
@@ -291,16 +290,36 @@ public class PhotoAddNotification implements IHook {
                 }
             }
             int randomNotificationId = (int) System.currentTimeMillis();
-            NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-            if (notificationManager != null) {
+            if (limeOptions.original_ID.checked) {
+                int originalId;
+                String tag = null;
                 if (hasTag) {
-                    String tag = (String) param.args[0];
-                    notificationManager.notify(tag, randomNotificationId, newNotification);
+                    tag = (String) param.args[0];
+                    originalId = (Integer) param.args[1];
                 } else {
-                    notificationManager.notify(randomNotificationId, newNotification);
+                    originalId = (Integer) param.args[0];
+                }
+
+
+                NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                if (notificationManager != null) {
+                    if (hasTag) {
+                        notificationManager.notify(tag, originalId, newNotification);
+                    } else {
+                        notificationManager.notify(originalId, newNotification);
+                    }
+                }
+            }else {
+                NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+                if (notificationManager != null) {
+                    if (hasTag) {
+                        String tag = (String) param.args[0];
+                        notificationManager.notify(tag, randomNotificationId, newNotification);
+                    } else {
+                        notificationManager.notify(randomNotificationId, newNotification);
+                    }
                 }
             }
-
             param.setResult(null);
         } catch (Exception e) {
             Log.e(TAG, "Critical error in notification processing", e);

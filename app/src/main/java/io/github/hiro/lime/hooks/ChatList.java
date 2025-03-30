@@ -357,7 +357,6 @@ public class ChatList implements IHook {
 
         saveChangeToFile(chatId, originalTime);
 
-        // トランザクション開始
         db.beginTransaction();
         try {
             String updateQuery = "UPDATE chat SET last_created_time = ? WHERE chat_id = ?";
@@ -365,10 +364,9 @@ public class ChatList implements IHook {
             statement.bindLong(1, newTime);
             statement.bindString(2, chatId);
 
-            int updatedRows = statement.executeUpdateDelete(); // ここが抜けていた
+            statement.executeUpdateDelete();
             db.setTransactionSuccessful();
 
-           // XposedBridge.log("Updated rows: " + updatedRows + " for chat: " + chatId);
             PinListFix(db, db2, moduleContext, chatId);
         } catch (SQLException e) {
             XposedBridge.log("Update error: " + e.getMessage());
@@ -426,7 +424,7 @@ public class ChatList implements IHook {
                 if (current == null || !current.equals(newMessage)) {
                     db.execSQL("UPDATE chat SET last_message = ? WHERE chat_id = ?",
                             new Object[]{newMessage, chatId});
-                    XposedBridge.log("Updated last message for chat: " + chatId);
+                 //   XposedBridge.log("Updated last message for chat: " + chatId);
                 }
             }
         }
