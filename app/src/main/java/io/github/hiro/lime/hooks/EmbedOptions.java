@@ -1356,6 +1356,12 @@ public class EmbedOptions implements IHook {
         layout.addView(backupfolderButton);
 
 
+        Button restorefolderButton = new Button(context);
+        restorefolderButton.setText(moduleContext.getResources().getString(R.string.Picure_Restore));
+        restorefolderButton.setOnClickListener(v -> restoreChatsFolder(context, moduleContext));
+        layout.addView(restorefolderButton);
+
+
         if (limeOptions.MuteGroup.checked) {
             Button muteGroupsButton = new Button(context);
             muteGroupsButton.setText(moduleContext.getResources().getString(R.string.Mute_Group));

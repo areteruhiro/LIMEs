@@ -38,6 +38,10 @@ public class ChatList implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
 
+
+
+
+        hookSAMethod(loadPackageParam);
         XposedBridge.hookAllMethods(Application.class, "onCreate", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -56,7 +60,7 @@ public class ChatList implements IHook {
                     SQLiteDatabase.OpenParams dbParams = builder.build();
                     SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile, dbParams);
 
-                    hookSAMethod(loadPackageParam, db, appContext,moduleContext);
+
                     hookMessageDeletion(loadPackageParam, appContext, db, moduleContext); // moduleContextを渡す
                 } else {
                 }
@@ -124,13 +128,15 @@ public class ChatList implements IHook {
         }
     }
 
-    private void hookSAMethod(XC_LoadPackage.LoadPackageParam loadPackageParam, SQLiteDatabase db, Context context,Context moduleContext) {
+    private void hookSAMethod(XC_LoadPackage.LoadPackageParam loadPackageParam) {
         //ChatListViewModel
         Class<?> targetClass = XposedHelpers.findClass(Constants.Archive.className, loadPackageParam.classLoader);
 
         XposedBridge.hookAllMethods(targetClass, "invokeSuspend", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                        "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
                 Context appContext = AndroidAppHelper.currentApplication();
                 if (appContext == null) {
                     return;
@@ -158,7 +164,7 @@ public class ChatList implements IHook {
                     return;
                 }
                 if (limeOptions.Archived.checked) {
-                    List<String> chatIds = readChatIdsFromFile(appContext, context);  // 変更点
+                    List<String> chatIds = readChatIdsFromFile(appContext, appContext);  // 変更点
                     for (String chatId : chatIds) {
                         if (!chatId.isEmpty()) {
                             updateIsArchived(db, chatId);
@@ -173,7 +179,7 @@ public class ChatList implements IHook {
                         }
 
                     }
-                    restoreMissingEntries(context,db);
+                    restoreMissingEntries(appContext,db);
                 }
                 if (db != null) db.close();
                 if (db2 != null) db2.close();
@@ -183,7 +189,7 @@ public class ChatList implements IHook {
     }
 
 
-    private List<String> readChatIdsFromFile(Context context, Context moduleContext) {
+    private List<String> readChatIdsFromFile(Context appContext, Context moduleContext) {
         List<String> chatIds = new ArrayList<>();
         File dir = moduleContext.getFilesDir();
         File file = new File(dir, "hidelist.txt");
@@ -450,11 +456,11 @@ public class ChatList implements IHook {
 
         return  moduleContext.getResources().getString(R.string.file);
     }
-    private void restoreMissingEntries(Context context,SQLiteDatabase db) {
+    private void restoreMissingEntries(Context appContext,SQLiteDatabase db) {
         // XposedBridge.log("復元処理開始");
 
-        Map<String, String> chatList = loadChatList(context);
-        Map<String, String> changeList = loadChangeList(context);
+        Map<String, String> chatList = loadChatList(appContext);
+        Map<String, String> changeList = loadChangeList(appContext);
         int successCount = 0;
         int failCount = 0;
 
@@ -497,7 +503,7 @@ public class ChatList implements IHook {
 
         // XposedBridge.log("復元処理結果: 成功=" + successCount + ", 失敗=" + failCount);
     }
-    private Map<String, String> loadChangeList(Context context) {
+    private Map<String, String> loadChangeList(Context appContext) {
         Map<String, String> changeMap = new HashMap<>();
         File file = new File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
@@ -519,7 +525,7 @@ public class ChatList implements IHook {
         }
         return changeMap;
     }
-    private Map<String, String> loadChatList(Context context) {
+    private Map<String, String> loadChatList(Context appContext) {
         Map<String, String> chatMap = new HashMap<>();
         File file = new File(
                 Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
