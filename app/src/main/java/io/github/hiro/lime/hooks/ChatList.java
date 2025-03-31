@@ -60,12 +60,14 @@ public class ChatList implements IHook {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
                         builder = new SQLiteDatabase.OpenParams.Builder();
                     }
-                    builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams = builder.build();
-                    SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile, dbParams);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
 
+                        SQLiteDatabase.OpenParams dbParams = builder.build();
+                        SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile, dbParams);
 
-                    hookMessageDeletion(loadPackageParam, appContext, db, moduleContext); // moduleContextを渡す
+                        hookMessageDeletion(loadPackageParam, appContext, db, moduleContext);
+                    }
                 } else {
                 }
             }
@@ -151,19 +153,24 @@ public class ChatList implements IHook {
                 SQLiteDatabase db2 = null;
 
                 if (dbFile.exists() && dbFile2.exists()) {
-                    SQLiteDatabase.OpenParams.Builder builder = new SQLiteDatabase.OpenParams.Builder();
-                    builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams = builder.build();
+                    SQLiteDatabase.OpenParams.Builder builder = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder = new SQLiteDatabase.OpenParams.Builder();
 
 
-                    SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
-                    builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams2 = builder2.build();
+                        builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+
+                        SQLiteDatabase.OpenParams dbParams = builder.build();
 
 
-                    db = SQLiteDatabase.openDatabase(dbFile, dbParams);
-                    db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
+                        SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
+                        builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                        SQLiteDatabase.OpenParams dbParams2 = builder2.build();
 
+
+                        db = SQLiteDatabase.openDatabase(dbFile, dbParams);
+                        db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
+                    }
                 } else {
                     return;
                 }
@@ -434,7 +441,7 @@ public class ChatList implements IHook {
                 if (current == null || !current.equals(newMessage)) {
                     db.execSQL("UPDATE chat SET last_message = ? WHERE chat_id = ?",
                             new Object[]{newMessage, chatId});
-                 //   XposedBridge.log("Updated last message for chat: " + chatId);
+                    //   XposedBridge.log("Updated last message for chat: " + chatId);
                 }
             }
         }
