@@ -60,14 +60,12 @@ public class ChatList implements IHook {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
                         builder = new SQLiteDatabase.OpenParams.Builder();
                     }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                        builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    SQLiteDatabase.OpenParams dbParams = builder.build();
+                    SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile, dbParams);
 
-                        SQLiteDatabase.OpenParams dbParams = builder.build();
-                        SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile, dbParams);
 
-                        hookMessageDeletion(loadPackageParam, appContext, db, moduleContext);
-                    }
+                    hookMessageDeletion(loadPackageParam, appContext, db, moduleContext); // moduleContextを渡す
                 } else {
                 }
             }
@@ -153,24 +151,19 @@ public class ChatList implements IHook {
                 SQLiteDatabase db2 = null;
 
                 if (dbFile.exists() && dbFile2.exists()) {
-                    SQLiteDatabase.OpenParams.Builder builder = null;
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                        builder = new SQLiteDatabase.OpenParams.Builder();
+                    SQLiteDatabase.OpenParams.Builder builder = new SQLiteDatabase.OpenParams.Builder();
+                    builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    SQLiteDatabase.OpenParams dbParams = builder.build();
 
 
-                        builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-
-                        SQLiteDatabase.OpenParams dbParams = builder.build();
-
-
-                        SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
-                        builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                        SQLiteDatabase.OpenParams dbParams2 = builder2.build();
+                    SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
+                    builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    SQLiteDatabase.OpenParams dbParams2 = builder2.build();
 
 
-                        db = SQLiteDatabase.openDatabase(dbFile, dbParams);
-                        db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
-                    }
+                    db = SQLiteDatabase.openDatabase(dbFile, dbParams);
+                    db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
+
                 } else {
                     return;
                 }
