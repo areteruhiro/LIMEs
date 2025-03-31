@@ -10,6 +10,7 @@ import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteStatement;
+import android.os.Build;
 import android.os.Environment;
 import android.util.Pair;
 
@@ -44,7 +45,7 @@ public class ChatList implements IHook {
         hookSAMethod(loadPackageParam);
         XposedBridge.hookAllMethods(Application.class, "onCreate", new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 Application appContext = (Application) param.thisObject;
 
                 if (appContext == null) {
@@ -55,13 +56,18 @@ public class ChatList implements IHook {
 
                 File dbFile = appContext.getDatabasePath("naver_line");
                 if (dbFile.exists()) {
-                    SQLiteDatabase.OpenParams.Builder builder = new SQLiteDatabase.OpenParams.Builder();
-                    builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams = builder.build();
-                    SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile, dbParams);
+                    SQLiteDatabase.OpenParams.Builder builder = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
 
+                        SQLiteDatabase.OpenParams dbParams = builder.build();
+                        SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile, dbParams);
 
-                    hookMessageDeletion(loadPackageParam, appContext, db, moduleContext); // moduleContextを渡す
+                        hookMessageDeletion(loadPackageParam, appContext, db, moduleContext);
+                    }
                 } else {
                 }
             }
@@ -134,7 +140,7 @@ public class ChatList implements IHook {
 
         XposedBridge.hookAllMethods(targetClass, "invokeSuspend", new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                         "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
                 Context appContext = AndroidAppHelper.currentApplication();
@@ -147,19 +153,24 @@ public class ChatList implements IHook {
                 SQLiteDatabase db2 = null;
 
                 if (dbFile.exists() && dbFile2.exists()) {
-                    SQLiteDatabase.OpenParams.Builder builder = new SQLiteDatabase.OpenParams.Builder();
-                    builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams = builder.build();
+                    SQLiteDatabase.OpenParams.Builder builder = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder = new SQLiteDatabase.OpenParams.Builder();
 
 
-                    SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
-                    builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams2 = builder2.build();
+                        builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+
+                        SQLiteDatabase.OpenParams dbParams = builder.build();
 
 
-                    db = SQLiteDatabase.openDatabase(dbFile, dbParams);
-                    db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
+                        SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
+                        builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                        SQLiteDatabase.OpenParams dbParams2 = builder2.build();
 
+
+                        db = SQLiteDatabase.openDatabase(dbFile, dbParams);
+                        db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
+                    }
                 } else {
                     return;
                 }
