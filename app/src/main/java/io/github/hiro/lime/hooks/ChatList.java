@@ -138,7 +138,7 @@ public class ChatList implements IHook {
         //ChatListViewModel
         Class<?> targetClass = XposedHelpers.findClass(Constants.Archive.className, loadPackageParam.classLoader);
 
-        XposedBridge.hookAllMethods(targetClass, "invokeSuspend", new XC_MethodHook() {
+        XposedBridge.hookAllMethods(targetClass, Constants.Archive.methodName, new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
@@ -384,13 +384,14 @@ public class ChatList implements IHook {
             statement.executeUpdateDelete();
             db.setTransactionSuccessful();
 
-            PinListFix(db, db2, moduleContext, chatId);
+            //PinListFix(db, db2, moduleContext, chatId);
         } catch (SQLException e) {
             XposedBridge.log("Update error: " + e.getMessage());
         } finally {
             db.endTransaction();
         }
     }
+
     private void PinListFix(SQLiteDatabase db, SQLiteDatabase db2, Context moduleContext, String chatId) {
         String latestMessageQuery = "SELECT content, parameter, from_mid FROM chat_history WHERE chat_id = ? ORDER BY id DESC LIMIT 1";
 

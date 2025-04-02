@@ -142,7 +142,7 @@
     <string name="AgeCheckSkip">跳過年齡驗證</string>
     <string name="LINELabOnly">只在LINE Lab畫面中加入設定按鈕</string>
     <string name="canceled_message">更改已取消訊息的通知對話</string>
-    <string name="canceled_message_txt">這是一條已取消的訊息</string>
+    <string name="canceled_message_txt">" 回收訊息提示"</string>
     <string name="hide_canceled_message">隱藏已取消訊息的訊息</string>
     <string name="removeNaviOpenchat">刪除聊天清單中的開啟聊天圖標</string>
     <string name="removeNaviAlbum">移除聊天清單中的相簿圖標</string>

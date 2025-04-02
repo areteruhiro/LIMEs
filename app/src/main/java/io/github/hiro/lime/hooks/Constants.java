@@ -149,9 +149,38 @@ public class Constants {
 
 
 
-        } else if (isVersionInRange(versionName, "15.4.0", "15.5.0")) {
+        } else if (isVersionInRange(versionName, "15.4.0", "15.4.1")) {
 
-            XposedBridge.log("15.4.0- 15.5.0 Patched ");
+            XposedBridge.log("15.4.0 Patched ");
+
+            USER_AGENT_HOOK = new HookTarget("Rj1.c", "j");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("jS0.l", "onPageFinished");
+            MUTE_MESSAGE_HOOK = new HookTarget("Ki1.b", "I");
+            MARK_AS_READ_HOOK = new HookTarget("pQ.d$d", "run");
+            Archive = new HookTarget("GC.Y", "G7");
+            NOTIFICATION_READ_HOOK = new HookTarget("lk1.b", "invokeSuspend");
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+            RemoveVoiceRecord_Hook_a = new HookTarget("h.i", "run");
+
+            ChatRestore = new HookTarget("androidx.fragment.app.p", "onActivityResult");
+//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
+            PhotoSave = new HookTarget("qh1.i0", "");
+
+//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
+            PhotoSave1 = new HookTarget("rc1.C", "");
+
+ //DIRECTORY_PICTURES
+            PhotoSave2 = new HookTarget("mR.g", "");
+
+//com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
+            PhotoSave3 = new HookTarget("gm.J$b", "");
+
+
+
+        } else if (isVersionInRange(versionName, "15.4.1", "15.5.0")) {
+
+            XposedBridge.log("15.4.1 Patched ");
 
                      /*
             TRADITIONAL_CHINESE
@@ -175,29 +204,30 @@ public class Constants {
             USER_AGENT_HOOK = new HookTarget("Rj1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("jS0.l", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("Ki1.b", "I");
-            MARK_AS_READ_HOOK = new HookTarget("pQ.d$d", "run");
-            Archive = new HookTarget("GC.Z", "invokeSuspend");
+            MARK_AS_READ_HOOK = new HookTarget("pQ.c$d", "run");
+            Archive = new HookTarget("GC.Y", "G7");
             NOTIFICATION_READ_HOOK = new HookTarget("lk1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("h.i", "run");
 
-            ChatRestore = new HookTarget("androidx.fragment.app.p", "onActivityResult");
+            ChatRestore = new HookTarget("androidx.fragment.app.n", "onActivityResult");
 //jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
-            PhotoSave = new HookTarget("qh1.i0", "");
+            //getAllChatIds
+            PhotoSave = new HookTarget("qh1.k0", "");
 
 //jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
-            PhotoSave1 = new HookTarget("rc1.C", "");
+            //VideoPlaybackSyncEvent(localMessageId
+            PhotoSave1 = new HookTarget("rc1.D", "");
 
- //DIRECTORY_PICTURES
+            //DIRECTORY_PICTURES
             PhotoSave2 = new HookTarget("mR.g", "");
 
 //com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
-            PhotoSave3 = new HookTarget("gm.J$b", "");
-
-
-
+            //createAlbum
+            PhotoSave3 = new HookTarget("gm.K", "");
         }
+
 
 
     }
