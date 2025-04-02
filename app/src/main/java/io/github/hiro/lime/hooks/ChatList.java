@@ -384,7 +384,7 @@ public class ChatList implements IHook {
             statement.executeUpdateDelete();
             db.setTransactionSuccessful();
 
-            //PinListFix(db, db2, moduleContext, chatId);
+            PinListFix(db, db2, moduleContext, chatId);
         } catch (SQLException e) {
             XposedBridge.log("Update error: " + e.getMessage());
         } finally {
@@ -393,7 +393,7 @@ public class ChatList implements IHook {
     }
 
     private void PinListFix(SQLiteDatabase db, SQLiteDatabase db2, Context moduleContext, String chatId) {
-        String latestMessageQuery = "SELECT content, parameter, from_mid FROM chat_history WHERE chat_id = ? ORDER BY id DESC LIMIT 1";
+        String latestMessageQuery = "SELECT content, parameter, type, from_mid FROM chat_history WHERE chat_id = ? ORDER BY id DESC LIMIT 1";
 
         try (Cursor cursor = db.rawQuery(latestMessageQuery, new String[]{chatId})) {
             if (cursor != null && cursor.moveToFirst()) {
@@ -405,7 +405,6 @@ public class ChatList implements IHook {
                     String mediaType = getMediaDescription(moduleContext, parameter);
 
                     if (fromMid == null) {
-
                         latestContent = String.format(
                                 moduleContext.getString(R.string.media_message_no_sender),
                                 mediaType
@@ -418,14 +417,44 @@ public class ChatList implements IHook {
                                 mediaType
                         );
                     }
-                    // XposedBridge.log("Formatted media message: " + latestContent);
+                } else if (latestContent.startsWith("Call History :")) {
+                    // Handle call history formatting
+                    int result = 0;
+                    long millisecs = 0;
+
+                    // Extract millisecs and result from the content
+                    try {
+                        String[] parts = latestContent.split(", ");
+                        for (String part : parts) {
+                            if (part.startsWith("Call History :")) {
+                                millisecs = Long.parseLong(part.replace("Call History :", "").replace(" millisecs", "").trim());
+                            } else if (part.startsWith("Result:")) {
+                                result = Integer.parseInt(part.replace("Result:", "").trim());
+                            }
+                        }
+
+                        if (result == 16) {
+                            // Format as "通話時間 00:00"
+                            long seconds = millisecs / 1000;
+                            long minutes = seconds / 60;
+                            seconds = seconds % 60;
+                            latestContent = String.format(moduleContext.getString(R.string.call_duration_format),
+                                    minutes, seconds);
+                        } else if (result == 77 && millisecs == 0) {
+                            if (fromMid == null) {
+                                latestContent = moduleContext.getString(R.string.call_cancelled);
+                            } else {
+                                latestContent = moduleContext.getString(R.string.missed_call);
+                            }
+                        }
+                    } catch (Exception e) {
+                        XposedBridge.log("Error parsing call history: " + e.getMessage());
+                    }
                 }
 
-
                 updateChatLastMessage(db, chatId, latestContent);
-
             } else {
-                //   XposedBridge.log("No message found for chat: " + chatId);
+                // XposedBridge.log("No message found for chat: " + chatId);
             }
         } catch (SQLException e) {
             XposedBridge.log("DB error: " + e.getMessage());

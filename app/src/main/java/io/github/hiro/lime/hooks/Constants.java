@@ -157,7 +157,7 @@ public class Constants {
             WEBVIEW_CLIENT_HOOK = new HookTarget("jS0.l", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("Ki1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("pQ.d$d", "run");
-            Archive = new HookTarget("GC.Y", "G7");
+            Archive = new HookTarget("GC.Z", "invokeSuspend");
             NOTIFICATION_READ_HOOK = new HookTarget("lk1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
@@ -226,6 +226,9 @@ public class Constants {
 //com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
             //createAlbum
             PhotoSave3 = new HookTarget("gm.K", "");
+
+
+
         }
 
 

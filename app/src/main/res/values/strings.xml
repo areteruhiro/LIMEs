@@ -246,4 +246,8 @@
     <string name="file_copy_error">Failed to Copy Temporary File</string>
     <string name="Delete_Cache">Please Clear LINE Cache</string>
     <string name="Send_Message">was sent</string>
+
+    <string name="call_duration_format">Call duration %02d:%02d</string>
+    <string name="missed_call">Missed call</string>
+    <string name="call_cancelled">Call cancelled</string>
 </resources>

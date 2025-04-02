@@ -232,5 +232,8 @@
     <string name="restoring_chat_history">正在恢復聊天記錄</string>
     <string name="preparing">準備中…</string>
 
+    <string name="call_duration_format">通話時間 %02d:%02d</string>
+    <string name="missed_call">未接來電</string>
+    <string name="call_cancelled">已取消通話</string>
 
 </resources>

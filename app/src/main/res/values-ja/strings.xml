@@ -241,4 +241,8 @@
     <string name="UserSet">ユーザー設定</string>
     <string name="save">保存</string>
 
+    <string name="call_duration_format">通話時間 %02d:%02d</string>
+    <string name="missed_call">不在着信</string>
+    <string name="call_cancelled">通話をキャンセルしました</string>
+
 </resources>
