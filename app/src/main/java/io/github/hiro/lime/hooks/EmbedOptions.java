@@ -2818,7 +2818,7 @@ public class EmbedOptions implements IHook {
 
             @Override
             protected Boolean doInBackground(Void... voids) {
-                final int BATCH_SIZE = 100;
+                final int BATCH_SIZE = 50;
                 if (finalTempFile == null) {
                     errorMessage = "Backup file path is null";
                     return false;
