@@ -209,7 +209,7 @@ public class Constants {
             NOTIFICATION_READ_HOOK = new HookTarget("lk1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
-            RemoveVoiceRecord_Hook_a = new HookTarget("h.i", "run");
+            RemoveVoiceRecord_Hook_a = new HookTarget("h.j", "run");
 
             ChatRestore = new HookTarget("androidx.fragment.app.n", "onActivityResult");
 //jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
