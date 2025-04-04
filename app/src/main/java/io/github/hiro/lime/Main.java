@@ -63,6 +63,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new Removebutton(),
             new PhotoSave(),
 
+
     };
 
 
@@ -91,8 +92,14 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             createDefaultSettings();
         } catch (Exception e) {
      XposedBridge.log("Lime: Preferences init failed: " + e);
+
+
+
             return;
         }
+
+
+
 
         Constants.initializeHooks(lpparam);
 
@@ -100,7 +107,11 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
         for (IHook hook : hooks) {
             hook.hook(limeOptions, lpparam);
         }
+
+
+
     }
+
 
     private void loadSettings() {
         for (LimeOptions.Option option : limeOptions.options) {

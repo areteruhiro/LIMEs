@@ -44,7 +44,7 @@ public class CustomPreferences {
             }
             settingsFileInternal = new File(internalDir, SETTINGS_FILE);
 
-            File externalBaseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File externalBaseDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
             File externalDir = new File(externalBaseDir, SETTINGS_DIR);
             if (!externalDir.exists() && !externalDir.mkdirs()) {
 
