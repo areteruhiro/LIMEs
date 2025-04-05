@@ -61,7 +61,7 @@ public class SendMuteMessage implements IHook {
                             }
 
                             String resourceString = resources.getString(resourceId);
-                     //       XposedBridge.log("Resource ID: " + resourceId + ", Name: " + resourceName + ", String: " + resourceString);
+         //XposedBridge.log("Resource ID: " + resourceId + ", Name: " + resourceName + ", String: " + resourceString);
 
                             String entryName = resourceName.substring(resourceName.lastIndexOf('/') + 1);
 
