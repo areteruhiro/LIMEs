@@ -235,5 +235,6 @@
     <string name="call_duration_format">通話時間 %02d:%02d</string>
     <string name="missed_call">未接來電</string>
     <string name="call_cancelled">已取消通話</string>
+    <string name="ReactionCount">ReactionCount(Dev)</string>
 
 </resources>

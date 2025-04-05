@@ -631,18 +631,13 @@ public class PhotoSave implements IHook {
 
 private static boolean isVersionInRange(String versionName, String minVersion, String maxVersion) {
     try {
-        // バージョン文字列を数値に変換
         int[] currentVersion = parseVersion(versionName);
         int[] minVersionArray = parseVersion(minVersion);
         int[] maxVersionArray = parseVersion(maxVersion);
 
-        // バージョンが minVersion 以上かどうかをチェック
         boolean isGreaterOrEqualMin = compareVersions(currentVersion, minVersionArray) >= 0;
 
-        // バージョンが maxVersion 未満かどうかをチェック
         boolean isLessThanMax = compareVersions(currentVersion, maxVersionArray) < 0;
-
-        // 両方の条件を満たすかどうかを返す
         return isGreaterOrEqualMin && isLessThanMax;
     } catch (Exception e) {
         e.printStackTrace();
@@ -650,7 +645,6 @@ private static boolean isVersionInRange(String versionName, String minVersion, S
     }
 }
 
-// バージョン文字列を数値配列に変換
 private static int[] parseVersion(String version) {
     String[] parts = version.split("\\.");
     int[] versionArray = new int[parts.length];
@@ -660,7 +654,7 @@ private static int[] parseVersion(String version) {
     return versionArray;
 }
 
-// バージョン比較用のメソッド
+
 private static int compareVersions(int[] version1, int[] version2) {
     for (int i = 0; i < Math.min(version1.length, version2.length); i++) {
         if (version1[i] < version2[i]) return -1;

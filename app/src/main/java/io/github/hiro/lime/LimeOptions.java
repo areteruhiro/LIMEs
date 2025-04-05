@@ -72,6 +72,7 @@ public class LimeOptions {
         public Option ReadChecker = new Option("ReadChecker", R.string.ReadChecker, false, OptionCategory.CHAT);
         public Option ReadCheckerChatdataDelete = new Option("ReadCheckerChatdataDelete", R.string.ReadCheckerChatdataDelete, false, OptionCategory.CHAT);
         public Option MySendMessage = new Option("MySendMessage", R.string.MySendMessage, false, OptionCategory.CHAT);
+        public Option ReactionCount = new Option("ReactionCount", R.string.ReactionCount, false, OptionCategory.CHAT);
 
 
         public Option BlockCheck = new Option("BlockCheck", R.string.BlockCheck, true, OptionCategory.CHAT);
@@ -157,7 +158,8 @@ public class LimeOptions {
                 BlockCheck, SettingClick,
                 photoboothButtonOption, voiceButtonOption, videoButtonOption, videoSingleButtonOption,
                 AutoUpDateCheck, PinList,
-                NewOption, PhotoSave
+                NewOption, PhotoSave,
+                ReactionCount
         };
 
 
