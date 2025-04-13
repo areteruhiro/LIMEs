@@ -117,11 +117,11 @@ public class PhotoAddNotification implements IHook {
                             Bundle extras = notification.extras;
                             String userName = extras.getString("android.title");
                             String groupName = extras.getString("android.subText");
-                            
+
                             if (isMatchingSetting(userName, groupName)) {
 
                             } else {
-                               
+
                                 param.setResult(null);
                                 return;
                             }
@@ -206,23 +206,23 @@ public class PhotoAddNotification implements IHook {
 
                             if (chatId != null && id != null) {
                                 foundValidData = true;
-                                //XposedBridge.log("Found Chat ID: " + chatId + ", Message ID: " + id);
+                               // XposedBridge.log("Found Chat ID: " + chatId + ", Message ID: " + id);
 
                                 File latestFile = getFileWithId(chatId, id);
                                 if (latestFile == null) {
-                                    //XposedBridge.log("No file found for Chat ID: " + chatId + " and ID: " + id);
+                                   // XposedBridge.log("No file found for Chat ID: " + chatId + " and ID: " + id);
                                     return;
                                 }
 
                                 Bitmap bitmap = loadBitmapFromFile(latestFile);
                                 if (bitmap == null) {
-                                    //XposedBridge.log("Failed to load bitmap from file: " + latestFile.getAbsolutePath());
+                                   // XposedBridge.log("Failed to load bitmap from file: " + latestFile.getAbsolutePath());
                                     return;
                                 }
 
 
                                 newNotification = createNotificationWithImageFromFile(context, originalNotification, latestFile, originalText);
-                                //XposedBridge.log("Created new notification with image.");
+                               // XposedBridge.log("Created new notification with image.");
 
 
                                 param.setResult(null);
@@ -241,12 +241,12 @@ public class PhotoAddNotification implements IHook {
 //                                }
                             } else {
                                 // Log and retry if either chatId or id is null
-                                //XposedBridge.log("Chat ID or Message ID is null, retrying...");
+                               // XposedBridge.log("Chat ID or Message ID is null, retrying...");
                                 retryCount++;
                                 try {
                                     Thread.sleep(RETRY_DELAY); // Wait before retrying
                                 } catch (InterruptedException e) {
-                                    //XposedBridge.log("Retry interrupted.");
+                                   // XposedBridge.log("Retry interrupted.");
                                 }
                             }
                         } else {
@@ -309,7 +309,7 @@ public class PhotoAddNotification implements IHook {
                         notificationManager.notify(originalId, newNotification);
                     }
                 }
-            }else {
+            } else {
                 NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
                 if (notificationManager != null) {
                     if (hasTag) {
@@ -368,18 +368,18 @@ public class PhotoAddNotification implements IHook {
     private Notification createNotificationWithImageFromBitmap(Context context, Notification original, Bitmap bitmap, String originalText) {
         Notification.BigPictureStyle bigPictureStyle = new Notification.BigPictureStyle()
                 .bigPicture(bitmap)
-                .bigLargeIcon(bitmap) 
+                .bigLargeIcon(bitmap)
                 .setSummaryText(originalText);
 
         Notification.Builder builder = Notification.Builder.recoverBuilder(context, original)
-                .setStyle(bigPictureStyle); 
+                .setStyle(bigPictureStyle);
 
         return builder.build();
     }
 
     private File getFileWithId(String chatId, String id) {
-    
-        //XposedBridge.log("getFileWithId: Searching for file with id: " + id + " in chat: " + chatId);
+
+       // XposedBridge.log("getFileWithId: Searching for file with id: " + id + " in chat: " + chatId);
 
         File messagesDir = new File(Environment.getExternalStorageDirectory(),
                 "/Android/data/jp.naver.line.android/files/chats/" + chatId + "/messages");
@@ -389,60 +389,33 @@ public class PhotoAddNotification implements IHook {
             return null;
         }
 
-        // バックアップ用ディレクトリとファイル
-        File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-        if (!backupDir.exists() && !backupDir.mkdirs()) {
-            backupDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
-        }
-
-        File waitTimeFile = new File(backupDir, "wait_time.txt");
 
         long waitTimeMillis = 1000; // デフォルトの待機時間（1秒）
-        if (!waitTimeFile.exists()) {
-            try (FileWriter writer = new FileWriter(waitTimeFile)) {
-                writer.write(String.valueOf(waitTimeMillis)); // デフォルト値を書き込む
-                //XposedBridge.log("getFileWithId: Wait time file created with default value: " + waitTimeMillis);
-            } catch (IOException e) {
-                //XposedBridge.log("getFileWithId: Failed to write wait time file: " + e.getMessage());
-                return null; // ファイル作成失敗
-            }
-        } else {
-            try (BufferedReader reader = new BufferedReader(new FileReader(waitTimeFile))) {
-                String line = reader.readLine();
-                waitTimeMillis = Long.parseLong(line); // ファイルから待機時間を取得
-                //XposedBridge.log("getFileWithId: Wait time read from file: " + waitTimeMillis);
-            } catch (IOException | NumberFormatException e) {
-                //XposedBridge.log("getFileWithId: Failed to read or parse wait time: " + e.getMessage());
-                return null; // 読み込みまたは解析失敗
-            }
-        }
 
+            //XposedBridge.log("getFileWithId: Wait time read from file: " + waitTimeMillis);
         // 待機
         try {
-            //XposedBridge.log("getFileWithId: Sleeping for " + waitTimeMillis + " milliseconds.");
+           // XposedBridge.log("getFileWithId: Sleeping for " + waitTimeMillis + " milliseconds.");
             Thread.sleep(waitTimeMillis);
         } catch (InterruptedException e) {
             //XposedBridge.log("getFileWithId: Thread interrupted during sleep.");
-            return null; // スレッド中断
+            return null; 
         }
-
-        // Check each file for the specific id
         File[] files = messagesDir.listFiles((dir, name) -> !name.endsWith(".downloading"));
         if (files == null || files.length == 0) {
-            //XposedBridge.log("getFileWithId: No files found in the messages directory.");
+           // XposedBridge.log("getFileWithId: No files found in the messages directory.");
             return null;
         }
 
         // Iterate through the files and find the one containing the id
         for (File file : files) {
-            //XposedBridge.log("getFileWithId: Checking file: " + file.getName());
+           // XposedBridge.log("getFileWithId: Checking file: " + file.getName());
             if (file.getName().contains(id)) {
-                //XposedBridge.log("getFileWithId: Found file containing id: " + file.getName());
+               // XposedBridge.log("getFileWithId: Found file containing id: " + file.getName());
                 return file; // Return the first file containing the id
             }
         }
-
-        //XposedBridge.log("getFileWithId: No file with the specified id found.");
+       // XposedBridge.log("getFileWithId: No file with the specified id found.");
         return null; // No file with the specified id found
     }
 
@@ -659,42 +632,42 @@ public class PhotoAddNotification implements IHook {
 
     }
     private void logAllNotificationDetails(String method, int ids, Notification notification, String tag) {
-        XposedBridge.log(method + " called. ID: " + ids + (tag != null ? ", Tag: " + tag : ""));
-        XposedBridge.log("Notification Icon: " + notification.icon);
-        XposedBridge.log("Notification When: " + notification.when);
-        XposedBridge.log("Notification Flags: " + notification.flags);
-        XposedBridge.log("Notification Priority: " + notification.priority);
-        XposedBridge.log("Notification Category: " + notification.category);
+       // XposedBridge.log(method + " called. ID: " + ids + (tag != null ? ", Tag: " + tag : ""));
+       // XposedBridge.log("Notification Icon: " + notification.icon);
+       // XposedBridge.log("Notification When: " + notification.when);
+       // XposedBridge.log("Notification Flags: " + notification.flags);
+       // XposedBridge.log("Notification Priority: " + notification.priority);
+       // XposedBridge.log("Notification Category: " + notification.category);
         if (notification.extras != null) {
             Bundle extras = notification.extras;
-            XposedBridge.log("Notification Extras:");
+           // XposedBridge.log("Notification Extras:");
             for (String key : extras.keySet()) {
                 Object value = extras.get(key);
-                XposedBridge.log("  " + key + ": " + (value != null ? value.toString() : "null"));
+               // XposedBridge.log("  " + key + ": " + (value != null ? value.toString() : "null"));
             }
         } else {
-            XposedBridge.log("Notification has no extras.");
+           // XposedBridge.log("Notification has no extras.");
         }
 
         if (notification.actions != null) {
-            XposedBridge.log("Notification Actions:");
+           // XposedBridge.log("Notification Actions:");
             for (int i = 0; i < notification.actions.length; i++) {
                 Notification.Action action = notification.actions[i];
-                XposedBridge.log("  Action " + i + ": " +
-                        "Title=" + action.title +
-                        ", Intent=" + action.actionIntent);
+               // XposedBridge.log("  Action " + i + ": " +
+//                        "Title=" + action.title +
+//                        ", Intent=" + action.actionIntent);
             }
         } else {
             //XposedBridge.log("No actions found.");
         }
 
         // その他の情報
-        XposedBridge.log("Notification Visibility: " + notification.visibility);
-        XposedBridge.log("Notification Color: " + notification.color);
-        XposedBridge.log("Notification Group: " + notification.getGroup());
-        XposedBridge.log("Notification SortKey: " + notification.getSortKey());
-        XposedBridge.log("Notification Sound: " + notification.sound);
-        XposedBridge.log("Notification Vibrate: " + (notification.vibrate != null ? "Yes" : "No"));
+       // XposedBridge.log("Notification Visibility: " + notification.visibility);
+       // XposedBridge.log("Notification Color: " + notification.color);
+       // XposedBridge.log("Notification Group: " + notification.getGroup());
+       // XposedBridge.log("Notification SortKey: " + notification.getSortKey());
+       // XposedBridge.log("Notification Sound: " + notification.sound);
+       // XposedBridge.log("Notification Vibrate: " + (notification.vibrate != null ? "Yes" : "No"));
     }
 }
 

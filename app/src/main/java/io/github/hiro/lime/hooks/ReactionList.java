@@ -1,7 +1,6 @@
 package io.github.hiro.lime.hooks;
 
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
-import static de.robv.android.xposed.XposedHelpers.findClassIfExists;
 import static io.github.hiro.lime.Main.limeOptions;
 import static io.github.hiro.lime.Utils.dpToPx;
 
@@ -11,14 +10,12 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.widget.FrameLayout;
 import android.widget.GridLayout;
 import android.widget.ImageView;
@@ -26,7 +23,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -136,15 +132,19 @@ public class ReactionList implements IHook {
 
                     private void incrementCount(String type) {
                         if (Arrays.asList(REACTION_TYPES).contains(type)) {
-                            reactionCounts.put(type, reactionCounts.getOrDefault(type, 0) + 1);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                reactionCounts.put(type, reactionCounts.getOrDefault(type, 0) + 1);
+                            }
                         }
                     }
 
                     private void logReactionCounts() {
                         StringBuilder log = new StringBuilder("[RESULT] Reaction Counts:\n");
-                        reactionCounts.forEach((type, count) -> {
-                            if (count > 0) log.append("  ").append(type).append(": ").append(count).append("\n");
-                        });
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                            reactionCounts.forEach((type, count) -> {
+                                if (count > 0) log.append("  ").append(type).append(": ").append(count).append("\n");
+                            });
+                        }
                         XposedBridge.log(log.toString());
                     }
                 }
@@ -213,7 +213,10 @@ public class ReactionList implements IHook {
             grid.setPadding(dpToPx(4, context), 0, dpToPx(4, context), 0);
 
             for (String type : REACTION_TYPES) {
-                int count = reactionCounts.getOrDefault(type, 0);
+                int count = 0;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    count = reactionCounts.getOrDefault(type, 0);
+                }
                 if (count > 0) {
                     String resourceName = REACTION_IMAGE_NAMES.get(type);
                     int resourceId = moduleContext.getResources().getIdentifier(
@@ -223,8 +226,8 @@ public class ReactionList implements IHook {
                     );
 
                     if (resourceId != 0) {
-
-                        int imageSize = dpToPx(20, context);
+//アイコンサイズ変更
+                        int imageSize = dpToPx(28, context);
 
                         InputStream is = moduleContext.getResources().openRawResource(resourceId);
                         Bitmap rawBitmap = BitmapFactory.decodeStream(is);
@@ -284,7 +287,7 @@ public class ReactionList implements IHook {
         TextView tv = new TextView(context);
         tv.setText(String.valueOf(count));
         tv.setTextColor(Color.parseColor("#FF4081"));
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
         tv.setTypeface(Typeface.DEFAULT_BOLD);
 
         tv.setShadowLayer(

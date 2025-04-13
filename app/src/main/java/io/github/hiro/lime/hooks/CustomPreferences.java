@@ -24,67 +24,58 @@ public class CustomPreferences {
     private final boolean isXposedContext;
 
     public CustomPreferences(Context context) throws PackageManager.NameNotFoundException, IOException {
-        if (context != null) {
-
+        // システムパッケージの場合は常に外部ストレージを使用
+        if (context != null && !context.getPackageName().equals("android")) {
             this.isXposedContext = true;
 
+            // 内部ストレージの初期化
             File internalDir = new File(context.getFilesDir(), SETTINGS_DIR);
             if (!internalDir.exists() && !internalDir.mkdirs()) {
-
                 Toast.makeText(
                         context,
                         context.getString(R.string.Error_Create_setting_Button)
                                 + "\nError: " + context.getString(R.string.save_failed),
                         Toast.LENGTH_LONG
                 ).show();
-                throw new IOException("Failed to create internal directory: "
-                        + internalDir.getAbsolutePath()
-                        + " | Permission: "
-                        + (internalDir.getParentFile().canWrite() ? "granted" : "denied"));
+                throw new IOException("Failed to create internal directory");
             }
             settingsFileInternal = new File(internalDir, SETTINGS_FILE);
 
+            // 外部ストレージの初期化
             File externalBaseDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+            if (externalBaseDir == null) {
+                throw new IOException("External storage not available");
+            }
             File externalDir = new File(externalBaseDir, SETTINGS_DIR);
             if (!externalDir.exists() && !externalDir.mkdirs()) {
-
-
-                throw new IOException("Failed to create external directory: "
-                        + externalDir.getAbsolutePath()
-                        + " | Storage state: "
-                        + Environment.getExternalStorageState());
+                throw new IOException("Failed to create external directory");
             }
             settingsFileExternal = new File(externalDir, SETTINGS_FILE);
 
-
+            // ファイルの同期
             if (!settingsFileInternal.exists() && settingsFileExternal.exists()) {
                 copyFile(settingsFileExternal, settingsFileInternal);
             } else if (!settingsFileExternal.exists() && settingsFileInternal.exists()) {
                 copyFile(settingsFileInternal, settingsFileExternal);
             }
-
         } else {
-
+            // システムパッケージまたはnullコンテキストの場合
             this.isXposedContext = false;
+            this.settingsFileInternal = null;
 
-
+            // 外部ストレージのみ使用
             File externalBaseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
             File externalDir = new File(externalBaseDir, SETTINGS_DIR);
             settingsFileExternal = new File(externalDir, SETTINGS_FILE);
 
-
             if (!settingsFileExternal.exists()) {
-                throw new FileNotFoundException("External settings file not found at: "
-                        + settingsFileExternal.getAbsolutePath()
-                        + "\nPlease ensure the file exists or run the hooked app first");
+                throw new FileNotFoundException("External settings file not found");
             }
-
-            settingsFileInternal = null;
-
         }
 
         syncFiles();
     }
+
 
     private void syncFiles() {
         if (!isXposedContext || settingsFileInternal == null) return;

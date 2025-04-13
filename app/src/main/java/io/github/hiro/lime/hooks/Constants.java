@@ -181,26 +181,6 @@ public class Constants {
         } else if (isVersionInRange(versionName, "15.4.1", "15.5.0")) {
 
             XposedBridge.log("15.4.1 Patched ");
-
-                     /*
-            TRADITIONAL_CHINESE
-            static  HookTarget USER_AGENT_HOOK = new HookTarget("ek1.c", "j");
-            HANDLED_AND_RETURN_TRUE
-            static     WEBVIEW_CLIENT_HOOK = new HookTarget("CR0.m", "onPageFinished");
-            NOTIFICATION_DISABLED
-            static  HookTarget MUTE_MESSAGE_HOOK = new HookTarget("Xi1.b", "I");
-            PROCESSING
-            static  HookTarget   MARK_AS_READ_HOOK = new HookTarget("aQ.c$d", "run");
-
-        ChatListViewModel
-            static  HookTarget Archive = new HookTarget("tC.S", "invokeSuspend");
-          StreamingFetchOperationHandler
-            static  HookTargetNOTIFICATION_READ_HOOK = new HookTarget("yk1.b", "invokeSuspend");
-            //%s failed: out of sequence response: expected %d but got %d
-            static  HookTarget   REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
-            static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
-          */
-            //BackEventCompat
             USER_AGENT_HOOK = new HookTarget("Rj1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("jS0.l", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("Ki1.b", "I");
@@ -228,8 +208,64 @@ public class Constants {
             PhotoSave3 = new HookTarget("gm.K", "");
 
 
+        } else if (isVersionInRange(versionName, "15.5.0", "15.6.0")) {
+
+            XposedBridge.log("15.5.1 Patched ");
+
+                     /*
+            TRADITIONAL_CHINESE
+            static  HookTarget USER_AGENT_HOOK = new HookTarget("ek1.c", "j");
+            HANDLED_AND_RETURN_TRUE
+            static     WEBVIEW_CLIENT_HOOK = new HookTarget("CR0.m", "onPageFinished");
+            NOTIFICATION_DISABLED
+            static  HookTarget MUTE_MESSAGE_HOOK = new HookTarget("Xi1.b", "I");
+            PROCESSING
+            static  HookTarget   MARK_AS_READ_HOOK = new HookTarget("aQ.c$d", "run");
+
+        ChatListViewModel
+            static  HookTarget Archive = new HookTarget("tC.S", "invokeSuspend");
+          StreamingFetchOperationHandler
+            static  HookTargetNOTIFICATION_READ_HOOK = new HookTarget("yk1.b", "invokeSuspend");
+
+            //%s failed: out of sequence response: expected %d but got %d
+            static  HookTarget   REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+            static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+          */
+
+            //BackEventCompat
+            USER_AGENT_HOOK = new HookTarget("ej1.c", "j");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("FS0.l", "onPageFinished");
+            MUTE_MESSAGE_HOOK = new HookTarget("Xh1.b", "I");
+            MARK_AS_READ_HOOK = new HookTarget("mQ.c$d", "run");
+            Archive = new HookTarget("JC.Y", "invokeSuspend");
+
+            NOTIFICATION_READ_HOOK = new HookTarget("yj1.b", "invokeSuspend");
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+
+            RemoveVoiceRecord_Hook_a = new HookTarget("h.j", "run");
+
+            ChatRestore = new HookTarget("androidx.fragment.app.n", "onActivityResult");
+//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
+            //getAllChatIds
+            PhotoSave = new HookTarget("Cg1.s0", "");
+
+//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
+            //VideoPlaybackSyncEvent(localMessageId
+            PhotoSave1 = new HookTarget("Ib1.L", "");
+
+            //DIRECTORY_PICTURES
+            PhotoSave2 = new HookTarget("jR.g", "");
+
+//com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
+            //createAlbum
+            PhotoSave3 = new HookTarget("gm.y", "");
+
+
 
         }
+
+
 
 
 
