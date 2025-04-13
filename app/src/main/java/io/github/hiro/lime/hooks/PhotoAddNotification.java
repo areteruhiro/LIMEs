@@ -27,6 +27,8 @@ import android.os.Parcelable;
 import android.util.Log;
 import android.widget.Toast;
 
+import androidx.core.content.ContextCompat;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -223,22 +225,12 @@ public class PhotoAddNotification implements IHook {
 
                                 newNotification = createNotificationWithImageFromFile(context, originalNotification, latestFile, originalText);
                                // XposedBridge.log("Created new notification with image.");
-
-
-                                param.setResult(null);
-
                                 if (hasTag) {
                                     param.args[2] = newNotification;
                                 } else {
                                     param.args[1] = newNotification;
                                 }
 
-//
-//                                NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
-//                                if (notificationManager != null) {
-//                                    notificationManager.cancel(ids);  // Cancel the original notification
-//                                    notificationManager.notify(ids, newNotification);  // Show the new notification with the image
-//                                }
                             } else {
                                 // Log and retry if either chatId or id is null
                                // XposedBridge.log("Chat ID or Message ID is null, retrying...");
@@ -265,8 +257,6 @@ public class PhotoAddNotification implements IHook {
                     }
                 }
             }
-
-            param.setResult(null);
             if (limeOptions.AddCopyAction.checked) {
                 if (!isReceiverRegistered) {
                     //Log.d(TAG, "Attempting to register receiver");
@@ -320,10 +310,10 @@ public class PhotoAddNotification implements IHook {
                     }
                 }
             }
-            param.setResult(null);
         } catch (Exception e) {
             Log.e(TAG, "Critical error in notification processing", e);
         } finally {
+            param.setResult(null);
             isHandlingNotification = false;
         }
     }
@@ -569,10 +559,7 @@ public class PhotoAddNotification implements IHook {
                         Context.RECEIVER_NOT_EXPORTED
                 );
             } else {
-                context.registerReceiver(
-                        new CopyTextReceiver(),
-                        filter
-                );
+                ContextCompat.registerReceiver(context, new CopyTextReceiver(), filter, ContextCompat.RECEIVER_NOT_EXPORTED);
             }
             //Log.d(TAG, "Receiver registration successful");
         } catch (Exception e) {
