@@ -19,6 +19,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.view.View;
@@ -173,25 +174,6 @@ public class ReadChecker implements IHook {
     }
 
 
-    private boolean isNoGroup(String groupId) {
-        if (limeDatabase == null) {
-            //XposedBridge.log("Database is not initialized.");
-            return true;
-        }
-        String query = "SELECT group_name FROM read_message WHERE group_id = ?";
-        Cursor cursor = limeDatabase.rawQuery(query, new String[]{groupId});
-        boolean noGroup = true;
-        if (cursor.moveToFirst()) {
-            String groupName = cursor.getString(cursor.getColumnIndexOrThrow("group_name"));
-            noGroup = groupName == null || groupName.isEmpty();
-        }
-
-
-        cursor.close();
-        return noGroup;
-    }
-
-
     private void addButton(Activity activity, Context moduleContext) {
         // ファイルパスを取得
         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
@@ -276,14 +258,12 @@ public class ReadChecker implements IHook {
 
         imageButton.setLayoutParams(frameParams);
 
-        imageButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (currentGroupId != null) {
-                    showDataForGroupId(activity, currentGroupId, moduleContext);
-                }
+        imageButton.setOnClickListener(v -> {
+            if (currentGroupId != null) {
+                showDataForGroupId(activity, currentGroupId, moduleContext);
             }
         });
+
         if (limeOptions.ReadCheckerChatdataDelete.checked) {
             Button deleteButton = new Button(activity);
             deleteButton.setText(moduleContext.getResources().getString(R.string.Delete));
@@ -356,7 +336,7 @@ public class ReadChecker implements IHook {
             Cursor nullGroupIdCursor = limeDatabase.rawQuery("SELECT server_id, user_name FROM read_message WHERE group_id = 'null'", null);
             while (nullGroupIdCursor.moveToNext()) {
                 String serverId = nullGroupIdCursor.getString(0);
-                String userName = nullGroupIdCursor.getString(1); // 更新したレコードの user_name
+                String userName = nullGroupIdCursor.getString(1);
                 String chatId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
 
                 if (chatId != null && !"null".equals(chatId)) {
@@ -499,10 +479,12 @@ public class ReadChecker implements IHook {
             cursor.close();
 
             List<DataItem> sortedDataItems = new ArrayList<>(dataItemMap.values());
-            Collections.sort(sortedDataItems, Comparator.comparing(
-                    item -> item.timeFormatted,
-                    Comparator.nullsLast(Comparator.naturalOrder())
-            ));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                Collections.sort(sortedDataItems, Comparator.comparing(
+                        item -> item.timeFormatted,
+                        Comparator.nullsLast(Comparator.naturalOrder())
+                ));
+            }
             StringBuilder resultBuilder = new StringBuilder();
             for (DataItem item : sortedDataItems) {
                 resultBuilder.append("Content: ").append(item.content != null ? item.content : "Media").append("\n");
@@ -608,14 +590,12 @@ public class ReadChecker implements IHook {
             }
         }
         cursor.close();
-        ////("最終的なuserNames: " + userNames);
         return userNames;
     }
 
     private void processRelatedRecords(String groupId, String currentServerId, String finalcontent) {
         if (limeDatabase == null) return;
 
-        // トランザクション開始（安全な一括処理）
         limeDatabase.beginTransaction();
         try (Cursor cursor = limeDatabase.rawQuery(
                 "SELECT server_id, user_name, Sent_User, Send_User, group_name, content, created_time " +
@@ -638,7 +618,7 @@ public class ReadChecker implements IHook {
 
                 if (currentTrimmedName != null && targetTrimmedName != null &&
                         !currentTrimmedName.equals(targetTrimmedName) &&
-                        !isDuplicateRecord(targetServerId, targetUserName)) {
+                        !isDuplicateRecord(targetServerId, sentUser)) {
 
                     ContentValues values = new ContentValues();
                     values.put("group_id", groupId);
@@ -658,18 +638,14 @@ public class ReadChecker implements IHook {
             limeDatabase.endTransaction();
         }
     }
-    private boolean isDuplicateRecord(String serverId, String userName) {
+    private boolean isDuplicateRecord(String serverId, String sentUser) {
         try (Cursor cursor = limeDatabase.rawQuery(
-                "SELECT COUNT(*) FROM read_message WHERE server_id = ? AND user_name = ?",
-                new String[]{serverId, userName}
+                "SELECT COUNT(*) FROM read_message WHERE server_id = ? AND Sent_User = ?",
+                new String[]{serverId, sentUser}
         )) {
-            if (cursor.moveToFirst()) {
-                return cursor.getInt(0) > 0; // 1件以上あれば重複
-            }
+            return cursor.moveToFirst() && cursor.getInt(0) > 0;
         }
-        return false;
     }
-    // ユーザー名トリミングメソッド
     private String extractTrimmedName(String formattedName) {
         if (formattedName == null) return null;
         Pattern pattern = Pattern.compile("-(.*?)\\s\\[");
@@ -779,8 +755,6 @@ public class ReadChecker implements IHook {
 
                                 return;
                             }
-
-
                             Context moduleContext;
                             try {
                                 moduleContext = appContext.createPackageContext(
@@ -887,7 +861,7 @@ public class ReadChecker implements IHook {
 
     private String formatMessageTime(String timeEpochStr) {
         if (timeEpochStr == null || timeEpochStr.trim().isEmpty()) {
-            return "null"; // null または空文字列の場合 "null" を返す
+            return "null";
         }
 
         try {
@@ -895,7 +869,6 @@ public class ReadChecker implements IHook {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault());
             return sdf.format(new Date(timeEpoch)); // フォーマットして返す
         } catch (NumberFormatException e) {
-            // 数値として不正な形式の場合
             return "null";
         }
     }

@@ -250,5 +250,6 @@
     <string name="call_duration_format">Call duration %02d:%02d</string>
     <string name="missed_call">Missed call</string>
     <string name="call_cancelled">Call cancelled</string>
-    <string name="ReactionCount">ReactionCount(Dev)</string>
+    <string name="ReactionCount">ReactionCount</string>
+    <string name="WhiteToDark">WhiteToDark(DevNow)</string>
 </resources>

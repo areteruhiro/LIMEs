@@ -4,8 +4,11 @@ import android.app.AndroidAppHelper;
 import android.content.Context;
 import android.content.res.XModuleResources;
 
+import android.graphics.Color;
 import android.os.Build;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import de.robv.android.xposed.IXposedHookInitPackageResources;
@@ -63,6 +66,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new Removebutton(),
             new PhotoSave(),
             new ReactionList(),
+            new WhiteToDark()
     };
 
 
@@ -252,6 +256,28 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                 }
             });
                  }
+        if (limeOptions.WhiteToDark.checked) {
+            resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "main_tab_search_bar", new XC_LayoutInflated() {
+                @Override
+                public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
+                    ViewGroup rootView = (ViewGroup) liparam.view;
+                    setAllViewsToBlack(rootView);
+                }
+
+                private void setAllViewsToBlack(View view) {
+                    if (view instanceof ViewGroup) {
+                        ViewGroup viewGroup = (ViewGroup) view;
+                        for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                            setAllViewsToBlack(viewGroup.getChildAt(i));
+                        }
+                    }
+                    view.setBackgroundColor(Color.BLACK);
+                    if (view instanceof TextView) {
+                        ((TextView) view).setTextColor(Color.BLACK);
+                    }
+                }
+            });
+        }
         if (limeOptions.removeNaviAlbum.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_albums", xModuleResources.fwd(R.drawable.empty_drawable));
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "badge_dot_green", xModuleResources.fwd(R.drawable.empty_drawable));

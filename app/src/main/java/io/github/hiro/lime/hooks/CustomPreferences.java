@@ -24,11 +24,8 @@ public class CustomPreferences {
     private final boolean isXposedContext;
 
     public CustomPreferences(Context context) throws PackageManager.NameNotFoundException, IOException {
-        // システムパッケージの場合は常に外部ストレージを使用
         if (context != null && !context.getPackageName().equals("android")) {
             this.isXposedContext = true;
-
-            // 内部ストレージの初期化
             File internalDir = new File(context.getFilesDir(), SETTINGS_DIR);
             if (!internalDir.exists() && !internalDir.mkdirs()) {
                 Toast.makeText(
@@ -40,9 +37,7 @@ public class CustomPreferences {
                 throw new IOException("Failed to create internal directory");
             }
             settingsFileInternal = new File(internalDir, SETTINGS_FILE);
-
-            // 外部ストレージの初期化
-            File externalBaseDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+            File externalBaseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
             if (externalBaseDir == null) {
                 throw new IOException("External storage not available");
             }
@@ -59,12 +54,9 @@ public class CustomPreferences {
                 copyFile(settingsFileInternal, settingsFileExternal);
             }
         } else {
-            // システムパッケージまたはnullコンテキストの場合
             this.isXposedContext = false;
             this.settingsFileInternal = null;
-
-            // 外部ストレージのみ使用
-            File externalBaseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS);
+            File externalBaseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
             File externalDir = new File(externalBaseDir, SETTINGS_DIR);
             settingsFileExternal = new File(externalDir, SETTINGS_FILE);
 

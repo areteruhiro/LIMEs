@@ -112,8 +112,9 @@ public class LimeOptions {
         public Option AgeCheckSkip = new Option("AgeCheckSkip", R.string.AgeCheckSkip, false, OptionCategory.OTHER);
         public Option AutoUpDateCheck = new Option("AutoUpDateCheck", R.string.AutoUpDateCheck, false, OptionCategory.OTHER);
 
-        public Option PhotoSave = new Option("PhotoSave", R.string.PhotoSave, false, OptionCategory.OTHER);
+        public Option PhotoSave = new Option("PhotoSave", R.string.PhotoSave, false, OptionCategory.CHAT);
         public Option stopVersionCheck = new Option("stop_version_check", R.string.switch_stop_version_check, false, OptionCategory.OTHER);
+        public Option WhiteToDark = new Option("WhiteToDark", R.string.WhiteToDark, false, OptionCategory.Theme);
 
 
     public Option[] options = {
@@ -159,7 +160,7 @@ public class LimeOptions {
                 photoboothButtonOption, voiceButtonOption, videoButtonOption, videoSingleButtonOption,
                 AutoUpDateCheck, PinList,
                 NewOption, PhotoSave,
-                ReactionCount
+                ReactionCount,WhiteToDark
         };
 
 
