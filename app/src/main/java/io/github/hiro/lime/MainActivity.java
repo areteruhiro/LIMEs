@@ -5,9 +5,7 @@ import android.app.AlertDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -18,7 +16,6 @@ import android.provider.Settings;
 import android.text.InputType;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Base64;
-import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -26,7 +23,6 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
 import android.Manifest;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
@@ -167,9 +163,7 @@ public class MainActivity extends Activity {
             switchView.setLayoutParams(params);
 
             switchView.setChecked(option.checked);
-            switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                customPrefs.saveSetting(name, String.valueOf(isChecked));
-            });
+            switchView.setOnCheckedChangeListener((buttonView, isChecked) -> customPrefs.saveSetting(name, String.valueOf(isChecked)));
 
             if (name.equals("redirect_webview")) {
                 switchRedirectWebView = switchView;

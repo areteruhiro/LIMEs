@@ -122,13 +122,9 @@ public class KeepUnreadLSpatch implements IHook {
 
     private Map<String, String> readSettingsFromExternalFile(Context context) {
         String fileName = "margin_settings.txt";
-        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
         File file = new File(dir, fileName);
         Map<String, String> settings = new HashMap<>();
-        if (!file.exists()) {
-            dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
-            file = new File(dir, fileName);
-        }
         if (file.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                 String line;

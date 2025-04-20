@@ -3,7 +3,6 @@ package io.github.hiro.lime.hooks;
 import static io.github.hiro.lime.Main.limeOptions;
 
 import android.app.Activity;
-import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Color;
@@ -13,7 +12,6 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.os.Build;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,11 +21,9 @@ import android.widget.TextView;
 
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.Random;
 import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
@@ -47,10 +43,9 @@ public class DarkColor implements IHook {
                     protected void afterHookedMethod(MethodHookParam param) {
                         Activity activity = (Activity) param.thisObject;
                         View rootView = activity.getWindow().getDecorView(); // DecorViewを取得
-                        View view = rootView;
 
                         if (limeOptions.DarkModSync.checked) {
-                            if (!isDarkModeEnabled(view)) return;
+                            if (!isDarkModeEnabled(rootView)) return;
                         }
                         traverseViewsAndLog((ViewGroup) rootView, activity);
                     }
@@ -85,7 +80,7 @@ public class DarkColor implements IHook {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) {
                 int color = (int) param.args[0];
-                if (isTargetColor(color, "#111111")) {
+                if (isTargetColor(color)) {
                     param.args[0] = Color.parseColor("#000000");
                 }
 
@@ -94,8 +89,8 @@ public class DarkColor implements IHook {
 
 
     }
-    private boolean isTargetColor(int color, String target) {
-        int targetColor = Color.parseColor(target);
+    private boolean isTargetColor(int color) {
+        int targetColor = Color.parseColor("#111111");
         return (color & 0x00FFFFFF) == (targetColor & 0x00FFFFFF);
     }
     private void traverseViewsAndLog(ViewGroup viewGroup, Activity activity) {
@@ -295,9 +290,7 @@ public class DarkColor implements IHook {
             roundedBg.setCornerRadius(20f); // 角丸の半径（単位：ピクセル）
             roundedBg.setColor(Color.BLACK);
             view.setBackground(roundedBg);
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                view.setClipToOutline(true);
-            }
+            view.setClipToOutline(true);
             if (view instanceof ViewGroup) {
                 ViewGroup container = (ViewGroup) view;
                 for (int i = 0; i < container.getChildCount(); i++) {

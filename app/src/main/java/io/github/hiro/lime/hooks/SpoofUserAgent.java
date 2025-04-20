@@ -1,7 +1,6 @@
 package io.github.hiro.lime.hooks;
 
 import android.content.Context;
-import android.content.pm.PackageManager;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;

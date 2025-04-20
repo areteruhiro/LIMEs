@@ -53,21 +53,16 @@ public class CallOpenApplication implements IHook {
         });
     }
     private void addButton(Activity activity) {
-        // ボタンを作成
+
         Button button = new Button(activity);
         button.setText("LINE");
-
-        // 背景を透明に設定
-        button.setBackgroundResource(0); // または
+        button.setBackgroundResource(0);
         // button.setBackgroundColor(Color.TRANSPARENT);
 
-        // テキスト色を設定（必要に応じて）
         // button.setTextColor(Color.WHITE);
 
-        // パディングを0に設定（必要に応じて）
         button.setPadding(0, 0, 0, 0);
 
-        // レイアウトパラメータ設定
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.WRAP_CONTENT,
                 FrameLayout.LayoutParams.WRAP_CONTENT
@@ -77,7 +72,6 @@ public class CallOpenApplication implements IHook {
         params.setMargins(0, 0, 16, 16);
         button.setLayoutParams(params);
 
-        // クリックリスナー
         button.setOnClickListener(v -> {
             Intent intent = activity.getPackageManager().getLaunchIntentForPackage("jp.naver.line.android");
             if (intent != null) {

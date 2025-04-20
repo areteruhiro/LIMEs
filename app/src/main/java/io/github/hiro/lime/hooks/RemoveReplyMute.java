@@ -20,7 +20,7 @@ public class RemoveReplyMute implements IHook {
                 Notification.Action.class,
                 new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         Application app = AndroidAppHelper.currentApplication();
                         Notification.Action a = (Notification.Action) param.args[0];
                         String muteChatString = app.getString(app.getResources().getIdentifier("notification_button_mute", "string", app.getPackageName()));

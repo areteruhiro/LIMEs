@@ -121,21 +121,9 @@ public class PreventMarkAsRead implements IHook {
                 }
                 private Map<String, String> readSettingsFromExternalFile(Context context) {
                     String fileName = "margin_settings.txt";
-                    File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+                    File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
                     File file = new File(dir, fileName);
                     Map<String, String> settings = new HashMap<>();
-
-                    // ファイルが存在しない場合、他のディレクトリを確認
-                    if (!file.exists()) {
-                        // 次のディレクトリを確認
-                        dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
-                        file = new File(dir, fileName);
-
-                        // それでも存在しない場合、内部ストレージを確認
-                        if (!file.exists()) {
-                            file = new File(context.getFilesDir(), fileName);
-                        }
-                    }
 
                     // ファイルが存在する場合、内容を読み込む
                     if (file.exists()) {

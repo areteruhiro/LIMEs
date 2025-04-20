@@ -3,7 +3,6 @@ package io.github.hiro.lime.hooks;
 import android.graphics.Canvas;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewTreeObserver;
 import android.webkit.WebView;
 
 import java.util.ArrayList;
@@ -28,7 +27,7 @@ public class RemoveAds implements IHook {
                 Constants.REQUEST_HOOK.methodName,
                 new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         String request = param.args[0].toString();
                         if (request.equals("getBanners") || request.equals("getPrefetchableBanners")) {
                             param.setResult(null);
@@ -43,7 +42,7 @@ public class RemoveAds implements IHook {
                 Canvas.class,
                 new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         ((View) ((View) param.thisObject).getParent()).setVisibility(View.GONE);
                     }
                 }
@@ -54,7 +53,7 @@ public class RemoveAds implements IHook {
                 "onAttachedToWindow",
                 new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         View view = (View) ((View) param.thisObject).getParent().getParent();
                         ViewGroup.LayoutParams layoutParams = view.getLayoutParams();
                         layoutParams.height = 0;
@@ -71,7 +70,7 @@ public class RemoveAds implements IHook {
                 ViewGroup.LayoutParams.class,
                 new XC_MethodHook() {
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void afterHookedMethod(MethodHookParam param) {
                         View view = (View) param.args[0];
                         String className = view.getClass().getName();
                         if (className.contains("Ad")) {
@@ -92,12 +91,9 @@ public class RemoveAds implements IHook {
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                             View view = (View) param.thisObject;
                             view.setVisibility(View.GONE);
-                            view.getViewTreeObserver().addOnGlobalLayoutListener(new ViewTreeObserver.OnGlobalLayoutListener() {
-                                @Override
-                                public void onGlobalLayout() {
-                                    if (view.getVisibility() != View.GONE) {
-                                        view.setVisibility(View.GONE);
-                                    }
+                            view.getViewTreeObserver().addOnGlobalLayoutListener(() -> {
+                                if (view.getVisibility() != View.GONE) {
+                                    view.setVisibility(View.GONE);
                                 }
                             });
                         }

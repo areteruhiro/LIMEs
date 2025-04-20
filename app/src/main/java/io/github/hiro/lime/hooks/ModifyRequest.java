@@ -17,9 +17,7 @@ import io.github.hiro.lime.LimeOptions;
 public class ModifyRequest implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
-        // Explicitly use Android Context
         Context context = getTargetAppContext(loadPackageParam);
-
         XposedBridge.hookAllMethods(
                 loadPackageParam.classLoader.loadClass(Constants.REQUEST_HOOK.className),
                 Constants.REQUEST_HOOK.methodName,
@@ -31,8 +29,6 @@ public class ModifyRequest implements IHook {
                                 customPreferences.getSetting("encoded_js_modify_request", ""),
                                 Base64.NO_WRAP
                         ));
-
-                        // Use fully qualified name for Rhino Context
                         org.mozilla.javascript.Context rhinoContext = org.mozilla.javascript.Context.enter();
                         rhinoContext.setOptimizationLevel(-1);
                         try {

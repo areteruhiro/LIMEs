@@ -2,43 +2,37 @@
 package io.github.hiro.lime.hooks;
 
 
-import android.app.Activity;
 import android.app.AndroidAppHelper;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.os.Bundle;
+import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
-import android.widget.ToggleButton;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
@@ -99,7 +93,6 @@ public class KeepUnread implements IHook {
                         imageParams.setMargins(horizontalMarginPx, verticalMarginPx, 0, 0);
 
 
-
                         imageView.setOnClickListener(v -> {
                             keepUnread = !keepUnread;
                             updateSwitchImage(imageView, keepUnread, moduleContext);
@@ -109,11 +102,8 @@ public class KeepUnread implements IHook {
 
                         layout.addView(imageView, imageParams);
 
-
                         if (rootView instanceof ViewGroup) {
                             ViewGroup rootViewGroup = (ViewGroup) rootView;
-
-
                             boolean added = false;
                             for (int i = 0; i < rootViewGroup.getChildCount(); i++) {
                                 View child = rootViewGroup.getChildAt(i);
@@ -125,7 +115,6 @@ public class KeepUnread implements IHook {
                                 }
                             }
 
-
                             if (!added) {
                                 rootViewGroup.addView(layout);
                             }
@@ -134,13 +123,9 @@ public class KeepUnread implements IHook {
 
                     private Map<String, String> readSettingsFromExternalFile(Context context) {
                         String fileName = "margin_settings.txt";
-                        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+                        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
                         File file = new File(dir, fileName);
                         Map<String, String> settings = new HashMap<>();
-                        if (!file.exists()) {
-                            dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
-                            file = new File(dir, fileName);
-                        }
                         if (file.exists()) {
                             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                                 String line;
@@ -159,54 +144,57 @@ public class KeepUnread implements IHook {
 
                         return settings;
                     }
+
                     private float getkeep_unread_horizontalMarginFactor(Context context) {
                         Map<String, String> settings = readSettingsFromExternalFile(context);
                         try {
-                            return Float.parseFloat(settings.getOrDefault("keep_unread_horizontalMarginFactor", "0.5"));
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                return Float.parseFloat(Objects.requireNonNull(settings.getOrDefault("keep_unread_horizontalMarginFactor", "0.5")));
+                            }
                         } catch (NumberFormatException e) {
-                            return 0.5f; // エラー時のデフォルト値
+                            return 0.5f; //
                         }
+                        return 0;
                     }
-
                     private int getkeep_unread_verticalMarginDp(Context context) {
                         Map<String, String> settings = readSettingsFromExternalFile(context);
                         try {
-                            return Integer.parseInt(settings.getOrDefault("keep_unread_verticalMarginDp", "15"));
-                        } catch (NumberFormatException e) {
-                            return 15; // エラー時のデフォルト値
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                return Integer.parseInt(Objects.requireNonNull(settings.getOrDefault("keep_unread_verticalMarginDp", "15")));
+                            }
+                        } catch (NumberFormatException ignored) {
+                            return 15;
                         }
+                        return 0;
                     }
 
                     private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext) {
                         String imageName = isOn ? "keep_switch_on.png" : "keep_switch_off.png"; // 拡張子を追加
                         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-                        if (!dir.exists()) {
-                            if (!dir.mkdirs()) {
-                                dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
-                            }
-                        }
                         File imageFile = new File(dir, imageName);
 
                         if (!imageFile.exists()) {
-                            try (InputStream in = moduleContext.getResources().openRawResource(
-                                    moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));
-                                 OutputStream out = new FileOutputStream(imageFile)) {
-                                byte[] buffer = new byte[1024];
-                                int length;
-                                while ((length = in.read(buffer)) > 0) {
-                                    out.write(buffer, 0, length);
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                try (InputStream in = moduleContext.getResources().openRawResource(
+                                        moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));
+                                     OutputStream out = Files.newOutputStream(imageFile.toPath())) {
+                                    byte[] buffer = new byte[1024];
+                                    int length;
+                                    while ((length = in.read(buffer)) > 0) {
+                                        out.write(buffer, 0, length);
+                                    }
+                                } catch (IOException ignored) {
                                 }
-                            } catch (IOException e) {
-                                e.printStackTrace();
                             }
                         }
-
-                        // コピーした画像をImageViewに設定
                         if (imageFile.exists()) {
                             Drawable drawable = Drawable.createFromPath(imageFile.getAbsolutePath());
                             if (drawable != null) {
                                 Map<String, String> settings = readSettingsFromExternalFile(moduleContext);
-                                float sizeInDp = Float.parseFloat(settings.getOrDefault("keep_unread_size", "60"));
+                                float sizeInDp = 0;
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                                    sizeInDp = Float.parseFloat(Objects.requireNonNull(settings.getOrDefault("keep_unread_size", "60")));
+                                }
                                 int sizeInPx = dpToPx(moduleContext, sizeInDp);
                                 drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
                                 imageView.setImageDrawable(drawable);
@@ -262,7 +250,8 @@ public class KeepUnread implements IHook {
 
     private void saveStateToFile(Context context, boolean state) {
         String filename = "keep_unread_state.txt";
-        try (FileOutputStream fos = context.openFileOutput(filename, Context.MODE_PRIVATE)) {
+        try (FileOutputStream fos = context.openFileOutput(filename, Context.MODE_PRIVATE)
+        ) {
             fos.write((state ? "1" : "0").getBytes());
         } catch (IOException ignored) {
         }

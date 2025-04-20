@@ -1,31 +1,8 @@
 package io.github.hiro.lime.hooks;
 
-import static io.github.hiro.lime.Main.limeOptions;
-
-import android.app.Application;
-import android.app.Notification;
-import android.content.Context;
-import android.content.pm.PackageManager;
 import android.content.res.Resources;
-import android.database.Cursor;
-import android.database.sqlite.SQLiteDatabase;
-import android.os.Bundle;
-import android.os.Environment;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
 
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
@@ -43,7 +20,7 @@ public class RemoveProfileNotification implements IHook {
                 new XC_MethodHook() {
 
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void afterHookedMethod(MethodHookParam param) {
                         if (isHandlingHook) {
                             return;
                         }

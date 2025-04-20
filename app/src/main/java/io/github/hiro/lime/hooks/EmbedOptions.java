@@ -357,29 +357,23 @@ public class EmbedOptions implements IHook {
 
                                     Button copyButton = new Button(context);
                                     copyButton.setText(R.string.button_copy);
-                                    copyButton.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                            ClipData clip = ClipData.newPlainText("", editText.getText().toString());
-                                            clipboard.setPrimaryClip(clip);
-                                        }
+                                    copyButton.setOnClickListener(v -> {
+                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                                        ClipData clip = ClipData.newPlainText("", editText.getText().toString());
+                                        clipboard.setPrimaryClip(clip);
                                     });
 
                                     buttonLayout.addView(copyButton);
 
                                     Button pasteButton = new Button(context);
                                     pasteButton.setText(R.string.button_paste);
-                                    pasteButton.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                            if (clipboard != null && clipboard.hasPrimaryClip()) {
-                                                ClipData clip = clipboard.getPrimaryClip();
-                                                if (clip != null && clip.getItemCount() > 0) {
-                                                    CharSequence pasteData = clip.getItemAt(0).getText();
-                                                    editText.setText(pasteData);
-                                                }
+                                    pasteButton.setOnClickListener(v -> {
+                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                                        if (clipboard != null && clipboard.hasPrimaryClip()) {
+                                            ClipData clip = clipboard.getPrimaryClip();
+                                            if (clip != null && clip.getItemCount() > 0) {
+                                                CharSequence pasteData = clip.getItemAt(0).getText();
+                                                editText.setText(pasteData);
                                             }
                                         }
                                     });
@@ -395,93 +389,51 @@ public class EmbedOptions implements IHook {
                                     buttonParams.topMargin = Utils.dpToPx(20, context);
                                     backupButton.setLayoutParams(buttonParams);
                                     backupButton.setText(moduleContext.getResources().getString(R.string.Back_Up));
-                                    backupButton.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            backupChatHistory(context, moduleContext);
-                                        }
-                                    });
+                                    backupButton.setOnClickListener(v -> backupChatHistory(context, moduleContext));
                                     layout.addView(backupButton);
 
 
                                     Button restoreButton = new Button(context);
                                     restoreButton.setLayoutParams(buttonParams);
                                     restoreButton.setText(moduleContext.getResources().getString(R.string.Restore));
-                                    restoreButton.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            
-                                            showFilePickerChatHistory(context, moduleContext);
-                                        }
-                                    });
+                                    restoreButton.setOnClickListener(v -> showFilePickerChatHistory(context, moduleContext));
                                     layout.addView(restoreButton);
 
                                     Button restoreChatListButton = new Button(context);
                                     restoreChatListButton.setLayoutParams(buttonParams);
                                     restoreChatListButton.setText(moduleContext.getResources().getString(R.string.restoreChatListButton));
-                                    restoreChatListButton.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            
-                                            showFilePickerChatlist(context, moduleContext);
-                                        }
-                                    });
+                                    restoreChatListButton.setOnClickListener(v -> showFilePickerChatlist(context, moduleContext));
                                     layout.addView(restoreChatListButton);
 
                                     Button backupfolderButton = new Button(context);
                                     backupfolderButton.setLayoutParams(buttonParams);
                                     backupfolderButton.setText(moduleContext.getResources().getString(R.string.Talk_Picture_Back_up));
-                                    backupfolderButton.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            backupChatsFolder(context, moduleContext);
-                                        }
-                                    });
+                                    backupfolderButton.setOnClickListener(v -> backupChatsFolder(context, moduleContext));
                                     layout.addView(backupfolderButton);
                                     Button restorefolderButton = new Button(context);
                                     restorefolderButton.setLayoutParams(buttonParams);
                                     restorefolderButton.setText(moduleContext.getResources().getString(R.string.Picure_Restore));
-                                    restorefolderButton.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            restoreChatsFolder(context, moduleContext);
-                                        }
-                                    });
+                                    restorefolderButton.setOnClickListener(v -> restoreChatsFolder(context, moduleContext));
                                     layout.addView(restorefolderButton);
                                     if (limeOptions.MuteGroup.checked) {
                                         Button MuteGroups_Button = new Button(context);
                                         MuteGroups_Button.setLayoutParams(buttonParams);
                                         MuteGroups_Button.setText(moduleContext.getResources().getString(R.string.Mute_Group));
-                                        MuteGroups_Button.setOnClickListener(new View.OnClickListener() {
-                                            @Override
-                                            public void onClick(View v) {
-                                                MuteGroups_Button(context, moduleContext);
-                                            }
-                                        });
+                                        MuteGroups_Button.setOnClickListener(v -> MuteGroups_Button(context, moduleContext));
                                         layout.addView(MuteGroups_Button);
                                     }
 
                                     Button KeepUnread_Button = new Button(context);
                                     KeepUnread_Button.setLayoutParams(buttonParams);
                                     KeepUnread_Button.setText(moduleContext.getResources().getString(R.string.edit_margin_settings));
-                                    KeepUnread_Button.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            KeepUnread_Button(context, moduleContext);
-                                        }
-                                    });
+                                    KeepUnread_Button.setOnClickListener(v -> KeepUnread_Button(context, moduleContext));
                                     layout.addView(KeepUnread_Button);
 
                                     if (limeOptions.preventUnsendMessage.checked) {
                                         Button canceled_message_Button = new Button(context);
                                         canceled_message_Button.setLayoutParams(buttonParams);
                                         canceled_message_Button.setText(moduleContext.getResources().getString(R.string.canceled_message));
-                                        canceled_message_Button.setOnClickListener(new View.OnClickListener() {
-                                            @Override
-                                            public void onClick(View v) {
-                                                Cancel_Message_Button(context, moduleContext);
-                                            }
-                                        });
+                                        canceled_message_Button.setOnClickListener(v -> Cancel_Message_Button(context, moduleContext));
                                         layout.addView(canceled_message_Button);
                                     }
                                     if (limeOptions.CansellNotification.checked) {
@@ -489,12 +441,7 @@ public class EmbedOptions implements IHook {
                                         Button CansellNotification_Button = new Button(context);
                                         CansellNotification_Button.setLayoutParams(buttonParams);
                                         CansellNotification_Button.setText(moduleContext.getResources().getString(R.string.CansellNotification));
-                                        CansellNotification_Button.setOnClickListener(new View.OnClickListener() {
-                                            @Override
-                                            public void onClick(View v) {
-                                                CansellNotification(context, moduleContext);
-                                            }
-                                        });
+                                        CansellNotification_Button.setOnClickListener(v -> CansellNotification(context, moduleContext));
                                         layout.addView(CansellNotification_Button);
                                     }
 
@@ -503,39 +450,20 @@ public class EmbedOptions implements IHook {
                                         Button BlockCheck_Button = new Button(context);
                                         BlockCheck_Button.setLayoutParams(buttonParams);
                                         BlockCheck_Button.setText(moduleContext.getResources().getString(R.string.BlockCheck));
-                                        BlockCheck_Button.setOnClickListener(new View.OnClickListener() {
-                                            @Override
-                                            public void onClick(View v) {
-                                                Blocklist(context, moduleContext);
-                                            }
-                                        });
+                                        BlockCheck_Button.setOnClickListener(v -> Blocklist(context, moduleContext));
                                         layout.addView(BlockCheck_Button);
                                     }
                                     if (limeOptions.preventUnsendMessage.checked) {
                                         Button hide_canceled_message_Button = new Button(context);
                                         hide_canceled_message_Button.setLayoutParams(buttonParams);
                                         hide_canceled_message_Button.setText(moduleContext.getResources().getString(R.string.hide_canceled_message));
-                                        hide_canceled_message_Button.setOnClickListener(new View.OnClickListener() {
-                                            @Override
-                                            public void onClick(View v) {
-
-                                                new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
-                                                        .setTitle(moduleContext.getResources().getString(R.string.HideSetting))
-                                                        .setMessage(moduleContext.getResources().getString(R.string.HideSetting_selection))
-                                                        .setPositiveButton(moduleContext.getResources().getString(R.string.Hide), new DialogInterface.OnClickListener() {
-                                                            public void onClick(DialogInterface dialog, int which) {
-                                                                updateMessagesVisibility(context, true, moduleContext);
-                                                            }
-                                                        })
-                                                        .setNegativeButton(moduleContext.getResources().getString(R.string.Show), new DialogInterface.OnClickListener() {
-                                                            public void onClick(DialogInterface dialog, int which) {
-                                                                updateMessagesVisibility(context, false, moduleContext);
-                                                            }
-                                                        })
-                                                        .setIcon(android.R.drawable.ic_dialog_info)
-                                                        .show();
-                                            }
-                                        });
+                                        hide_canceled_message_Button.setOnClickListener(v -> new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
+                                                .setTitle(moduleContext.getResources().getString(R.string.HideSetting))
+                                                .setMessage(moduleContext.getResources().getString(R.string.HideSetting_selection))
+                                                .setPositiveButton(moduleContext.getResources().getString(R.string.Hide), (dialog, which) -> updateMessagesVisibility(context, true, moduleContext))
+                                                .setNegativeButton(moduleContext.getResources().getString(R.string.Show), (dialog, which) -> updateMessagesVisibility(context, false, moduleContext))
+                                                .setIcon(android.R.drawable.ic_dialog_info)
+                                                .show());
                                         layout.addView(hide_canceled_message_Button);
                                     }
 
@@ -544,49 +472,36 @@ public class EmbedOptions implements IHook {
                                         Button PinList_Button = new Button(context);
                                         PinList_Button.setLayoutParams(buttonParams);
                                         PinList_Button.setText(moduleContext.getResources().getString(R.string.PinList));
-                                        PinList_Button.setOnClickListener(new View.OnClickListener() {
-                                            @Override
-                                            public void onClick(View v) {
-                                                PinListButton(context, moduleContext);
-                                            }
-                                        });
+                                        PinList_Button.setOnClickListener(v -> PinListButton(context, moduleContext));
                                         layout.addView(PinList_Button);
                                     }
 
-                                    builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface dialog, int which) {
-                                            String code = editText.getText().toString();
-                                            if (!code.equals(script)) {
-                                                // CustomPreferencesのインスタンスを作成
-                                                CustomPreferences customPreferences = null;
-                                                try {
-                                                    customPreferences = new CustomPreferences(contextV);
-                                                } catch (
-                                                        PackageManager.NameNotFoundException e) {
-                                                    throw new RuntimeException(e);
-                                                } catch (IOException e) {
-                                                    throw new RuntimeException(e);
-                                                }
-                                                // Base64エンコードして設定を保存
-                                                String encodedCode = Base64.encodeToString(code.getBytes(), Base64.NO_WRAP);
-                                                customPreferences.saveSetting("encoded_js_modify_request", encodedCode);
-
-                                                Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                                                Process.killProcess(Process.myPid());
-                                                context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+                                    builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
+                                        String code = editText.getText().toString();
+                                        if (!code.equals(script)) {
+                                            // CustomPreferencesのインスタンスを作成
+                                            CustomPreferences customPreferences1 = null;
+                                            try {
+                                                customPreferences1 = new CustomPreferences(contextV);
+                                            } catch (
+                                                    PackageManager.NameNotFoundException e) {
+                                                throw new RuntimeException(e);
+                                            } catch (IOException e) {
+                                                throw new RuntimeException(e);
                                             }
+                                            // Base64エンコードして設定を保存
+                                            String encodedCode = Base64.encodeToString(code.getBytes(), Base64.NO_WRAP);
+                                            customPreferences1.saveSetting("encoded_js_modify_request", encodedCode);
+
+                                            Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+                                            Process.killProcess(Process.myPid());
+                                            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
                                         }
                                     });
 
                                     builder.setNegativeButton(R.string.negative_button, null);
 
-                                    builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                                        @Override
-                                        public void onDismiss(DialogInterface dialog) {
-                                            editText.setText(script);
-                                        }
-                                    });
+                                    builder.setOnDismissListener(dialog -> editText.setText(script));
 
                                     AlertDialog dialog = builder.create();
                                     Button button = new Button(context);
@@ -596,12 +511,7 @@ public class EmbedOptions implements IHook {
                                     params.topMargin = Utils.dpToPx(20, context);
                                     button.setLayoutParams(params);
                                     button.setText(R.string.modify_request);
-                                    button.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View view) {
-                                            dialog.show();
-                                        }
-                                    });
+                                    button.setOnClickListener(view -> dialog.show());
                                     layout.addView(button);
                                 }
 
@@ -639,29 +549,23 @@ public class EmbedOptions implements IHook {
 
                                     Button copyButton = new Button(context);
                                     copyButton.setText(R.string.button_copy);
-                                    copyButton.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                            ClipData clip = ClipData.newPlainText("", editText.getText().toString());
-                                            clipboard.setPrimaryClip(clip);
-                                        }
+                                    copyButton.setOnClickListener(v -> {
+                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                                        ClipData clip = ClipData.newPlainText("", editText.getText().toString());
+                                        clipboard.setPrimaryClip(clip);
                                     });
 
                                     buttonLayout.addView(copyButton);
 
                                     Button pasteButton = new Button(context);
                                     pasteButton.setText(R.string.button_paste);
-                                    pasteButton.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                            if (clipboard != null && clipboard.hasPrimaryClip()) {
-                                                ClipData clip = clipboard.getPrimaryClip();
-                                                if (clip != null && clip.getItemCount() > 0) {
-                                                    CharSequence pasteData = clip.getItemAt(0).getText();
-                                                    editText.setText(pasteData);
-                                                }
+                                    pasteButton.setOnClickListener(v -> {
+                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                                        if (clipboard != null && clipboard.hasPrimaryClip()) {
+                                            ClipData clip = clipboard.getPrimaryClip();
+                                            if (clip != null && clip.getItemCount() > 0) {
+                                                CharSequence pasteData = clip.getItemAt(0).getText();
+                                                editText.setText(pasteData);
                                             }
                                         }
                                     });
@@ -673,27 +577,19 @@ public class EmbedOptions implements IHook {
                                     AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
                                             .setTitle(R.string.modify_response);
                                     builder.setView(scrollView);
-                                    builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
-                                        @Override
-                                        public void onClick(DialogInterface dialog, int which) {
-                                            String code = editText.getText().toString();
-                                            if (!code.equals(script)) {
-                                                customPreferences.saveSetting("encoded_js_modify_response", Base64.encodeToString(code.getBytes(), Base64.NO_WRAP));
-                                                Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                                                Process.killProcess(Process.myPid());
-                                                context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
-                                            }
+                                    builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
+                                        String code = editText.getText().toString();
+                                        if (!code.equals(script)) {
+                                            customPreferences.saveSetting("encoded_js_modify_response", Base64.encodeToString(code.getBytes(), Base64.NO_WRAP));
+                                            Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+                                            Process.killProcess(Process.myPid());
+                                            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
                                         }
                                     });
 
                                     builder.setNegativeButton(R.string.negative_button, null);
 
-                                    builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                                        @Override
-                                        public void onDismiss(DialogInterface dialog) {
-                                            editText.setText(script);
-                                        }
-                                    });
+                                    builder.setOnDismissListener(dialog -> editText.setText(script));
                                     AlertDialog dialog = builder.create();
                                     Button button = new Button(context);
                                     LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
@@ -702,12 +598,7 @@ public class EmbedOptions implements IHook {
                                     params.topMargin = Utils.dpToPx(20, context);
                                     button.setLayoutParams(params);
                                     button.setText(R.string.modify_response);
-                                    button.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View view) {
-                                            dialog.show();
-                                        }
-                                    });
+                                    button.setOnClickListener(view -> dialog.show());
 
                                     layout.addView(button);
                                 }
@@ -717,46 +608,40 @@ public class EmbedOptions implements IHook {
                                 AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
                                         .setTitle("LIMEs" + " (" + LIMEs_versionName + ")");
                                 builder.setView(scrollView);
-                                builder.setPositiveButton(R.string.positive_button, new DialogInterface.OnClickListener() {
-                                    @Override
-                                    public void onClick(DialogInterface dialog, int which) {
-                                        boolean optionChanged = false;
-                                        boolean saveSuccess = true; // 保存成功フラグ
+                                builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
+                                    boolean optionChanged = false;
+                                    boolean saveSuccess = true; // 保存成功フラグ
 
-                                        for (int i = 0; i < limeOptions.options.length; ++i) {
-                                            Switch switchView = (Switch) layout.getChildAt(i);
-                                            boolean isChecked = switchView.isChecked();
+                                    for (int i = 0; i < limeOptions.options.length; ++i) {
+                                        Switch switchView = (Switch) layout.getChildAt(i);
+                                        boolean isChecked = switchView.isChecked();
 
-                                            // 変更があったかチェック
-                                            if (limeOptions.options[i].checked != isChecked) {
-                                                optionChanged = true;
-                                            }
-
-                                            // 保存処理の結果をチェック
-                                            if (!customPreferences.saveSetting(limeOptions.options[i].name, String.valueOf(isChecked))) {
-                                                saveSuccess = false;
-                                            }
+                                        // 変更があったかチェック
+                                        if (limeOptions.options[i].checked != isChecked) {
+                                            optionChanged = true;
                                         }
 
-                                        if (!saveSuccess) {
-                                            Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();
-                                        } else if (optionChanged) {
-                                            Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                                            Process.killProcess(Process.myPid());
-                                            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+                                        // 保存処理の結果をチェック
+                                        if (!customPreferences.saveSetting(limeOptions.options[i].name, String.valueOf(isChecked))) {
+                                            saveSuccess = false;
                                         }
+                                    }
+
+                                    if (!saveSuccess) {
+                                        Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();
+                                    } else if (optionChanged) {
+                                        Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+                                        Process.killProcess(Process.myPid());
+                                        context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
                                     }
                                 });
 
                                 builder.setNegativeButton(R.string.negative_button, null);
 
-                                builder.setOnDismissListener(new DialogInterface.OnDismissListener() {
-                                    @Override
-                                    public void onDismiss(DialogInterface dialog) {
-                                        for (int i = 0; i < limeOptions.options.length; ++i) {
-                                            Switch switchView = (Switch) layout.getChildAt(i);
-                                            switchView.setChecked(limeOptions.options[i].checked);
-                                        }
+                                builder.setOnDismissListener(dialog -> {
+                                    for (int i = 0; i < limeOptions.options.length; ++i) {
+                                        Switch switchView = (Switch) layout.getChildAt(i);
+                                        switchView.setChecked(limeOptions.options[i].checked);
                                     }
                                 });
 
@@ -785,12 +670,7 @@ public class EmbedOptions implements IHook {
                                     layoutParams.topMargin = Utils.dpToPx(5, context); // Set margin to 5dp
                                 }
                                 button.setLayoutParams(layoutParams);
-                                button.setOnClickListener(new View.OnClickListener() {
-                                    @Override
-                                    public void onClick(View view) {
-                                        dialog.show();
-                                    }
-                                });
+                                button.setOnClickListener(view -> dialog.show());
 
                                 FrameLayout frameLayout = new FrameLayout(context);
                                 frameLayout.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -800,9 +680,7 @@ public class EmbedOptions implements IHook {
                             } catch (Exception e) {
                                 // エラー情報を詳細にログ出力
                                 // XposedBridge.log("設定作成エラー: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-                                for (StackTraceElement ste : e.getStackTrace()) {
-                                    // XposedBridge.log("  at " + ste.toString());
-                                }
+
 
                                 try {
                                     // UIスレッドでToastを表示
@@ -3261,14 +3139,8 @@ public class EmbedOptions implements IHook {
     }
 
     private boolean isRecordExists(SQLiteDatabase db, String table, String column, String value) {
-        Cursor cursor = null;
-        try {
-            cursor = db.rawQuery("SELECT 1 FROM " + table + " WHERE " + column + " = ?", new String[]{value});
+        try (Cursor cursor = db.rawQuery("SELECT 1 FROM " + table + " WHERE " + column + " = ?", new String[]{value})) {
             return cursor != null && cursor.moveToFirst();
-        } finally {
-            if (cursor != null) {
-                cursor.close();
-            }
         }
     }
 

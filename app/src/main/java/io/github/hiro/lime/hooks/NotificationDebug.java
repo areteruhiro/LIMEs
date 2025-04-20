@@ -47,7 +47,6 @@ public class NotificationDebug implements IHook {
                 }
                 XposedBridge.log(argsLog.toString());
 
-                // 2. notificationId が渡される位置を確認 (arg[20])
                 if (param.args.length > 20) {
                     XposedBridge.log("[NOTIFICATION_ID] arg[20]: " + param.args[20]);
                 }

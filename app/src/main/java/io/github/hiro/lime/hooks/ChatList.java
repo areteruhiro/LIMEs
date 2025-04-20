@@ -68,43 +68,40 @@ public class ChatList implements IHook {
 
                         hookMessageDeletion(loadPackageParam, appContext, db, moduleContext);
                     }
-                } else {
                 }
             }
         });
     }
 
-    private void hookMessageDeletion(XC_LoadPackage.LoadPackageParam loadPackageParam, Context context, SQLiteDatabase db, Context moduleContext) {
+    private void hookMessageDeletion(XC_LoadPackage.LoadPackageParam loadPackageParam, Context context, SQLiteDatabase db, Context moduleContext) throws ClassNotFoundException {
         if (!limeOptions.Archived.checked) return;
-        try {
-            XposedBridge.hookAllMethods(
-                    loadPackageParam.classLoader.loadClass(Constants.REQUEST_HOOK.className),
-                    Constants.REQUEST_HOOK.methodName,
-                    new XC_MethodHook() {
-                        @Override
-                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                            String paramValue = param.args[1].toString();
-                            if (paramValue.contains("hidden:true")) {
-                                String talkId = extractTalkId(paramValue);
-                                if (talkId != null) {
-                                    saveTalkIdToFile(talkId, context);
-                                    updateArchivedChatsFromFile(db, context, moduleContext);
-                                }
-                            }
-                            if (paramValue.contains("hidden:false")) {
-                                String talkId = extractTalkId(paramValue);
-                                if (talkId != null) {
 
-                                    deleteTalkIdFromFile(talkId, context);
-                                    updateArchivedChatsFromFile(db, context, moduleContext);
-                                }
+        XposedBridge.hookAllMethods(
+                loadPackageParam.classLoader.loadClass(Constants.REQUEST_HOOK.className),
+                Constants.REQUEST_HOOK.methodName,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) {
+                        String paramValue = param.args[1].toString();
+                        if (paramValue.contains("hidden:true")) {
+                            String talkId = extractTalkId(paramValue);
+                            if (talkId != null) {
+                                saveTalkIdToFile(talkId, context);
+                                updateArchivedChatsFromFile(db, moduleContext);
                             }
-
                         }
-                    });
+                        if (paramValue.contains("hidden:false")) {
+                            String talkId = extractTalkId(paramValue);
+                            if (talkId != null) {
 
-        } catch (ClassNotFoundException e) {
-        }
+                                deleteTalkIdFromFile(talkId, context);
+                                updateArchivedChatsFromFile(db, moduleContext);
+                            }
+                        }
+
+                    }
+                });
+
     }
 
     private void deleteTalkIdFromFile(String talkId, Context moduleContext) {
@@ -175,7 +172,7 @@ public class ChatList implements IHook {
                     return;
                 }
                 if (limeOptions.Archived.checked) {
-                    List<String> chatIds = readChatIdsFromFile(appContext, appContext);  // 変更点
+                    List<String> chatIds = readChatIdsFromFile(appContext);  // 変更点
                     for (String chatId : chatIds) {
                         if (!chatId.isEmpty()) {
                             updateIsArchived(db, chatId);
@@ -200,7 +197,7 @@ public class ChatList implements IHook {
     }
 
 
-    private List<String> readChatIdsFromFile(Context appContext, Context moduleContext) {
+    private List<String> readChatIdsFromFile( Context moduleContext) {
         List<String> chatIds = new ArrayList<>();
         File dir = moduleContext.getFilesDir();
         File file = new File(dir, "hidelist.txt");
@@ -223,7 +220,6 @@ public class ChatList implements IHook {
     }
 
 
-    // ファイル読み込みメソッドの修正
     private List<Pair<String, Integer>> PinChatReadFile(Context context) {
         List<Pair<String, Integer>> chatData = new ArrayList<>();
         File dir = new File(
@@ -289,7 +285,7 @@ public class ChatList implements IHook {
         } catch (IOException ignored) {
         }
     }
-    private void updateArchivedChatsFromFile(SQLiteDatabase db, Context context, Context moduleContext) {
+    private void updateArchivedChatsFromFile(SQLiteDatabase db, Context moduleContext) {
         File dir = moduleContext.getFilesDir();
         File file = new File(dir, "hidelist.txt");
 

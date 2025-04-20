@@ -1,6 +1,5 @@
 package io.github.hiro.lime.hooks;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.res.Resources;
@@ -45,7 +44,7 @@ public class SendMuteMessage implements IHook {
                 int.class,
                 new XC_MethodHook() {
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void afterHookedMethod(MethodHookParam param) {
                         if (isHandlingHook) {
                             return;
                         }

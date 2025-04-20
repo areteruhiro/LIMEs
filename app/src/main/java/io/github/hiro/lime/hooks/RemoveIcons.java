@@ -179,7 +179,7 @@ public class RemoveIcons implements IHook {
             View child = container.getChildAt(i);
             if (child.getVisibility() == View.VISIBLE) {
                 visibleCount++;
-                setLayoutWeight(child, 1);
+                setLayoutWeight(child);
             }
         }
 
@@ -188,11 +188,11 @@ public class RemoveIcons implements IHook {
         }
     }
 
-    private void setLayoutWeight(View view, float weight) {
+    private void setLayoutWeight(View view) {
         ViewGroup.LayoutParams params = view.getLayoutParams();
         if (params instanceof LinearLayout.LayoutParams) {
             LinearLayout.LayoutParams llParams = (LinearLayout.LayoutParams) params;
-            llParams.weight = weight;
+            llParams.weight = (float) 1;
             llParams.width = 0;
             view.setLayoutParams(llParams);
         }

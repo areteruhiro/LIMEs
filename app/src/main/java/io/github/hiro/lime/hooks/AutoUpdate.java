@@ -65,7 +65,6 @@ public class AutoUpdate implements IHook {
                 Bundle.class,
                 new XC_MethodHook() {
 
-                    // アップデート確認が行われたかどうかを管理するフラグ
                     boolean isUpdateChecked = false;
 
                     @Override

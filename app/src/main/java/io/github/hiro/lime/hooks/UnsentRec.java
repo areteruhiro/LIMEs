@@ -1,7 +1,6 @@
 package io.github.hiro.lime.hooks;
 
-import static io.github.hiro.lime.Main.limeOptions;
-
+import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.app.AndroidAppHelper;
 import android.app.Application;
@@ -12,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Color;
+import android.os.Build;
 import android.os.Environment;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -33,6 +33,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -98,7 +99,10 @@ public class UnsentRec implements IHook {
                             if (backupFile.length() > 0) {
                                 try {
                                     StringBuilder output = new StringBuilder();
-                                    BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(backupFile)));
+                                    BufferedReader reader = null;
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                        reader = new BufferedReader(new InputStreamReader(Files.newInputStream(backupFile.toPath())));
+                                    }
                                     String line;
                                     while ((line = reader.readLine()) != null) {
                                         output.append(line).append("\n");
@@ -291,16 +295,38 @@ public class UnsentRec implements IHook {
                 File dbFile2 = appContext.getDatabasePath("contact");
                 if (dbFile1.exists() && dbFile2.exists()) {
 
-                    SQLiteDatabase.OpenParams.Builder builder1 = new SQLiteDatabase.OpenParams.Builder();
-                    builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams1 = builder1.build();
+                    SQLiteDatabase.OpenParams.Builder builder1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams1 = builder1.build();
+                    }
 
-                    SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
-                    builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams2 = builder2.build();
+                    SQLiteDatabase.OpenParams.Builder builder2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams2 = builder2.build();
+                    }
 
-                    SQLiteDatabase db1 = SQLiteDatabase.openDatabase(dbFile1, dbParams1);
-                    SQLiteDatabase db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
+                    SQLiteDatabase db1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db1 = SQLiteDatabase.openDatabase(dbFile1, dbParams1);
+                    }
+                    SQLiteDatabase db2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
+                    }
 
 
                     hookMessageDeletion(loadPackageParam, appContext, db1, db2,moduleContext);
@@ -497,27 +523,27 @@ public class UnsentRec implements IHook {
 
         if (cursor.moveToFirst()) {
             // カラムの値を取得（null の場合もそのまま代入）
-            String type = cursor.isNull(cursor.getColumnIndex("type")) ? null : cursor.getString(cursor.getColumnIndex("type"));
-            String chatId = cursor.isNull(cursor.getColumnIndex("chat_id")) ? null : cursor.getString(cursor.getColumnIndex("chat_id"));
-            String fromMid = cursor.isNull(cursor.getColumnIndex("from_mid")) ? null : cursor.getString(cursor.getColumnIndex("from_mid"));
-            String createdTime = cursor.isNull(cursor.getColumnIndex("created_time")) ? null : cursor.getString(cursor.getColumnIndex("created_time"));
-            String deliveredTime = cursor.isNull(cursor.getColumnIndex("delivered_time")) ? null : cursor.getString(cursor.getColumnIndex("delivered_time"));
-            String status = cursor.isNull(cursor.getColumnIndex("status")) ? null : cursor.getString(cursor.getColumnIndex("status"));
-            Integer sentCount = cursor.isNull(cursor.getColumnIndex("sent_count")) ? null : cursor.getInt(cursor.getColumnIndex("sent_count"));
-            Integer readCount = cursor.isNull(cursor.getColumnIndex("read_count")) ? null : cursor.getInt(cursor.getColumnIndex("read_count"));
-            String locationName = cursor.isNull(cursor.getColumnIndex("location_name")) ? null : cursor.getString(cursor.getColumnIndex("location_name"));
-            String locationAddress = cursor.isNull(cursor.getColumnIndex("location_address")) ? null : cursor.getString(cursor.getColumnIndex("location_address"));
-            String locationPhone = cursor.isNull(cursor.getColumnIndex("location_phone")) ? null : cursor.getString(cursor.getColumnIndex("location_phone"));
-            Double locationLatitude = cursor.isNull(cursor.getColumnIndex("location_latitude")) ? null : cursor.getDouble(cursor.getColumnIndex("location_latitude"));
-            Double locationLongitude = cursor.isNull(cursor.getColumnIndex("location_longitude")) ? null : cursor.getDouble(cursor.getColumnIndex("location_longitude"));
-            String attachmentImage = cursor.isNull(cursor.getColumnIndex("attachement_image")) ? null : cursor.getString(cursor.getColumnIndex("attachement_image"));
-            Integer attachmentImageHeight = cursor.isNull(cursor.getColumnIndex("attachement_image_height")) ? null : cursor.getInt(cursor.getColumnIndex("attachement_image_height"));
-            Integer attachmentImageWidth = cursor.isNull(cursor.getColumnIndex("attachement_image_width")) ? null : cursor.getInt(cursor.getColumnIndex("attachement_image_width"));
-            Integer attachmentImageSize = cursor.isNull(cursor.getColumnIndex("attachement_image_size")) ? null : cursor.getInt(cursor.getColumnIndex("attachement_image_size"));
-            String attachmentType = cursor.isNull(cursor.getColumnIndex("attachement_type")) ? null : cursor.getString(cursor.getColumnIndex("attachement_type"));
-            String attachmentLocalUri = cursor.isNull(cursor.getColumnIndex("attachement_local_uri")) ? null : cursor.getString(cursor.getColumnIndex("attachement_local_uri"));
-            String parameter = cursor.isNull(cursor.getColumnIndex("parameter")) ? null : cursor.getString(cursor.getColumnIndex("parameter"));
-            String chunks = cursor.isNull(cursor.getColumnIndex("chunks")) ? null : cursor.getString(cursor.getColumnIndex("chunks"));
+            @SuppressLint("Range") String type = cursor.isNull(cursor.getColumnIndex("type")) ? null : cursor.getString(cursor.getColumnIndex("type"));
+            @SuppressLint("Range") String chatId = cursor.isNull(cursor.getColumnIndex("chat_id")) ? null : cursor.getString(cursor.getColumnIndex("chat_id"));
+            @SuppressLint("Range") String fromMid = cursor.isNull(cursor.getColumnIndex("from_mid")) ? null : cursor.getString(cursor.getColumnIndex("from_mid"));
+            @SuppressLint("Range") String createdTime = cursor.isNull(cursor.getColumnIndex("created_time")) ? null : cursor.getString(cursor.getColumnIndex("created_time"));
+            @SuppressLint("Range")String deliveredTime = cursor.isNull(cursor.getColumnIndex("delivered_time")) ? null : cursor.getString(cursor.getColumnIndex("delivered_time"));
+            @SuppressLint("Range")String status = cursor.isNull(cursor.getColumnIndex("status")) ? null : cursor.getString(cursor.getColumnIndex("status"));
+            @SuppressLint("Range")Integer sentCount = cursor.isNull(cursor.getColumnIndex("sent_count")) ? null : cursor.getInt(cursor.getColumnIndex("sent_count"));
+            @SuppressLint("Range")Integer readCount = cursor.isNull(cursor.getColumnIndex("read_count")) ? null : cursor.getInt(cursor.getColumnIndex("read_count"));
+            @SuppressLint("Range")String locationName = cursor.isNull(cursor.getColumnIndex("location_name")) ? null : cursor.getString(cursor.getColumnIndex("location_name"));
+            @SuppressLint("Range")String locationAddress = cursor.isNull(cursor.getColumnIndex("location_address")) ? null : cursor.getString(cursor.getColumnIndex("location_address"));
+            @SuppressLint("Range")String locationPhone = cursor.isNull(cursor.getColumnIndex("location_phone")) ? null : cursor.getString(cursor.getColumnIndex("location_phone"));
+            @SuppressLint("Range")Double locationLatitude = cursor.isNull(cursor.getColumnIndex("location_latitude")) ? null : cursor.getDouble(cursor.getColumnIndex("location_latitude"));
+            @SuppressLint("Range") Double locationLongitude = cursor.isNull(cursor.getColumnIndex("location_longitude")) ? null : cursor.getDouble(cursor.getColumnIndex("location_longitude"));
+            @SuppressLint("Range") String attachmentImage = cursor.isNull(cursor.getColumnIndex("attachement_image")) ? null : cursor.getString(cursor.getColumnIndex("attachement_image"));
+            @SuppressLint("Range") Integer attachmentImageHeight = cursor.isNull(cursor.getColumnIndex("attachement_image_height")) ? null : cursor.getInt(cursor.getColumnIndex("attachement_image_height"));
+            @SuppressLint("Range") Integer attachmentImageWidth = cursor.isNull(cursor.getColumnIndex("attachement_image_width")) ? null : cursor.getInt(cursor.getColumnIndex("attachement_image_width"));
+            @SuppressLint("Range") Integer attachmentImageSize = cursor.isNull(cursor.getColumnIndex("attachement_image_size")) ? null : cursor.getInt(cursor.getColumnIndex("attachement_image_size"));
+            @SuppressLint("Range") String attachmentType = cursor.isNull(cursor.getColumnIndex("attachement_type")) ? null : cursor.getString(cursor.getColumnIndex("attachement_type"));
+            @SuppressLint("Range") String attachmentLocalUri = cursor.isNull(cursor.getColumnIndex("attachement_local_uri")) ? null : cursor.getString(cursor.getColumnIndex("attachement_local_uri"));
+            @SuppressLint("Range") String parameter = cursor.isNull(cursor.getColumnIndex("parameter")) ? null : cursor.getString(cursor.getColumnIndex("parameter"));
+            @SuppressLint("Range")  String chunks = cursor.isNull(cursor.getColumnIndex("chunks")) ? null : cursor.getString(cursor.getColumnIndex("chunks"));
 
             // 既存のレコードがあるか確認
             Cursor existingCursor = db1.rawQuery("SELECT * FROM chat_history WHERE server_id=? AND content=?", new String[]{serverId, chatId});

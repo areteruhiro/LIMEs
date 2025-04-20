@@ -13,7 +13,6 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.graphics.Bitmap;
@@ -32,17 +31,13 @@ import androidx.core.content.ContextCompat;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
@@ -55,7 +50,6 @@ public class PhotoAddNotification implements IHook {
     private boolean isReceiverRegistered = false;
     private static final long RETRY_DELAY = 1000;
     private static boolean isHandlingNotification = false;
-    private static final Set<String> processedNotifications = new HashSet<>();
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
@@ -63,7 +57,7 @@ public class PhotoAddNotification implements IHook {
 
         XposedHelpers.findAndHookMethod(Application.class, "onCreate", new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+            protected void beforeHookedMethod(MethodHookParam param) {
                 Application appContext = (Application) param.thisObject;
 
                 if (appContext == null) {
@@ -71,28 +65,42 @@ public class PhotoAddNotification implements IHook {
                     return;
                 }
 
-                Context moduleContext;
-                try {
-                    moduleContext = appContext.createPackageContext(
-                            "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
-                } catch (PackageManager.NameNotFoundException ignored) {
-                    ////XposedBridge.log("Failed to create package context: " + e.getMessage());
-                    return;
-                }
                 File dbFile1 = appContext.getDatabasePath("naver_line");
                 File dbFile2 = appContext.getDatabasePath("contact");
 
                 if (dbFile1.exists() && dbFile2.exists()) {
-                    SQLiteDatabase.OpenParams.Builder builder1 = new SQLiteDatabase.OpenParams.Builder();
-                    builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams1 = builder1.build();
+                    SQLiteDatabase.OpenParams.Builder builder1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams1 = builder1.build();
+                    }
 
-                    SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
-                    builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams2 = builder2.build();
+                    SQLiteDatabase.OpenParams.Builder builder2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams2 = builder2.build();
+                    }
 
-                    SQLiteDatabase db1 = SQLiteDatabase.openDatabase(dbFile1, dbParams1);
-                    SQLiteDatabase db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
+                    SQLiteDatabase db1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db1 = SQLiteDatabase.openDatabase(dbFile1, dbParams1);
+                    }
+                    SQLiteDatabase db2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
+                    }
 
                     hookNotificationMethods(loadPackageParam, appContext, db1, db2);
                 }
@@ -108,7 +116,7 @@ public class PhotoAddNotification implements IHook {
         XposedHelpers.findAndHookMethod(notificationManagerClass, "notify",
                 String.class, int.class, Notification.class, new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void beforeHookedMethod(MethodHookParam param) {
 
                         Notification notification = (Notification) param.args[2];
                         String tag = (String) param.args[0];
@@ -331,11 +339,14 @@ public class PhotoAddNotification implements IHook {
         if (bitmap == null) {
             return original;
         }
-        Notification.Builder builder = Notification.Builder.recoverBuilder(context, original)
-                .setStyle(new Notification.BigPictureStyle()
-                        .bigPicture(bitmap)
-                        .bigLargeIcon(bitmap)
-                        .setSummaryText(originalText));
+        Notification.Builder builder = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            builder = Notification.Builder.recoverBuilder(context, original)
+                    .setStyle(new Notification.BigPictureStyle()
+                            .bigPicture(bitmap)
+                            .bigLargeIcon(bitmap)
+                            .setSummaryText(originalText));
+        }
         return builder.build();
 
     }
@@ -361,8 +372,11 @@ public class PhotoAddNotification implements IHook {
                 .bigLargeIcon(bitmap)
                 .setSummaryText(originalText);
 
-        Notification.Builder builder = Notification.Builder.recoverBuilder(context, original)
-                .setStyle(bigPictureStyle);
+        Notification.Builder builder = null;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            builder = Notification.Builder.recoverBuilder(context, original)
+                    .setStyle(bigPictureStyle);
+        }
 
         return builder.build();
     }
@@ -525,12 +539,15 @@ public class PhotoAddNotification implements IHook {
 
     private Notification addCopyAction(Context context, Notification original, String text, PendingIntent pendingIntent) {
         try {
-            Notification.Builder builder = Notification.Builder.recoverBuilder(context, original)
-                    .addAction(new Notification.Action.Builder(
-                            null,
-                            "Copy Text",
-                            pendingIntent
-                    ).build());
+            Notification.Builder builder = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                builder = Notification.Builder.recoverBuilder(context, original)
+                        .addAction(new Notification.Action.Builder(
+                                null,
+                                "Copy Text",
+                                pendingIntent
+                        ).build());
+            }
 
             return builder.build();
         } catch (Exception e) {

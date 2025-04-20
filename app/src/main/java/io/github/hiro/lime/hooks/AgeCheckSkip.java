@@ -17,6 +17,8 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
+import android.os.Build;
+
 import java.io.File;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -42,21 +44,29 @@ public class AgeCheckSkip implements IHook {
                 File dbFile3 = appContext.getDatabasePath("line_general_key_value");
 
                 if (dbFile3.exists()) {
-                    SQLiteDatabase.OpenParams.Builder builder1 = new SQLiteDatabase.OpenParams.Builder();
-                    builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams1 = builder1.build();
-                    SQLiteDatabase db3 = SQLiteDatabase.openDatabase(dbFile3, dbParams1);
+                    SQLiteDatabase.OpenParams.Builder builder1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams1 = builder1.build();
+                    }
+                    SQLiteDatabase db3 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db3 = SQLiteDatabase.openDatabase(dbFile3, dbParams1);
+                    }
                     String query = "SELECT * FROM key_value_text WHERE key = ?";
                     Cursor cursor = db3.rawQuery(query, new String[]{"AGE_VERIFICATION_RESULT"});
 
                     if (cursor.getCount() == 0) {
-                        // 存在しない場合のみ挿入
                         ContentValues values = new ContentValues();
                         values.put("key", "AGE_VERIFICATION_RESULT");
                         values.put("value", "2");
-
                         long newRowId = db3.insert("key_value_text", null, values);
-
                         if (newRowId == -1) {
                             XposedBridge.log("データの挿入に失敗しました。");
                         } else {

@@ -36,48 +36,48 @@ public class test implements IHook {
         //hookChatHistoryActivity(loadPackageParam.classLoader); // ChatHistoryActivityのフック
         //hookLongClickListeners(loadPackageParam.classLoader); // 長押しリスナーのフック
 
-        // System.currentTimeMillis() をフック
-        XposedBridge.hookAllMethods(
-                java.lang.System.class,
-                "currentTimeMillis",
-                new XC_MethodHook() {
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        // フックが呼ばれたことをログ出力
-                        XposedBridge.log("System.currentTimeMillis() called");
-                    }
-
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        // 元の戻り値を取得
-                        long originalResult = (long) param.getResult();
-
-                        // スタックトレースを取得
-                        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
-
-                        // ログに出力
-                        StringBuilder sb = new StringBuilder();
-                        sb.append("System.currentTimeMillis() returned: ").append(originalResult).append("\n");
-                        sb.append("Stack trace:\n");
-
-                        // スタックトレースをフォーマット (上位10フレームまで)
-                        for (int i = 0; i < Math.min(stackTrace.length, 80); i++) {
-                            StackTraceElement element = stackTrace[i];
-                            sb.append("  at ")
-                                    .append(element.getClassName())
-                                    .append(".")
-                                    .append(element.getMethodName())
-                                    .append("(")
-                                    .append(element.getFileName())
-                                    .append(":")
-                                    .append(element.getLineNumber())
-                                    .append(")\n");
-                        }
-
-                        XposedBridge.log(sb.toString());
-                    }
-                }
-        );
+//        // System.currentTimeMillis() をフック
+//        XposedBridge.hookAllMethods(
+//                java.lang.System.class,
+//                "currentTimeMillis",
+//                new XC_MethodHook() {
+//                    @Override
+//                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+//                        // フックが呼ばれたことをログ出力
+//                        XposedBridge.log("System.currentTimeMillis() called");
+//                    }
+//
+//                    @Override
+//                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+//                        // 元の戻り値を取得
+//                        long originalResult = (long) param.getResult();
+//
+//                        // スタックトレースを取得
+//                        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+//
+//                        // ログに出力
+//                        StringBuilder sb = new StringBuilder();
+//                        sb.append("System.currentTimeMillis() returned: ").append(originalResult).append("\n");
+//                        sb.append("Stack trace:\n");
+//
+//                        // スタックトレースをフォーマット (上位10フレームまで)
+//                        for (int i = 0; i < Math.min(stackTrace.length, 80); i++) {
+//                            StackTraceElement element = stackTrace[i];
+//                            sb.append("  at ")
+//                                    .append(element.getClassName())
+//                                    .append(".")
+//                                    .append(element.getMethodName())
+//                                    .append("(")
+//                                    .append(element.getFileName())
+//                                    .append(":")
+//                                    .append(element.getLineNumber())
+//                                    .append(")\n");
+//                        }
+//
+//                        XposedBridge.log(sb.toString());
+//                    }
+//                }
+//        );
 
 
 
@@ -347,12 +347,15 @@ public class test implements IHook {
             }
 
             // 対象メソッドが特定のビュー関連メソッドであるか確認
-            if (!"invokeSuspend".equals(method.getName()) &&
+            if (
+
+                    !"invokeSuspend".equals(method.getName()) &&
                     !"run".equals(method.getName()) &&
                     !"setOnTouchListener".equals(method.getName()) &&
                     !"setVisibility".equals(method.getName()) &&
                     !"setAlpha".equals(method.getName()) &&
                     !"setEnabled".equals(method.getName()) &&
+                    !"onCreate".equals(method.getName()) &&
                     !"setFocusable".equals(method.getName()) &&
                     !"setOnClickListener".equals(method.getName()) &&
                     !"setBackgroundColor".equals(method.getName()) &&
@@ -365,7 +368,8 @@ public class test implements IHook {
                     !"setHint".equals(method.getName()) &&  // 新しく追加されたメソッド
                     !"setHintTextColor".equals(method.getName()) &&  // 新しく追加されたメソッド
                     !"onStart".equals(method.getName()) &&
-                    !"setCompoundDrawables".equals(method.getName()) &&
+                    !"onViewCreated".equals(method.getName()) &&
+//                    !"setCompoundDrawables".equals(method.getName()) &&
                     !"getActivity".equals(method.getName()) &&  // PendingIntent method
                     !"onViewAdded".equals(method.getName()) && // PendingIntent method
                     !"setState".equals(method.getName())) {   // PendingIntent method
@@ -392,49 +396,71 @@ public class test implements IHook {
 // メソッドに応じたログ出力
                         if ("invokeSuspend".equals(method.getName())) {
                             XposedBridge.log("Before calling invokeSuspend in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("run".equals(method.getName())) {
-                            XposedBridge.log("Before calling run in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setAlpha".equals(method.getName())) {
-                            XposedBridge.log("Before calling setAlpha in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setEnabled".equals(method.getName())) {
-                            XposedBridge.log("Before calling setEnabled in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setFocusable".equals(method.getName())) {
-                            XposedBridge.log("Before calling setFocusable in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setOnClickListener".equals(method.getName())) {
-                            XposedBridge.log("Before calling setOnClickListener in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setBackgroundColor".equals(method.getName())) {
-                            XposedBridge.log("Before calling setBackgroundColor in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setPadding".equals(method.getName())) {
-                            XposedBridge.log("Before calling setPadding in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setLayoutParams".equals(method.getName())) {
-                            XposedBridge.log("Before calling setLayoutParams in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("requestLayout".equals(method.getName())) {
-                            XposedBridge.log("Before calling requestLayout in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("invalidate".equals(method.getName())) {
-                            XposedBridge.log("Before calling invalidate in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setText".equals(method.getName())) {
-                            XposedBridge.log("Before calling setText in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setTextColor".equals(method.getName())) {
-                            XposedBridge.log("Before calling setTextColor in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setHint".equals(method.getName())) {
-                            XposedBridge.log("Before calling setHint in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setHintTextColor".equals(method.getName())) {
-                            XposedBridge.log("Before calling setHintTextColor in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setCompoundDrawables".equals(method.getName())) {
-                            XposedBridge.log("Before calling setCompoundDrawables in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("onStart".equals(method.getName())) {
-                            XposedBridge.log("Before calling onStart in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("getActivity".equals(method.getName())) {
-                            XposedBridge.log("Before calling getActivity in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("run".equals(method.getName())) {
+//                            XposedBridge.log("Before calling run in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("onCreate".equals(method.getName())) {
+//                            XposedBridge.log("Before calling onCreate in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setAlpha".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setAlpha in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setEnabled".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setEnabled in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setFocusable".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setFocusable in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setOnClickListener".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setOnClickListener in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setBackgroundColor".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setBackgroundColor in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setPadding".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setPadding in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setLayoutParams".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setLayoutParams in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("requestLayout".equals(method.getName())) {
+//                            XposedBridge.log("Before calling requestLayout in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("invalidate".equals(method.getName())) {
+//                            XposedBridge.log("Before calling invalidate in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setText".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setText in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setTextColor".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setTextColor in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setHint".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setHint in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setHintTextColor".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setHintTextColor in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setCompoundDrawables".equals(method.getName())) {
+//                            XposedBridge.log("Before calling setCompoundDrawables in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("onStart".equals(method.getName())) {
+//                            XposedBridge.log("Before calling onStart in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("getActivity".equals(method.getName())) {
+//                            XposedBridge.log("Before calling getActivity in class: " + clazz.getName() + " with args: " + argsString);
                         } else if ("onViewAdded".equals(method.getName())) {
-                            XposedBridge.log("Before calling onViewAdded in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("getService".equals(method.getName())) {
-                            XposedBridge.log("Before calling getService in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("setState".equals(method.getName())) {
-                            XposedBridge.log("Before setState invoke in class: " + clazz.getName() + " with args: " + argsString);
+                            // スタックトレースの取得
+                            StringBuilder stackTrace = new StringBuilder("\nStack Trace:\n");
+                            for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+                                stackTrace.append("  at ")
+                                        .append(element.getClassName())
+                                        .append(".")
+                                        .append(element.getMethodName())
+                                        .append("(")
+                                        .append(element.getFileName())
+                                        .append(":")
+                                        .append(element.getLineNumber())
+                                        .append(")\n");
+                            }
+
+                            // ログ出力（引数 + スタックトレース）
+                            XposedBridge.log("Before calling onViewAdded in class: "
+                                    + clazz.getName()
+                                    + " with args: " + argsString
+                                    + stackTrace.toString());
+
+//                        } else if ("getService".equals(method.getName())) {
+//                            XposedBridge.log("Before calling getService in class: " + clazz.getName() + " with args: " + argsString);
+//                        } else if ("setState".equals(method.getName())) {
+//                            XposedBridge.log("Before setState invoke in class: " + clazz.getName() + " with args: " + argsString);
+//                        }
                         }
                     }
-
+/*
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         Object result = param.getResult();
@@ -446,6 +472,11 @@ public class test implements IHook {
                             XposedBridge.log("After calling setAlpha in class: " + clazz.getName() + " with result: " + (result != null ? result.toString() : "null"));
                         } else if ("setEnabled".equals(method.getName())) {
                             XposedBridge.log("After calling setEnabled in class: " + clazz.getName() + " with result: " + (result != null ? result.toString() : "null"));
+                        } else if ("onCreate".equals(method.getName())) {
+                            XposedBridge.log("After calling onCreate in class: " + clazz.getName() + " with result: " + (result != null ? result.toString() : "null"));
+                        } else if ("onViewCreated".equals(method.getName())) {
+                            XposedBridge.log("After calling onViewCreated in class: " + clazz.getName() + " with result: " + (result != null ? result.toString() : "null"));
+
                         } else if ("setFocusable".equals(method.getName())) {
                             XposedBridge.log("After calling setFocusable in class: " + clazz.getName() + " with result: " + (result != null ? result.toString() : "null"));
                         } else if ("setOnClickListener".equals(method.getName())) {
@@ -482,6 +513,8 @@ public class test implements IHook {
                             XposedBridge.log("setState " + clazz.getName() + " with result: " + (result != null ? result.toString() : "null"));
                         }
                     }
+
+ */
                 });
             } catch (IllegalArgumentException e) {
                 XposedBridge.log("Error hooking method " + method.getName() + " in class " + clazz.getName() + " : " + e.getMessage());

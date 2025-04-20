@@ -2,12 +2,9 @@ package io.github.hiro.lime.hooks;
 
 import android.content.Context;
 import android.content.res.Resources;
-import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
-import android.widget.TextView;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -19,7 +16,7 @@ import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 
 public class Removebutton implements IHook {
-    private Set<Integer> targetIds = new HashSet<>();
+    private final Set<Integer> targetIds = new HashSet<>();
     private volatile boolean initialized = false;
 
     private static final String[] TARGET_RESOURCES = {

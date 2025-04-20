@@ -38,6 +38,7 @@ import io.github.hiro.lime.LimeOptions;
 public class WhiteToDark implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
+
         if (!limeOptions.WhiteToDark.checked) return;
         final int REPLACE_COLOR = Color.parseColor("#000000"); // 灰色
         Context context = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
@@ -55,6 +56,38 @@ public class WhiteToDark implements IHook {
 
         if (isVersionInRange(versionName, "15.5.1", "15.6.0")){
 
+            XposedHelpers.findAndHookMethod(
+                    "com.linecorp.line.chatskin.impl.main.ChatSkinSettingsActivity$d", // 内部クラスを指定
+                    loadPackageParam.classLoader,
+                    "invokeSuspend",
+                    Object.class, // 引数の型を指定
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            // DARKモードを強制するための列挙型を取得
+                            Class<?> modeClass = XposedHelpers.findClass("Xv0.m$b", loadPackageParam.classLoader);
+                            Object darkEnum = Enum.valueOf((Class<Enum>) modeClass, "DARK");
+                            param.args[0] = darkEnum; // 引数をDARKに設定
+
+                            XposedBridge.log("[ThemeHook] forced param = " + param.args[0]);
+                        }
+
+                    }
+            );
+
+            XposedHelpers.findAndHookMethod(
+                    "le1.e",
+                    loadPackageParam.classLoader,
+                    "a",
+                    boolean.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            // メソッド呼び出し前に引数を改ざん
+                            param.args[0] = true; // 強制的にダークモードを要求
+                        }
+                    }
+            );
 
         XposedHelpers.findAndHookMethod(
                 "Zv0.e",
@@ -109,6 +142,32 @@ public class WhiteToDark implements IHook {
                 param.setResult(darkEnum);
             }
         });
+            XposedHelpers.findAndHookMethod("jp.naver.line.android.common.view.listview.PopupListView", loadPackageParam.classLoader, "c", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    Class<?> modeClass = XposedHelpers.findClass("Xv0.m$b", loadPackageParam.classLoader);
+                    Object darkEnum = Enum.valueOf((Class<Enum>) modeClass, "DARK");
+                    param.setResult(darkEnum);
+                }
+            });
+
+            XposedHelpers.findAndHookMethod(
+                    "com.linecorp.line.chat.ui.resources.message.header.ChatHistoryHeader",
+                    loadPackageParam.classLoader,
+                    "j", // メソッド名
+                    boolean.class, // 引数の型
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            // 強制的にTO_BLACKを設定
+                            param.args[0] = true; // paramBooleanをtrueに設定
+                            XposedBridge.log("[ThemeHook] Forced TO_BLACK setting in ChatHistoryHeader.j()");
+                        }
+                    }
+            );
+
+
+
 //        XposedHelpers.findAndHookMethod(
 //                "Xv0.m$a", loadPackageParam.classLoader,   // フックするクラスとそのクラスローダ
 //                "a", Context.class,   // フックするメソッドとその引数
@@ -388,21 +447,21 @@ public class WhiteToDark implements IHook {
                 resName.contains("name")
 
         ) {
-            XposedBridge.log(String.format("%s [WHITELIST] resName=%s, ViewType=%s",
-                    logPrefix,
-                    resName,
-                    view.getClass().getName()));
+//            XposedBridge.log(String.format("%s [WHITELIST] resName=%s, ViewType=%s",
+//                    logPrefix,
+//                    resName,
+//                    view.getClass().getName()));
 
             if (view instanceof TextView) {
                 TextView tv = (TextView) view;
                 int currentColor = tv.getCurrentTextColor();
-                XposedBridge.log(String.format("%s [Before] Color=#%s",
-                        logPrefix,
-                        Integer.toHexString(currentColor)));
+//                XposedBridge.log(String.format("%s [Before] Color=#%s",
+//                        logPrefix,
+//                        Integer.toHexString(currentColor)));
                 tv.setTextColor(Color.WHITE);
-                XposedBridge.log(String.format("%s [After] Color=#%s",
-                        logPrefix,
-                        Integer.toHexString(tv.getCurrentTextColor())));
+//                XposedBridge.log(String.format("%s [After] Color=#%s",
+//                        logPrefix,
+//                        Integer.toHexString(tv.getCurrentTextColor())));
             }
             else {
         //  view.setBackgroundColor(Color.WHITE);

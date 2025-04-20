@@ -16,7 +16,7 @@ public class RemoveIconLabels implements IHook {
                 loadPackageParam.classLoader.loadClass("jp.naver.line.android.activity.main.bottomnavigationbar.BottomNavigationBarTextView"),
                 new XC_MethodHook() {
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void afterHookedMethod(MethodHookParam param) {
                         ((View) param.thisObject).setVisibility(View.GONE);
                     }
                 }

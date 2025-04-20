@@ -36,7 +36,7 @@ public class SpoofAndroidId implements IHook {
                                     param.setResult("0000000000000000");
                                     XposedBridge.log("Lime: Android ID spoofing activated");
                                 }
-                            } catch (PackageManager.NameNotFoundException e) {
+                            } catch (PackageManager.NameNotFoundException ignored) {
                                         }
                         }
                     }
@@ -45,8 +45,8 @@ public class SpoofAndroidId implements IHook {
 
 
     }
-    private Context getTargetAppContext(XC_LoadPackage.LoadPackageParam lpparam) {
-        Context context = null;
+    private Context getTargetAppContext(XC_LoadPackage.LoadPackageParam loadPackageParam) {
+        Context context;
 
         
         try {
@@ -61,7 +61,7 @@ public class SpoofAndroidId implements IHook {
 
         
         try {
-            Class<?> activityThreadClass = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader);
+            Class<?> activityThreadClass = XposedHelpers.findClass("android.app.ActivityThread", loadPackageParam.classLoader);
             Object activityThread = XposedHelpers.callStaticMethod(activityThreadClass, "currentActivityThread");
             Object loadedApk = XposedHelpers.getObjectField(activityThread, "mBoundApplication");
             Object appInfo = XposedHelpers.getObjectField(loadedApk, "info");
@@ -80,10 +80,10 @@ public class SpoofAndroidId implements IHook {
         
         try {
             Context systemContext = (Context) XposedHelpers.callStaticMethod(
-                    XposedHelpers.findClass("android.app.ContextImpl", lpparam.classLoader),
+                    XposedHelpers.findClass("android.app.ContextImpl", loadPackageParam.classLoader),
                     "createSystemContext",
                     XposedHelpers.callStaticMethod(
-                            XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader),
+                            XposedHelpers.findClass("android.app.ActivityThread", loadPackageParam.classLoader),
                             "currentActivityThread"
                     )
             );

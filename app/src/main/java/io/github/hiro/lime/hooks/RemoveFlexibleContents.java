@@ -22,7 +22,7 @@ public class RemoveFlexibleContents implements IHook {
                 "onResume",
                 new XC_MethodHook() {
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         Context context = (Context) param.thisObject;
 
                         recommendationResId = getIdByName(context, "home_tab_contents_recommendation_placement");
@@ -45,7 +45,7 @@ public class RemoveFlexibleContents implements IHook {
                 new XC_MethodHook() {
                     View view;
                     @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void beforeHookedMethod(MethodHookParam param) {
                         view = (View) param.thisObject;
                         int viewId = view.getId();
 //                          String resourceName = getResourceName(view.getContext(), viewId);

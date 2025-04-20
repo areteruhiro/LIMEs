@@ -1,52 +1,22 @@
 package io.github.hiro.lime.hooks;
 
 
-import static android.content.ContentValues.TAG;
-import static io.github.hiro.lime.Main.limeOptions;
-
 import android.app.AndroidAppHelper;
 import android.app.Application;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.content.BroadcastReceiver;
-import android.content.ClipData;
-import android.content.ClipboardManager;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.media.ExifInterface;
 import android.os.Build;
-import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
-import android.os.Parcelable;
-import android.util.Log;
-import android.widget.Toast;
 
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.lang.reflect.Field;
-import java.net.HttpURLConnection;
-import java.net.URL;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Locale;
-import java.util.Objects;
-import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import de.robv.android.xposed.XC_MethodHook;
@@ -109,18 +79,38 @@ public class PhotoSave implements IHook {
                 File dbFile = appContext.getDatabasePath("naver_line");
                 File dbFileContact = appContext.getDatabasePath("contact");
                 if (dbFile.exists() && dbFileContact.exists()) {
-                    SQLiteDatabase.OpenParams.Builder builder1 = new SQLiteDatabase.OpenParams.Builder();
-                    builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams1 = builder1.build();
+                    SQLiteDatabase.OpenParams.Builder builder1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams1 = builder1.build();
+                    }
 
 
-                    SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
-                    builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams2 = builder2.build();
+                    SQLiteDatabase.OpenParams.Builder builder2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams2 = builder2.build();
+                    }
 
 
-                    db = SQLiteDatabase.openDatabase(dbFile, dbParams1);
-                    dbContact = SQLiteDatabase.openDatabase(dbFileContact, dbParams2);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db = SQLiteDatabase.openDatabase(dbFile, dbParams1);
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbContact = SQLiteDatabase.openDatabase(dbFileContact, dbParams2);
+                    }
 
 
                     Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(

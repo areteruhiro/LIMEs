@@ -30,7 +30,7 @@ public class Disabled_Group_notification implements IHook {
                 Constants.RESPONSE_HOOK.methodName,
                 new XC_MethodHook() {
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    protected void afterHookedMethod(MethodHookParam param) {
                         String paramValue = param.args[1].toString();
                         if (paramValue.contains("chatName:") && paramValue.contains("getChats_result")) {
                             String chatName = extractChatName(paramValue);

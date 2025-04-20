@@ -70,8 +70,6 @@ public class ReadChecker implements IHook {
     private boolean shouldHookOnCreate = false;
     private String currentGroupId = null;
 
-    private static final int MAX_RETRY_COUNT = 3; // 最大リトライ回数
-
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.ReadChecker.checked) return;
@@ -87,18 +85,38 @@ public class ReadChecker implements IHook {
                 File dbFile3 = appContext.getDatabasePath("naver_line");
                 File dbFile4 = appContext.getDatabasePath("contact");
                 if (dbFile3.exists() && dbFile4.exists()) {
-                    SQLiteDatabase.OpenParams.Builder builder1 = new SQLiteDatabase.OpenParams.Builder();
-                    builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams1 = builder1.build();
+                    SQLiteDatabase.OpenParams.Builder builder1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams1 = builder1.build();
+                    }
 
 
-                    SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
-                    builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                    SQLiteDatabase.OpenParams dbParams2 = builder2.build();
+                    SQLiteDatabase.OpenParams.Builder builder2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams2 = builder2.build();
+                    }
 
 
-                    db3 = SQLiteDatabase.openDatabase(dbFile3, dbParams1);
-                    db4 = SQLiteDatabase.openDatabase(dbFile4, dbParams2);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db3 = SQLiteDatabase.openDatabase(dbFile3, dbParams1);
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db4 = SQLiteDatabase.openDatabase(dbFile4, dbParams2);
+                    }
 
 
                     Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
@@ -113,7 +131,7 @@ public class ReadChecker implements IHook {
         Class<?> chatHistoryRequestClass = XposedHelpers.findClass("com.linecorp.line.chat.request.ChatHistoryRequest", loadPackageParam.classLoader);
         XposedHelpers.findAndHookMethod(chatHistoryRequestClass, "getChatId", new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+            protected void afterHookedMethod(MethodHookParam param) {
                 String chatId = (String) param.getResult();
                 //XposedBridge.log(chatId);
                 if (isGroupExists(chatId)) {
@@ -131,7 +149,7 @@ public class ReadChecker implements IHook {
 
 
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+            protected void beforeHookedMethod(MethodHookParam param) {
                 if (moduleContext == null) {
                     try {
                         Context systemContext = (Context) XposedHelpers.callMethod(param.thisObject, "getApplicationContext");
@@ -144,7 +162,7 @@ public class ReadChecker implements IHook {
 
 
             @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+            protected void afterHookedMethod(MethodHookParam param) {
                 if (moduleContext == null) {
                     //XposedBridge.log("Module context is null. Skipping hook.");
                     return;
@@ -219,22 +237,9 @@ public class ReadChecker implements IHook {
         if (!imageFile.exists()) {
             // 最初のディレクトリにコピーを試みる
             if (!copyImageFile(moduleContext, imageName, imageFile)) {
-                // 次のディレクトリにコピーを試みる
-                File fallbackDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
-                if (!fallbackDir.exists()) {
-                    fallbackDir.mkdirs();
-                }
-                imageFile = new File(fallbackDir, imageName);
-                if (!copyImageFile(moduleContext, imageName, imageFile)) {
-                    // 内部ストレージにコピーを試みる
-                    File internalDir = new File(moduleContext.getFilesDir(), "backup");
-                    if (!internalDir.exists()) {
-                        internalDir.mkdirs();
-                    }
-                    imageFile = new File(internalDir, imageName);
                     copyImageFile(moduleContext, imageName, imageFile);
                 }
-            }
+
         }
 
         // 画像ファイルが存在する場合、Drawableを設定
@@ -275,17 +280,14 @@ public class ReadChecker implements IHook {
             );
             deleteButtonParams.setMargins(horizontalMarginPx + dpToPx(moduleContext, readCheckerSizeDp) + 20, verticalMarginPx, 0, 0);
             deleteButton.setLayoutParams(deleteButtonParams);
-            deleteButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (currentGroupId != null) {
-                        new AlertDialog.Builder(activity)
-                                .setTitle(moduleContext.getResources().getString(R.string.check))
-                                .setMessage(moduleContext.getResources().getString(R.string.really_delete))
-                                .setPositiveButton(moduleContext.getResources().getString(R.string.yes), (confirmDialog, confirmWhich) -> deleteGroupData(currentGroupId, activity, moduleContext))
-                                .setNegativeButton(moduleContext.getResources().getString(R.string.no), null)
-                                .show();
-                    }
+            deleteButton.setOnClickListener(v -> {
+                if (currentGroupId != null) {
+                    new AlertDialog.Builder(activity)
+                            .setTitle(moduleContext.getResources().getString(R.string.check))
+                            .setMessage(moduleContext.getResources().getString(R.string.really_delete))
+                            .setPositiveButton(moduleContext.getResources().getString(R.string.yes), (confirmDialog, confirmWhich) -> deleteGroupData(currentGroupId, activity, moduleContext))
+                            .setNegativeButton(moduleContext.getResources().getString(R.string.no), null)
+                            .show();
                 }
             });
 
@@ -420,8 +422,7 @@ public class ReadChecker implements IHook {
                 }
 
                 String finalcontent = "null".equals(contentRetry) ? mediaDescription : contentRetry;
-                if (finalcontent == null || finalcontent.isEmpty()
-                        || finalcontent.equals("null") || finalcontent.equals("NoGetError")) {
+                if (finalcontent.isEmpty() || finalcontent.equals("null") || finalcontent.equals("NoGetError")) {
                     finalcontent = "null";
                 }
 
@@ -538,7 +539,6 @@ public class ReadChecker implements IHook {
 
     private List<String> getuser_namesForServerId(String serverId, SQLiteDatabase db3) {
         if (limeDatabase == null) {
-            //("limeDatabaseがnullです。");
             return Collections.emptyList();
         }
         String query = "SELECT user_name, ID, Sent_User FROM read_message WHERE server_id=? ORDER BY CAST(ID AS INTEGER) ASC";
