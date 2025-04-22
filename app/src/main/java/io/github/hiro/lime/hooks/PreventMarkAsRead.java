@@ -57,6 +57,7 @@ public class PreventMarkAsRead implements IHook {
 
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+
                     if (moduleContext == null) {
                         try {
                             Context systemContext = (Context) XposedHelpers.callMethod(param.thisObject, "getApplicationContext");
@@ -70,15 +71,19 @@ public class PreventMarkAsRead implements IHook {
 
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    Context activityContext = (Context) param.thisObject;
+
+                    // Get the application context
+                    Context context = activityContext.getApplicationContext();
                     if (moduleContext == null) {
                         //XposedBridge.log("Module context is null. Skipping hook.");
                         return;
                     }
                     Activity activity = (Activity) param.thisObject;
-                    addButton(activity, moduleContext);
+                    addButton(activity, moduleContext,context);
                 }
-                private void addButton(Activity activity, Context moduleContext) {
-                    Map<String, String> settings = readSettingsFromExternalFile(moduleContext);
+                private void addButton(Activity activity, Context moduleContext,Context context) {
+                    Map<String, String> settings = readSettingsFromExternalFile(context);
 
                     float horizontalMarginFactor = 0.5f;
                     int verticalMarginDp = 15;
@@ -144,23 +149,10 @@ public class PreventMarkAsRead implements IHook {
 
                 private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext) {
                     // ファイルパスを取得
-                    File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+                    File dir = new File(moduleContext.getFilesDir(), "LimeBackup");
                     File file = new File(dir, "margin_settings.txt");
 
-                    // デフォルト値
                     float chatUnreadSizeDp = 30; // デフォルト値
-
-                    // ファイルの内容を読み込む
-                    if (!file.exists()) {
-                        // 次のディレクトリを確認
-                        dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
-                        file = new File(dir, "margin_settings.txt");
-
-                        // それでも存在しない場合、内部ストレージを確認
-                        if (!file.exists()) {
-                            file = new File(moduleContext.getFilesDir(), "margin_settings.txt");
-                        }
-                    }
 
                     if (file.exists()) {
                         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {

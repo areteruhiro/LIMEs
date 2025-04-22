@@ -56,25 +56,25 @@ public class KeepUnread implements IHook {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         View rootView = (View) param.getResult();
-                        Context appContext = rootView.getContext();
+                        Context context = rootView.getContext();
 
 
                         Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                 "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
 
-                        RelativeLayout layout = new RelativeLayout(appContext);
+                        RelativeLayout layout = new RelativeLayout(context);
                         RelativeLayout.LayoutParams layoutParams = new RelativeLayout.LayoutParams(
                                 RelativeLayout.LayoutParams.MATCH_PARENT, RelativeLayout.LayoutParams.WRAP_CONTENT);
                         layout.setLayoutParams(layoutParams);
 
 
-                        keepUnread = readStateFromFile(appContext);
-                        ImageView imageView = new ImageView(appContext);
-                        updateSwitchImage(imageView, keepUnread, moduleContext);
+                        keepUnread = readStateFromFile(context);
+                        ImageView imageView = new ImageView(context);
+                        updateSwitchImage(imageView, keepUnread,moduleContext, context);
 
 
-                        Resources resources = appContext.getResources();
+                        Resources resources = context.getResources();
                         Configuration configuration = resources.getConfiguration();
                         int smallestWidthDp = configuration.smallestScreenWidthDp;
 
@@ -82,8 +82,8 @@ public class KeepUnread implements IHook {
                         float density = resources.getDisplayMetrics().density;
 
 
-                        float keep_unread_horizontalMarginFactor = getkeep_unread_horizontalMarginFactor(appContext);
-                        int keep_unread_verticalMarginDp = getkeep_unread_verticalMarginDp(appContext);
+                        float keep_unread_horizontalMarginFactor = getkeep_unread_horizontalMarginFactor(context);
+                        int keep_unread_verticalMarginDp = getkeep_unread_verticalMarginDp(context);
 
                         int horizontalMarginPx = (int) (smallestWidthDp * keep_unread_horizontalMarginFactor * density);
                         int verticalMarginPx = (int) (keep_unread_verticalMarginDp * density);
@@ -95,8 +95,8 @@ public class KeepUnread implements IHook {
 
                         imageView.setOnClickListener(v -> {
                             keepUnread = !keepUnread;
-                            updateSwitchImage(imageView, keepUnread, moduleContext);
-                            saveStateToFile(appContext, keepUnread);
+                            updateSwitchImage(imageView, keepUnread,moduleContext, context);
+                            saveStateToFile(context, keepUnread);
                         });
 
 
@@ -160,7 +160,7 @@ public class KeepUnread implements IHook {
                         Map<String, String> settings = readSettingsFromExternalFile(context);
                         try {
                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                                return Integer.parseInt(Objects.requireNonNull(settings.getOrDefault("keep_unread_verticalMarginDp", "15")));
+                                return Integer.parseInt(Objects.requireNonNull(settings.getOrDefault("keep_unread_verticalMarginDp", "50")));
                             }
                         } catch (NumberFormatException ignored) {
                             return 15;
@@ -168,7 +168,7 @@ public class KeepUnread implements IHook {
                         return 0;
                     }
 
-                    private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext) {
+                    private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext , Context context) {
                         String imageName = isOn ? "keep_switch_on.png" : "keep_switch_off.png"; // 拡張子を追加
                         File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
                         File imageFile = new File(dir, imageName);
@@ -190,10 +190,10 @@ public class KeepUnread implements IHook {
                         if (imageFile.exists()) {
                             Drawable drawable = Drawable.createFromPath(imageFile.getAbsolutePath());
                             if (drawable != null) {
-                                Map<String, String> settings = readSettingsFromExternalFile(moduleContext);
+                                Map<String, String> settings = readSettingsFromExternalFile(context);
                                 float sizeInDp = 0;
                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                                    sizeInDp = Float.parseFloat(Objects.requireNonNull(settings.getOrDefault("keep_unread_size", "60")));
+                                    sizeInDp = Float.parseFloat(Objects.requireNonNull(settings.getOrDefault("keep_unread_size", "80")));
                                 }
                                 int sizeInPx = dpToPx(moduleContext, sizeInDp);
                                 drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);

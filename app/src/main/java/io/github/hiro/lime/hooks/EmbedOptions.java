@@ -1706,22 +1706,17 @@ public class EmbedOptions implements IHook {
         return result;
     }
     private void KeepUnread_Button(Context context, Context moduleContext) {
-        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-        if (!dir.exists() && !dir.mkdirs()) {
-            dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
-            if (!dir.exists() && !dir.mkdirs()) {
-                dir = moduleContext.getFilesDir();
-            }
-        }
+        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
+
         File file = new File(dir, "margin_settings.txt");
 
         float keep_unread_horizontalMarginFactor = 0.5f;
-        int keep_unread_verticalMarginDp = 15;
+        int keep_unread_verticalMarginDp = 50;
         float read_button_horizontalMarginFactor = 0.6f;
         int read_button_verticalMarginDp = 60;
         float read_checker_horizontalMarginFactor = 0.5f;
         int read_checker_verticalMarginDp = 60;
-        float keep_unread_size = 60.0f;
+        float keep_unread_size = 80.0f;
         float chat_unread_size = 30.0f;
         float chat_read_check_size = 80.0f;
 

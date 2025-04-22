@@ -10,7 +10,7 @@ android {
         minSdk 22
         targetSdk 35
         versionCode 116160
-        versionName "1.22.4beta"
+        versionName "1.22.5Stable"
         multiDexEnabled true
 
         proguardFiles += 'proguard-rules.pro'
