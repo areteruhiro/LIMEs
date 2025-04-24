@@ -65,6 +65,7 @@ public class DarkColor implements IHook {
             protected void afterHookedMethod(MethodHookParam param) {
                 View view = (View) param.thisObject;
                 checkAndChangeBackgroundColor(view);
+                checkAndChangeTextColor(view);
             }
         });
 
@@ -73,6 +74,7 @@ public class DarkColor implements IHook {
             protected void afterHookedMethod(MethodHookParam param) {
                 View view = (View) param.thisObject;
                 checkAndChangeBackgroundColor(view);
+                checkAndChangeTextColor(view);
             }
         });
 
@@ -333,12 +335,13 @@ public class DarkColor implements IHook {
                 String resourceName = getViewResourceName(view); // リソース名を取得
                 // voipを含む場合は変更しない
                 if (resourceName.contains("voip")) {
+                    textView.setTextColor(Color.parseColor("#000000"));
                     // XposedBridge.log("Skipping background Color Change for Resource Name: " + resourceName);
                     return;
                 }
 
                 if (currentTextColor == Color.parseColor("#111111")) {
-                    textView.setTextColor(Color.parseColor("#FFFFFF"));
+                    textView.setTextColor(Color.parseColor("#000000"));
 //XposedBridge.log("Changed Text Color of Resource Name: " + resourceName + " to #FFFFFF");
                 } else {
 //XposedBridge.log("Text Color of Resource Name: " + resourceName + " is not #111111 (Current: " + (currentTextColor) + ")");

@@ -50,6 +50,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -198,6 +199,8 @@ public class ReadChecker implements IHook {
     private void addButton(Activity activity, Context context,Context moduleContext) {
 
         File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
+        File dir2 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+
         File file = new File(dir, "margin_settings.txt");
 
         float readCheckerHorizontalMarginFactor = 0.5f;
@@ -224,7 +227,7 @@ public class ReadChecker implements IHook {
 
         ImageView imageButton = new ImageView(activity);
         String imageName = "read_checker.png";
-        File imageFile = new File(dir, imageName);
+        File imageFile = new File(dir2, imageName);
 
         if (!imageFile.exists()) {
             if (!copyImageFile(moduleContext, imageName, imageFile)) {
@@ -426,24 +429,56 @@ public class ReadChecker implements IHook {
 
     private void showDialog(Activity activity, Context moduleContext, String groupId) {
         String query = limeOptions.MySendMessage.checked
-                ? "SELECT server_id, content, created_time FROM read_message WHERE group_id=? AND Send_User = 'null' ORDER BY created_time ASC"
-                : "SELECT server_id, content, created_time FROM read_message WHERE group_id=? ORDER BY created_time ASC";
+                ? "SELECT ID, server_id, content, created_time FROM read_message WHERE group_id=? AND Send_User = 'null' ORDER BY ID ASC"
+                : "SELECT ID, server_id, content, created_time FROM read_message WHERE group_id=? ORDER BY ID ASC";
 
         try (Cursor cursor = limeDatabase.rawQuery(query, new String[]{groupId})) {
-            StringBuilder resultBuilder = new StringBuilder();
+            List<DataItem> dataItems = new ArrayList<>();
+
             while (cursor.moveToNext()) {
-                String serverId = cursor.getString(0);
-                String content = cursor.getString(1);
-                String timeFormatted = cursor.getString(2);
+                int id = cursor.getInt(0);
+                String serverId = cursor.getString(1);
+                String content = cursor.getString(2);
+                String timeFormatted = cursor.getString(3);
                 List<String> user_nameList = getuser_namesForServerId(serverId, db3);
 
-                resultBuilder.append("Content: ").append(content != null ? content : "Media").append("\n");
-                resultBuilder.append("Created Time: ").append(timeFormatted).append("\n");
+                DataItem existingItem = null;
+                for (DataItem item : dataItems) {
+                    if (item.serverId.equals(serverId)) {
+                        existingItem = item;
+                        break;
+                    }
+                }
 
-                if (!user_nameList.isEmpty()) {
+                if (existingItem == null) {
+                    // 新しいDataItemを作成
+                    DataItem newItem = new DataItem(serverId, content, timeFormatted);
+                    newItem.id = id;  // IDを設定
+                    newItem.user_names.addAll(user_nameList);
+                    dataItems.add(newItem);
+                } else {
+                    // 既存のDataItemにユーザー名を追加（重複排除）
+                    existingItem.user_names.addAll(user_nameList);
+                }
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                Collections.sort(dataItems, Comparator.comparingInt(item -> item.id));
+            }
+
+            StringBuilder resultBuilder = new StringBuilder();
+            for (DataItem item : dataItems) {
+                resultBuilder.append("Content: ")
+                        .append(item.content != null ? item.content : "Media")
+                        .append("\n");
+                resultBuilder.append("Created Time: ")
+                        .append(item.timeFormatted)
+                        .append("\n");
+
+                if (!item.user_names.isEmpty()) {
                     resultBuilder.append(moduleContext.getResources().getString(R.string.Reader))
-                            .append(" (").append(user_nameList.size()).append("):\n");
-                    for (String user_name : user_nameList) {
+                            .append(" (").append(item.user_names.size()).append("):\n");
+                    for (String user_name : item.user_names) {
                         resultBuilder.append(user_name).append("\n");
                     }
                 } else {
@@ -466,7 +501,8 @@ public class ReadChecker implements IHook {
                 new AlertDialog.Builder(activity)
                         .setTitle(moduleContext.getResources().getString(R.string.check))
                         .setMessage(moduleContext.getResources().getString(R.string.really_delete))
-                        .setPositiveButton(moduleContext.getResources().getString(R.string.yes), (confirmDialog, confirmWhich) -> deleteGroupData(groupId, activity, moduleContext))
+                        .setPositiveButton(moduleContext.getResources().getString(R.string.yes),
+                                (confirmDialog, confirmWhich) -> deleteGroupData(groupId, activity, moduleContext))
                         .setNegativeButton(moduleContext.getResources().getString(R.string.no), null)
                         .show();
             });
@@ -476,7 +512,6 @@ public class ReadChecker implements IHook {
             scrollView.post(() -> scrollView.fullScroll(View.FOCUS_DOWN));
         }
     }
-
     private List<String> getuser_namesForServerId(String serverId, SQLiteDatabase db3) {
         if (limeDatabase == null) {
             return Collections.emptyList();
@@ -499,7 +534,6 @@ public class ReadChecker implements IHook {
                     int bracketIndex = trimmedUserName.indexOf('[');
                     if (bracketIndex != -1) {
                         String userNamePart = trimmedUserName.substring(1, bracketIndex).trim();
-                        ////("抽出したユーザー名部分: " + userNamePart);
 
                         if (userNamePart.equals("null")) {
                             if (SentUser != null) {
@@ -517,7 +551,6 @@ public class ReadChecker implements IHook {
                     }
                 }
 
-                // 重複排除
                 if (!uniqueUserNames.contains(userNameStr)) {
                     userNames.add(userNameStr);
                     uniqueUserNames.add(userNameStr);
@@ -745,16 +778,16 @@ public class ReadChecker implements IHook {
     }
 
     private static class DataItem {
+        int id;
         String serverId;
         String content;
         String timeFormatted;
-        List<String> user_names; // Set から List に変更
+        Set<String> user_names = new LinkedHashSet<>();
 
         DataItem(String serverId, String content, String timeFormatted) {
             this.serverId = serverId;
             this.content = content;
             this.timeFormatted = timeFormatted;
-            this.user_names = new ArrayList<>(); // HashSet から ArrayList に変更
         }
     }
     private void createErrorFile(Context context, String serverId, String mediaValue) {

@@ -55,7 +55,7 @@ public class WhiteToDark implements IHook {
         }
 
         if (isVersionInRange(versionName, "15.5.1", "15.6.0")){
-
+            
             XposedHelpers.findAndHookMethod(
                     "com.linecorp.line.chatskin.impl.main.ChatSkinSettingsActivity$d", // 内部クラスを指定
                     loadPackageParam.classLoader,
@@ -88,7 +88,21 @@ public class WhiteToDark implements IHook {
                         }
                     }
             );
+            Class<?> qjClass = XposedHelpers.findClass("QJ.g", loadPackageParam.classLoader);
+            Class<?> hClass = XposedHelpers.findClass("TJ.h", loadPackageParam.classLoader);
+            Class<?> eClass = XposedHelpers.findClass("BL.e", loadPackageParam.classLoader);
+            Class<?> fClass = XposedHelpers.findClass("BL.f", loadPackageParam.classLoader);
 
+            XposedHelpers.findAndHookMethod(qjClass, "a", hClass, new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    Object hInstance = param.args[0]; // 引数を取得
+                    // 常に DARK_MODE を返す
+                    Object mode = fClass.getField("DARK_MODE").get(null); // DARK_MODEを取得
+                    param.setResult(eClass.getConstructor(fClass, String.class, String.class, Integer.class)
+                            .newInstance(mode, hClass.getMethod("c").invoke(hInstance), hClass.getMethod("d").invoke(hInstance), hClass.getMethod("a").invoke(hInstance)));
+                }
+            });
         XposedHelpers.findAndHookMethod(
                 "Zv0.e",
                 loadPackageParam.classLoader,
@@ -142,29 +156,7 @@ public class WhiteToDark implements IHook {
                 param.setResult(darkEnum);
             }
         });
-            XposedHelpers.findAndHookMethod("jp.naver.line.android.common.view.listview.PopupListView", loadPackageParam.classLoader, "c", new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    Class<?> modeClass = XposedHelpers.findClass("Xv0.m$b", loadPackageParam.classLoader);
-                    Object darkEnum = Enum.valueOf((Class<Enum>) modeClass, "DARK");
-                    param.setResult(darkEnum);
-                }
-            });
 
-            XposedHelpers.findAndHookMethod(
-                    "com.linecorp.line.chat.ui.resources.message.header.ChatHistoryHeader",
-                    loadPackageParam.classLoader,
-                    "j", // メソッド名
-                    boolean.class, // 引数の型
-                    new XC_MethodHook() {
-                        @Override
-                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            // 強制的にTO_BLACKを設定
-                            param.args[0] = true; // paramBooleanをtrueに設定
-                            XposedBridge.log("[ThemeHook] Forced TO_BLACK setting in ChatHistoryHeader.j()");
-                        }
-                    }
-            );
 
 
 
@@ -257,7 +249,7 @@ public class WhiteToDark implements IHook {
             protected void afterHookedMethod(MethodHookParam param) {
                 View view = (View) param.thisObject;
                 checkAndChangeBackgroundColor(view);
-                //checkAndChangeTextColor(view);
+                checkAndChangeTextColor(view);
             }
         });
 
@@ -266,7 +258,7 @@ public class WhiteToDark implements IHook {
             protected void afterHookedMethod(MethodHookParam param) {
                 View view = (View) param.thisObject;
                 checkAndChangeBackgroundColor(view);
-               // checkAndChangeTextColor(view);
+                checkAndChangeTextColor(view);
             }
         });
 
