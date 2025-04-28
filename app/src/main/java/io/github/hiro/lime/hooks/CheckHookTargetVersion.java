@@ -31,7 +31,8 @@ public class CheckHookTargetVersion implements IHook {
                                 !versionNameStr.equals("15.0.0") &&
                                 !(isVersionInRange(versionName, "15.1.0", "15.2.0")) &&
                                 !(isVersionInRange(versionName, "15.3.0", "15.4.0")) &&
-                                !(isVersionInRange(versionName, "15.4.0", "15.4.2"))&& !versionNameStr.equals("15.5.1")
+                                !(isVersionInRange(versionName, "15.4.0", "15.4.2"))&&
+                                !(isVersionInRange(versionName, "15.5.0", "15.6.0"))
                         ) {
                                  Utils.addModuleAssetPath(context);
                             Toast.makeText(context.getApplicationContext(), context.getString(R.string.incompatible_version), Toast.LENGTH_SHORT).show();
