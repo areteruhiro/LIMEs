@@ -6,11 +6,13 @@ import static io.github.hiro.lime.Utils.dpToPx;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Build;
+import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -57,9 +59,9 @@ public class ReactionList implements IHook {
             e.printStackTrace();
         }
 
-        if (!isVersionInRange(versionName, "15.4.1", "15.5.0"))return;
+        if (!isVersionInRange(versionName, "15.4.1", "15.6.0"))return;
         XposedBridge.hookAllMethods(
-                loadPackageParam.classLoader.loadClass("Iy.l"),
+                loadPackageParam.classLoader.loadClass(Constants.ReactionList.className),
                 "invokeSuspend",
                 new XC_MethodHook() {
 
@@ -151,7 +153,6 @@ public class ReactionList implements IHook {
 
         );
 
-
         findAndHookMethod(
                 ViewGroup.class,
                 "onViewAdded",
@@ -161,14 +162,22 @@ public class ReactionList implements IHook {
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         try {
                             View addedView = (View) param.args[0];
+                            String resName = null;
+                            try {
+         resName = addedView.getResources().getResourceEntryName(addedView.getId());
+//                                XposedBridge.log("[DEBUG] Added View - ID: " + addedView.getId() +
+//                                        ", ResourceName: " + resName);
+                            } catch (Resources.NotFoundException ignored) {
+//                                XposedBridge.log("[DEBUG] Added View - ID: " + addedView.getId() +
+//                                        " (No resource name found)");
+                            }
 
-                            if (addedView.getId() == CLOSE_BUTTON_ID) {
+                            if ("chat_ui_reactionsheet_close".equals(resName)) {
                                 Context context = addedView.getContext();
                                 int marginLeftPx = dpToPx(16, context);
 
                                 if (addedView.getParent() instanceof ViewGroup) {
                                     ViewGroup parent = (ViewGroup) addedView.getParent();
-
                                     createReactionIcons(context, parent, marginLeftPx);
                                 }
                             }
@@ -204,13 +213,20 @@ public class ReactionList implements IHook {
         put("SAD", "chat_ui_sad_reaction_square");
         put("OMG", "chat_ui_omg_reaction_square");
     }};
-    private void createReactionIcons(Context context, ViewGroup parent, int marginLeftPx) {
+    private void createReactionIcons(Context context, ViewGroup parent, int marginLeftDp) {
         try {
+            DisplayMetrics metrics = context.getResources().getDisplayMetrics();
+            int marginLeftPx = dpToPx(marginLeftDp, context);
+            int baseImageSize = (metrics.widthPixels / metrics.density < 360) ? 24 : 28;
+            int imageSize = dpToPx(baseImageSize, context);
+
             Context moduleContext = context.createPackageContext("io.github.hiro.lime", 0);
+
             GridLayout grid = new GridLayout(context);
             grid.setColumnCount(3);
             grid.setRowCount(2);
-            grid.setPadding(dpToPx(4, context), 0, dpToPx(4, context), 0);
+            int padding = dpToPx(4, context);
+            grid.setPadding(padding, padding, padding, padding);
 
             for (String type : REACTION_TYPES) {
                 int count = 0;
@@ -220,49 +236,32 @@ public class ReactionList implements IHook {
                 if (count > 0) {
                     String resourceName = REACTION_IMAGE_NAMES.get(type);
                     int resourceId = moduleContext.getResources().getIdentifier(
-                            resourceName,
-                            "raw",
-                            "io.github.hiro.lime"
-                    );
+                            resourceName, "raw", "io.github.hiro.lime");
 
                     if (resourceId != 0) {
-//アイコンサイズ変更
-                        int imageSize = dpToPx(28, context);
-
                         InputStream is = moduleContext.getResources().openRawResource(resourceId);
-                        Bitmap rawBitmap = BitmapFactory.decodeStream(is);
                         Bitmap scaledBitmap = Bitmap.createScaledBitmap(
-                                rawBitmap,
+                                BitmapFactory.decodeStream(is),
                                 imageSize,
                                 imageSize,
                                 true
                         );
                         is.close();
+
                         LinearLayout container = new LinearLayout(context);
                         container.setOrientation(LinearLayout.HORIZONTAL);
                         container.setGravity(Gravity.CENTER_VERTICAL);
-
                         ImageView iv = new ImageView(context);
                         iv.setImageBitmap(scaledBitmap);
-                        LinearLayout.LayoutParams ivParams = new LinearLayout.LayoutParams(
-                                imageSize,
-                                imageSize
-                        );
+                        LinearLayout.LayoutParams ivParams = new LinearLayout.LayoutParams(imageSize, imageSize);
                         ivParams.setMargins(0, 0, dpToPx(4, context), 0);
                         iv.setLayoutParams(ivParams);
 
-                        TextView tv = createCountTextView(context, count);
-
                         container.addView(iv);
-                        container.addView(tv);
-
+                        container.addView(createCountTextView(context, count));
                         GridLayout.LayoutParams gridParams = new GridLayout.LayoutParams();
-                        gridParams.setMargins(
-                                dpToPx(2, context),
-                                dpToPx(2, context),
-                                dpToPx(2, context),
-                                dpToPx(2, context)
-                        );
+                        int itemMargin = dpToPx(2, context);
+                        gridParams.setMargins(itemMargin, itemMargin, itemMargin, itemMargin);
                         container.setLayoutParams(gridParams);
 
                         grid.addView(container);
@@ -274,15 +273,14 @@ public class ReactionList implements IHook {
                     FrameLayout.LayoutParams.WRAP_CONTENT,
                     FrameLayout.LayoutParams.WRAP_CONTENT
             );
-            params.setMargins(marginLeftPx, 0, 0, 0);
-            params.gravity = Gravity.CENTER_VERTICAL | Gravity.END;
+            params.gravity = Gravity.TOP | Gravity.START;
+            params.setMargins(marginLeftPx, dpToPx(8, context), 0, 0);
             parent.addView(grid, params);
 
         } catch (Exception e) {
             XposedBridge.log("[ERROR] Image processing failed: " + e.getMessage());
         }
     }
-
     private TextView createCountTextView(Context context, int count) {
         TextView tv = new TextView(context);
         tv.setText(String.valueOf(count));

@@ -39,6 +39,12 @@ public class Constants {
     static HookTarget  PhotoSave3 = new HookTarget("", "");
 
 
+    static HookTarget  ReactionList = new HookTarget("", "");
+
+    static HookTarget  WhiteToDark0 = new HookTarget("", "");
+
+
+
     public static void initializeHooks(LoadPackageParam loadPackageParam) {
         Context context = (Context) XposedHelpers.callMethod(XposedHelpers.callStaticMethod(
                 XposedHelpers.findClass("android.app.ActivityThread", null),
@@ -206,6 +212,10 @@ public class Constants {
 //com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
             //createAlbum
             PhotoSave3 = new HookTarget("gm.K", "");
+            ReactionList = new HookTarget("Iy.l", "");
+
+            //TIMELINE_FEED_TAB_LAST_PAUSED_TIME_MILLIS
+            WhiteToDark0 = new HookTarget("Xv0.m$b", "");
 
 
         } else if (isVersionInRange(versionName, "15.5.0", "15.6.0")) {
@@ -260,7 +270,8 @@ public class Constants {
 //com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
             //createAlbum
             PhotoSave3 = new HookTarget("gm.y", "");
-
+            //reactionListModel
+            ReactionList = new HookTarget("Ky.m", "");
 
 
         }
