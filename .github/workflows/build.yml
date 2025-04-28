@@ -74,9 +74,8 @@ jobs:
       - name: Download Required APKs
         if: github.event.inputs.release == 'true'
         run: |
-          curl -L -o LINE-15.4.4-arm64-v8a.armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm64-v8a.+.arm-v7a.apk
-#          curl -L -o LINE-15.4.1-arm64-v8a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.4.0/15.4.1arm64-v8a.apk
-          curl -L -o LINE-15-4-4-armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm-v7a.apk
+          curl -L -o LINE-15.5.4-arm64-v8a.armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm64-v8a.+.arm-v7a.apk
+          curl -L -o LINE-15-5-4-armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm-v7a.apk
       - name: Download LSPatch
         if: github.event.inputs.release == 'true'
         run: |
@@ -98,8 +97,7 @@ jobs:
 
         if: github.event.inputs.release == 'true'
         run: |
-          for file in LINE-15.4.4-arm64-v8a.armeabi-v7a.apk LINE-15-4-4-armeabi-v7a.apk; do
-#          LINE-15.4.1-arm64-v8a.apk
+          for file in LINE-15.5.4-arm64-v8a.armeabi-v7a.apk LINE-15-5-4-armeabi-v7a.apk; do
           
             echo "Patching $file..."
             java -jar lspatch.jar "$file" -m "${{ env.repo }}-${{ env.version }}.apk" -l 2 -v
@@ -133,14 +131,13 @@ jobs:
           prerelease: false
           files: |
             ${{ env.repo }}-${{ env.version }}.apk
-            Patched_${{ env.version }}_LINE-15.4.4-arm64-v8a.armeabi-v7a.apk
-#            Patched_${{ env.version }}_LINE-15.4.1-arm64-v8a.apk
-            Patched_${{ env.version }}_LINE-15-4-4-armeabi-v7a.apk
+            Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk
+            Patched_${{ env.version }}_LINE-15-5-4-armeabi-v7a.apk
           body: |
             # 更新内容
 
             ## 対応するLINEのバージョン
-            14.19.1 <br>14.21.1 <br>15.0.0  <br>15.1.X <br>15.2.1 <br>15.3.X <br> 15.4.0-15.4.1<br>15.5.1 
+            14.19.1 <br>14.21.1 <br>15.0.0  <br>15.1.X <br>15.2.1 <br>15.3.X <br> 15.4.0-15.4.1<br>15.5.1 -15.5.4
 
             ### 差分
             https://github.com/${{ github.repository }}/compare/${{ env.version }}^...${{ env.version }}
