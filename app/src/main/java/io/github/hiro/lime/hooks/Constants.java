@@ -210,7 +210,7 @@ public class Constants {
 
         } else if (isVersionInRange(versionName, "15.5.0", "15.6.0")) {
 
-            XposedBridge.log("15.5.1 Patched ");
+            XposedBridge.log("15.5.1-15.5.4 Patched ");
 
                      /*
             TRADITIONAL_CHINESE

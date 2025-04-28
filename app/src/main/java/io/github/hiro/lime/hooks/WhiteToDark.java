@@ -55,7 +55,7 @@ public class WhiteToDark implements IHook {
         }
 
         if (isVersionInRange(versionName, "15.5.1", "15.6.0")){
-            
+
             XposedHelpers.findAndHookMethod(
                     "com.linecorp.line.chatskin.impl.main.ChatSkinSettingsActivity$d", // 内部クラスを指定
                     loadPackageParam.classLoader,
