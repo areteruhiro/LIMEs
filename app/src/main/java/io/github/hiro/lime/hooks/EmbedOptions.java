@@ -2471,7 +2471,6 @@ public class EmbedOptions implements IHook {
             builder.setNegativeButton(moduleContext.getResources().getString(R.string.Return), null);
             builder.show();
         }
-
         private List<ProfileInfo> loadHiddenProfiles(Context context, Set<String> hiddenMids) {
             List<ProfileInfo> profiles = new ArrayList<>();
 
@@ -2894,7 +2893,6 @@ public class EmbedOptions implements IHook {
             }
         }.execute();
     }
-
     private void restoreChatList(Context context, Context moduleContext, File finalTempFile) {
         new AsyncTask<Void, Integer, Boolean>() {
             private ProgressDialog progressDialog;
@@ -2903,6 +2901,7 @@ public class EmbedOptions implements IHook {
 
             @Override
             protected void onPreExecute() {
+                XposedBridge.log("[Restore] Starting chat list restoration process");
                 progressDialog = new ProgressDialog(context);
                 progressDialog.setTitle(moduleContext.getString(R.string.restoring_chat));
                 progressDialog.setMessage(moduleContext.getString(R.string.preparing));
@@ -2916,9 +2915,10 @@ public class EmbedOptions implements IHook {
             @Override
             protected Boolean doInBackground(Void... voids) {
                 final int BATCH_SIZE = 500;
+                XposedBridge.log("[Restore] Batch size set to: " + BATCH_SIZE);
 
                 if (finalTempFile == null || !finalTempFile.exists()) {
-                    Log.e("Restore", "Backup file not found or null");
+                    XposedBridge.log("[Restore] ERROR: Backup file not found or null");
                     return false;
                 }
 
@@ -2929,19 +2929,22 @@ public class EmbedOptions implements IHook {
 
                 try {
                     if (!finalTempFile.canRead()) {
-                        Log.e("Restore", "No read permission for backup file");
+                        XposedBridge.log("[Restore] ERROR: No read permission for backup file");
                         return false;
                     }
 
+                    XposedBridge.log("[Restore] Opening backup database: " + finalTempFile.getAbsolutePath());
                     backupDb = SQLiteDatabase.openDatabase(
                             finalTempFile.getAbsolutePath(),
                             null,
                             SQLiteDatabase.OPEN_READONLY
                     );
+
                     countCursor = backupDb.rawQuery("SELECT COUNT(*) FROM chat", null);
                     if (countCursor != null && countCursor.moveToFirst()) {
                         totalRecords = countCursor.getInt(0);
-                        publishProgress(0); // 初期進捗更新
+                        XposedBridge.log("[Restore] Total records to process: " + totalRecords);
+                        publishProgress(0);
                     }
 
                     originalDb = context.openOrCreateDatabase(
@@ -2949,26 +2952,38 @@ public class EmbedOptions implements IHook {
                             Context.MODE_PRIVATE,
                             null
                     );
+                    XposedBridge.log("[Restore] Original database opened");
 
                     originalDb.beginTransaction();
                     cursor = backupDb.rawQuery("SELECT * FROM chat", null);
 
                     if (cursor != null && cursor.moveToFirst()) {
+                        XposedBridge.log("[Restore] Starting to process records");
                         do {
-                            if (isCancelled()) return false;
+                            if (isCancelled()) {
+                                XposedBridge.log("[Restore] Operation cancelled by user");
+                                return false;
+                            }
 
                             String chatId = cursor.getString(
                                     cursor.getColumnIndexOrThrow("chat_id")
                             );
-                            if (chatId == null) continue;
+                            if (chatId == null) {
+                                XposedBridge.log("[Restore] WARNING: Found null chat_id, skipping");
+                                continue;
+                            }
 
                             ContentValues values = extractChatValues(cursor);
-                            originalDb.insertWithOnConflict(
+                            long rowId = originalDb.insertWithOnConflict(
                                     "chat",
                                     null,
                                     values,
                                     SQLiteDatabase.CONFLICT_IGNORE
                             );
+
+                            if (rowId == -1) {
+                                XposedBridge.log("[Restore] WARNING: Conflict detected for chat_id: " + chatId);
+                            }
 
                             processedRecords++;
                             if (processedRecords % Math.max(1, totalRecords / 100) == 0 ||
@@ -2979,6 +2994,7 @@ public class EmbedOptions implements IHook {
                             if (processedRecords % BATCH_SIZE == 0) {
                                 originalDb.setTransactionSuccessful();
                                 originalDb.endTransaction();
+                                XposedBridge.log("[Restore] Committed batch of " + BATCH_SIZE + " records");
                                 originalDb.beginTransaction();
                             }
 
@@ -2986,18 +3002,20 @@ public class EmbedOptions implements IHook {
                     }
 
                     originalDb.setTransactionSuccessful();
+                    XposedBridge.log("[Restore] Successfully processed all records");
                     return true;
 
                 } catch (Exception e) {
-                    Log.e("RestoreChat", "Error restoring chat list", e);
+                    XposedBridge.log("[Restore] ERROR: Exception during restoration: " + Log.getStackTraceString(e));
                     return false;
                 } finally {
                     if (originalDb != null) {
                         try {
                             originalDb.endTransaction();
                             originalDb.close();
+                            XposedBridge.log("[Restore] Original database closed");
                         } catch (Exception e) {
-                            Log.e("Restore", "Error closing original DB", e);
+                            XposedBridge.log("[Restore] ERROR closing original DB: " + Log.getStackTraceString(e));
                         }
                     }
                     closeQuietly(cursor);
@@ -3005,13 +3023,15 @@ public class EmbedOptions implements IHook {
                     if (backupDb != null) {
                         try {
                             backupDb.close();
+                            XposedBridge.log("[Restore] Backup database closed");
                         } catch (Exception e) {
-                            Log.e("Restore", "Error closing backup DB", e);
+                            XposedBridge.log("[Restore] ERROR closing backup DB: " + Log.getStackTraceString(e));
                         }
                     }
 
                     if (finalTempFile != null && finalTempFile.exists()) {
-                        finalTempFile.delete();
+                        boolean deleted = finalTempFile.delete();
+                        XposedBridge.log("[Restore] Temp file deletion " + (deleted ? "successful" : "failed"));
                     }
                 }
             }
@@ -3030,6 +3050,9 @@ public class EmbedOptions implements IHook {
                                     percent
                             )
                     );
+                    if (percent % 10 == 0) {
+                        XposedBridge.log("[Restore] Progress: " + percent + "% (" + processedRecords + "/" + totalRecords + ")");
+                    }
                 }
             }
 
@@ -3040,14 +3063,17 @@ public class EmbedOptions implements IHook {
                 }
 
                 if (success) {
+                    XposedBridge.log("[Restore] SUCCESS: Chat table restored successfully");
                     showToast(context, moduleContext, R.string.Restore_Chat_Table_Success);
                 } else {
+                    XposedBridge.log("[Restore] FAILED: Chat table restoration failed");
                     showToast(context, moduleContext, R.string.Restore_Chat_Table_Error);
                 }
             }
 
             @Override
             protected void onCancelled() {
+                XposedBridge.log("[Restore] CANCELLED: Operation cancelled by user");
                 if (progressDialog != null) {
                     progressDialog.dismiss();
                 }
@@ -3059,14 +3085,12 @@ public class EmbedOptions implements IHook {
                     try {
                         closeable.close();
                     } catch (IOException e) {
-                        Log.e("Restore", "Error closing resource", e);
+                        XposedBridge.log("[Restore] ERROR closing resource: " + Log.getStackTraceString(e));
                     }
                 }
             }
         }.execute();
     }
-
-
     private ContentValues extractChatHistoryValues(Cursor cursor) {
         ContentValues values = new ContentValues();
         values.put("server_id", cursor.getString(cursor.getColumnIndexOrThrow("server_id")));

@@ -54,7 +54,7 @@ public class LimeOptions {
         public Option removeNaviAlbum = new Option("removeNaviAlbum", R.string.removeNaviAlbum, false, OptionCategory.GENERAL);
         public Option removeNaviOpenchat = new Option("removeNaviOpenchat", R.string.removeNaviOpenchat, false, OptionCategory.GENERAL);
 
-        public Option redirectWebView = new Option("redirect_webview", R.string.switch_redirect_webview, true, OptionCategory.GENERAL);
+        public Option redirectWebView = new Option("redirect_webview", R.string.switch_redirect_webview, false, OptionCategory.GENERAL);
          public Option openInBrowser = new Option("open_in_browser", R.string.switch_open_in_browser, false, OptionCategory.GENERAL);
         public Option RemoveNotification = new Option("RemoveProfileNotification", R.string.removeNotification, false, OptionCategory.GENERAL);
 
@@ -135,8 +135,8 @@ public class LimeOptions {
                 removeNaviAlbum,
                 removeSearchBar,
                 removeReplyMute,
-                redirectWebView,
-                openInBrowser,
+//                redirectWebView,
+//                openInBrowser,
                 preventMarkAsRead,
                 preventUnsendMessage,
                 sendMuteMessage,

@@ -22,6 +22,7 @@ import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.text.TextUtils;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -321,52 +322,117 @@ public class ReadChecker implements IHook {
 
 
     private void showDataForGroupId(Activity activity, String groupId, Context moduleContext) {
+        final String TAG = "MyXposedModule";
+
         if (limeDatabase == null) {
+            XposedBridge.log(TAG + " - limeDatabase is null");
             return;
         }
+
         try {
-            limeDatabase.beginTransaction(); // トランザクション開始
+            XposedBridge.log(TAG + " - Starting transaction for groupId: " + groupId);
+            limeDatabase.beginTransaction();
 
+// NULLグループIDの処理
+            try (Cursor nullGroupIdCursor = limeDatabase.rawQuery(
+                    "SELECT server_id, user_name FROM read_message WHERE group_id = 'null'", null)) {
 
-            try (Cursor nullGroupIdCursor = limeDatabase.rawQuery("SELECT server_id, user_name FROM read_message WHERE group_id = 'null'", null)) {
+                XposedBridge.log(TAG + " - Processing null groupIds...");
                 while (nullGroupIdCursor.moveToNext()) {
                     String serverId = nullGroupIdCursor.getString(0);
                     String userName = nullGroupIdCursor.getString(1);
+                    XposedBridge.log(TAG + " - Processing serverId: " + serverId + ", user: " + userName);
+
                     String chatId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
+                    XposedBridge.log(TAG + " - Retrieved chatId: " + chatId);
 
                     if (chatId != null && !"null".equals(chatId)) {
-                        limeDatabase.execSQL("UPDATE read_message SET group_id=? WHERE server_id=?", new String[]{chatId, serverId});
-                        processSameGroupId(serverId, chatId, userName);
-                        updateSendUser(serverId);
+                        try {
+                            // グループIDを更新
+                            limeDatabase.execSQL("UPDATE read_message SET group_id=? WHERE server_id=?",
+                                    new String[]{chatId, serverId});
+                            XposedBridge.log(TAG + " - Updated group_id for serverId: " + serverId);
+
+                            // コンテンツ情報を取得
+                            String contentRetry = queryDatabaseWithRetry(db3,
+                                    "SELECT content FROM chat_history WHERE server_id=?", serverId);
+                            contentRetry = (contentRetry != null && !"null".equals(contentRetry)) ? contentRetry : "null";
+                            String mediaDescription = getMediaDescription(serverId, contentRetry, moduleContext);
+                            String finalContent = "null".equals(contentRetry) ? mediaDescription : contentRetry;
+
+                            // 関連レコード処理を実行（新しいグループIDで）
+                            processRelatedRecords(chatId, serverId, finalContent);
+
+                            processSameGroupId(serverId, chatId, userName);
+                            updateSendUser(serverId);
+
+                        } catch (SQLException e) {
+                            XposedBridge.log(TAG + " - UPDATE failed for serverId: " + serverId);
+                            XposedBridge.log(e);
+                        }
                     }
                 }
+            } catch (SQLException e) {
+                XposedBridge.log(TAG + " - Error processing null groupIds");
+                XposedBridge.log(e);
             }
 
-            try (Cursor groupCursor = limeDatabase.rawQuery("SELECT server_id FROM read_message WHERE group_id = ?", new String[]{groupId})) {
+            // 指定groupIdの処理
+            try (Cursor groupCursor = limeDatabase.rawQuery(
+                    "SELECT server_id FROM read_message WHERE group_id = ?", new String[]{groupId})) {
+
+                XposedBridge.log(TAG + " - Processing groupId: " + groupId);
                 while (groupCursor.moveToNext()) {
                     String serverId = groupCursor.getString(0);
-                    String contentRetry = queryDatabaseWithRetry(db3, "SELECT content FROM chat_history WHERE server_id=?", serverId);
-                    contentRetry = (contentRetry != null && !"null".equals(contentRetry)) ? contentRetry : "null";
+                    XposedBridge.log(TAG + " - Processing serverId: " + serverId);
 
+                    String contentRetry = queryDatabaseWithRetry(db3,
+                            "SELECT content FROM chat_history WHERE server_id=?", serverId);
+                    XposedBridge.log(TAG + " - Initial content: " + contentRetry);
+
+                    contentRetry = (contentRetry != null && !"null".equals(contentRetry)) ? contentRetry : "null";
                     String mediaDescription = getMediaDescription(serverId, contentRetry, moduleContext);
                     String finalContent = "null".equals(contentRetry) ? mediaDescription : contentRetry;
 
-                    updateReadMessage(serverId, finalContent);
-                    processRelatedRecords(groupId, serverId, finalContent);
+                    XposedBridge.log(TAG + " - Final content: " + finalContent);
+
+                    try {
+                        updateReadMessage(serverId, finalContent);
+
+                    } catch (SQLException e) {
+                        XposedBridge.log(TAG + " - Error updating records for serverId: " + serverId);
+                        XposedBridge.log(e);
+                    }
                 }
+            } catch (SQLException e) {
+                XposedBridge.log(TAG + " - Error processing groupId: " + groupId);
+                XposedBridge.log(e);
             }
 
-            // ダイアログを表示する処理
-            showDialog(activity, moduleContext, groupId);
+            // ダイアログ表示
+            try {
+                showDialog(activity, moduleContext, groupId);
+                limeDatabase.setTransactionSuccessful();
+                XposedBridge.log(TAG + " - Transaction completed successfully for groupId: " + groupId);
+            } catch (Exception e) {
+                XposedBridge.log(TAG + " - Error showing dialog");
+                XposedBridge.log(e);
+            }
 
-            limeDatabase.setTransactionSuccessful(); // トランザクション成功
-        } catch (SQLException | Resources.NotFoundException ignored) {
-            throw new RuntimeException(ignored);
+        } catch (SQLException | Resources.NotFoundException e) {
+            XposedBridge.log(TAG + " - Critical error in transaction");
+            XposedBridge.log(e);
+            throw new RuntimeException(e);
         } finally {
-            limeDatabase.endTransaction(); // トランザクション終了
+            try {
+                limeDatabase.endTransaction();
+                XposedBridge.log(TAG + " - Transaction ended");
+            } catch (SQLException e) {
+                XposedBridge.log(TAG + " - Error ending transaction");
+                XposedBridge.log(e);
+            }
         }
     }
-
     private void processSameGroupId(String serverId, String chatId, String userName) {
         try (Cursor sameGroupIdCursor = limeDatabase.rawQuery(
                 "SELECT server_id, user_name FROM read_message WHERE group_id=? AND server_id != ?",
@@ -513,13 +579,15 @@ public class ReadChecker implements IHook {
         }
     }
     private List<String> getuser_namesForServerId(String serverId, SQLiteDatabase db3) {
+        processAndRemoveDuplicates(serverId, db3);
         if (limeDatabase == null) {
             return Collections.emptyList();
         }
+
         String query = "SELECT user_name, ID, Sent_User FROM read_message WHERE server_id=? ORDER BY CAST(ID AS INTEGER) ASC";
         Cursor cursor = limeDatabase.rawQuery(query, new String[]{serverId});
         List<String> userNames = new ArrayList<>();
-        Set<String> uniqueUserNames = new HashSet<>();
+        Set<String> uniqueBaseNames = new HashSet<>();
 
         while (cursor.moveToNext()) {
             String userNameStr = cursor.getString(0);
@@ -527,51 +595,117 @@ public class ReadChecker implements IHook {
             String SentUser = cursor.getString(2);
 
             if (userNameStr != null) {
-                //XposedBridge.log("取得したSent_User: " + SentUser);
+                String trimmed = userNameStr.trim();
+                String processedName = processUserName(trimmed, SentUser, db4);
 
-                String trimmedUserName = userNameStr.trim();
-                if (trimmedUserName.startsWith("-")) {
-                    int bracketIndex = trimmedUserName.indexOf('[');
-                    if (bracketIndex != -1) {
-                        String userNamePart = trimmedUserName.substring(1, bracketIndex).trim();
+                // ベース名（日時部分を除去）を抽出
+                String baseName = processedName.replaceAll("\\s*\\[.*", "").trim();
+                String normalized = baseName.toLowerCase();
 
-                        if (userNamePart.equals("null")) {
-                            if (SentUser != null) {
-                                String newUserName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SentUser);
-                                //XposedBridge.log("再取得したnewUserName: " + newUserName);
+                if (!uniqueBaseNames.contains(normalized)) {
+                    userNames.add(processedName);
+                    uniqueBaseNames.add(normalized);
+                    XposedBridge.log("追加されたuser_name: " + processedName);
+                } else {
+                    XposedBridge.log("重複スキップ: " + processedName);
 
-                                if (newUserName != null && !newUserName.equals("null")) {
-                                    userNameStr = "-" + newUserName + " [" + trimmedUserName.substring(bracketIndex + 1);
-                                    //XposedBridge.log("更新後のuser_name: " + userNameStr);
-                                }
-                            } else {
-                                //XposedBridge.log("SentUserがnullです。");
-                            }
-                        }
-                    }
-                }
-
-                if (!uniqueUserNames.contains(userNameStr)) {
-                    userNames.add(userNameStr);
-                    uniqueUserNames.add(userNameStr);
                 }
             }
         }
         cursor.close();
         return userNames;
     }
-
-    private void processRelatedRecords(String groupId, String currentServerId, String finalcontent) {
+    private void processAndRemoveDuplicates(String serverId, SQLiteDatabase db3) {
         if (limeDatabase == null) return;
 
         limeDatabase.beginTransaction();
+        try {
+            // 削除対象IDを保持するリスト
+            List<Integer> idsToDelete = new ArrayList<>();
+
+            String query = "SELECT ID, user_name, Sent_User FROM read_message WHERE server_id=? ORDER BY CAST(ID AS INTEGER) ASC";
+            Cursor cursor = limeDatabase.rawQuery(query, new String[]{serverId});
+
+            Set<String> uniqueBaseNames = new HashSet<>();
+
+            while (cursor.moveToNext()) {
+                int currentId = cursor.getInt(0);
+                String userNameStr = cursor.getString(1);
+                String sentUser = cursor.getString(2);
+
+                if (userNameStr != null) {
+                    String processedName = processUserName(userNameStr.trim(), sentUser, db4);
+                    String baseName = processedName.replaceAll("\\s*\\[.*", "").trim().toLowerCase();
+
+                    if (uniqueBaseNames.contains(baseName)) {
+                        idsToDelete.add(currentId);
+                        XposedBridge.log("削除対象ID: " + currentId + " - " + processedName);
+                    } else {
+                        uniqueBaseNames.add(baseName);
+                    }
+                }
+            }
+            cursor.close();
+
+            // 重複レコードの削除処理
+            if (!idsToDelete.isEmpty()) {
+                String deleteQuery = "DELETE FROM read_message WHERE ID IN (" +
+                        TextUtils.join(",", Collections.nCopies(idsToDelete.size(), "?")) + ")";
+
+                String[] deleteParams = new String[idsToDelete.size()];
+                for (int i = 0; i < idsToDelete.size(); i++) {
+                    deleteParams[i] = String.valueOf(idsToDelete.get(i));
+                }
+
+                limeDatabase.execSQL(deleteQuery, deleteParams);
+                XposedBridge.log("削除されたレコード数: " + idsToDelete.size());
+            }
+
+            limeDatabase.setTransactionSuccessful();
+        } catch (SQLException e) {
+            XposedBridge.log("データベースエラー: " + e.getMessage());
+        } finally {
+            limeDatabase.endTransaction();
+        }
+    }
+    private String processUserName(String trimmed, String sentUser, SQLiteDatabase db) {
+        if (trimmed.startsWith("-")) {
+            int bracketIndex = trimmed.indexOf('[');
+            if (bracketIndex != -1) {
+                String namePart = trimmed.substring(1, bracketIndex).trim();
+                if (namePart.equalsIgnoreCase("null") && sentUser != null) {
+                    String newName = queryDatabase(db, "SELECT profile_name FROM contacts WHERE mid=?", sentUser);
+                    if (newName != null && !newName.equalsIgnoreCase("null")) {
+                        return "-" + newName + " [" + trimmed.substring(bracketIndex + 1);
+                    }
+                }
+            }
+        }
+        return trimmed;
+    }
+
+
+
+    private void processRelatedRecords(String groupId, String currentServerId, String finalContent) {
+        final String TAG = "MyXposedModule";
+
+        if (limeDatabase == null) {
+            XposedBridge.log(TAG + " - limeDatabase is null");
+            return;
+        }
+
+        // トランザクションは呼び出し元で管理するため、ここでは開始しない
         try (Cursor cursor = limeDatabase.rawQuery(
                 "SELECT server_id, user_name, Sent_User, Send_User, group_name, content, created_time " +
                         "FROM read_message WHERE group_id = ? AND server_id != ?",
-                new String[]{groupId, currentServerId}
-        )) {
-            String currentTrimmedName = extractTrimmedName(finalcontent);
+                new String[]{groupId, currentServerId})) {
 
+            String currentTrimmedName = extractTrimmedName(finalContent);
+            XposedBridge.log(TAG + " - Processing groupId: " + groupId +
+                    ", currentServerId: " + currentServerId +
+                    ", currentTrimmedName: " + currentTrimmedName);
+
+            int insertedCount = 0;
             while (cursor.moveToNext()) {
                 String targetServerId = cursor.getString(0);
                 String targetUserName = cursor.getString(1);
@@ -582,11 +716,15 @@ public class ReadChecker implements IHook {
                 String createdTime = cursor.getString(6);
 
                 String targetTrimmedName = extractTrimmedName(targetUserName);
+                boolean isDuplicate = isDuplicateRecord(targetServerId, sentUser);
 
+                XposedBridge.log(TAG + " - Checking record: " + targetServerId +
+                        ", targetTrimmedName: " + targetTrimmedName +
+                        ", isDuplicate: " + isDuplicate);
 
                 if (currentTrimmedName != null && targetTrimmedName != null &&
                         !currentTrimmedName.equals(targetTrimmedName) &&
-                        !isDuplicateRecord(targetServerId, sentUser)) {
+                        !isDuplicate) {
 
                     ContentValues values = new ContentValues();
                     values.put("group_id", groupId);
@@ -598,20 +736,37 @@ public class ReadChecker implements IHook {
                     values.put("user_name", targetUserName);
                     values.put("created_time", createdTime);
 
-                    limeDatabase.insert("read_message", null, values);
+                    long rowId = limeDatabase.insert("read_message", null, values);
+                    if (rowId != -1) {
+                        insertedCount++;
+                        XposedBridge.log(TAG + " - Inserted new record: " + targetServerId);
+                    } else {
+                        XposedBridge.log(TAG + " - Failed to insert: " + targetServerId);
+                    }
                 }
             }
-            limeDatabase.setTransactionSuccessful();
-        } finally {
-            limeDatabase.endTransaction();
+            XposedBridge.log(TAG + " - Total inserted records: " + insertedCount);
+        } catch (SQLException e) {
+            XposedBridge.log(TAG + " - Database error in processRelatedRecords");
+            XposedBridge.log(e);
+            throw new RuntimeException("Database error", e);
         }
     }
     private boolean isDuplicateRecord(String serverId, String sentUser) {
+        // nullチェックを追加
+        if (serverId == null || sentUser == null) {
+            XposedBridge.log("isDuplicateRecord: Invalid parameters - serverId: " + serverId + ", sentUser: " + sentUser);
+            return false; // または適切なデフォルト値を返す
+        }
+
         try (Cursor cursor = limeDatabase.rawQuery(
                 "SELECT COUNT(*) FROM read_message WHERE server_id = ? AND Sent_User = ?",
                 new String[]{serverId, sentUser}
         )) {
             return cursor.moveToFirst() && cursor.getInt(0) > 0;
+        } catch (SQLException e) {
+            XposedBridge.log("Database error in isDuplicateRecord: " + e.getMessage());
+            return false;
         }
     }
     private String extractTrimmedName(String formattedName) {
@@ -1028,7 +1183,7 @@ public class ReadChecker implements IHook {
                               String user_name, String timeFormatted) {
         final String insertQuery =
                 "INSERT OR IGNORE INTO read_message(" +
-                        "    group_id, server_id, Sent_User, Send_User, " +
+                        "    group_id, server_id, Sent_User, Send_User, " +  // SendUser → Send_Userに修正
                         "    group_name, content, user_name, created_time" +
                         ") VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -1037,15 +1192,19 @@ public class ReadChecker implements IHook {
                     groupId,
                     serverId,
                     SentUser,
-                    SendUser,
+                    SendUser,  // この値はSend_Userカラムに挿入される
                     groupName,
                     finalContent,
                     user_name,
                     timeFormatted
             });
-        } catch (SQLException ignored) {
-
+        } catch (SQLException e) {
+            XposedBridge.log("Database insert error: " + e.getMessage());
+            XposedBridge.log(e);
+            XposedBridge.log("Failed data: " +
+                    "group=" + groupName + ", " +
+                    "sender=" + SendUser + ", " +
+                    "content=" + finalContent);
         }
     }
-
 }
