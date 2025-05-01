@@ -142,34 +142,47 @@ public class RingTone implements IHook {
 
                             if (limeOptions.ringtonevolume.checked) {
 
-                                if (methodName.equals("getVoiceComplexityLevel")) {
-                                    if (isPlaying) return;
-
-                                    File destFile = new File(ringtoneDir, "ringtone.wav");
-                                    Uri ringtoneUri = Uri.fromFile(destFile);
-
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                        ringtone = RingtoneManager.getRingtone(context, ringtoneUri);
-                                        if (ringtone != null) {
-                                            ringtone.setLooping(true);
-                                            ringtone.play();
-                                            isPlaying = true;
-                                            XposedBridge.log("Ringtone started playing from getVoiceComplexityLevel.");
-                                            return;
-                                        }
-                                    }
-                                    if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                                        return;
-                                    }
-
-                                    mediaPlayer = MediaPlayer.create(context, ringtoneUri);
-                                    if (mediaPlayer != null) {
-                                        mediaPlayer.setLooping(true);
-                                        mediaPlayer.start();
-                                        isPlaying = true;
-                                        XposedBridge.log("MediaPlayer started playing from getVoiceComplexityLevel.");
-                                    }
-                                }
+//                                if (methodName.equals("getVoiceComplexityLevel")) {
+//                                    if (isPlaying) return;
+//
+//                                    File destFile = new File(ringtoneDir, "ringtone.wav");
+//                                    Uri ringtoneUri = Uri.fromFile(destFile);
+//                                    // 引数の値を取得してログに出力
+//                                    StringBuilder argsLog = new StringBuilder("Method: " + methodName + ", Arguments: ");
+//                                    for (Object arg : param.args) {
+//                                        argsLog.append(arg).append(", ");
+//                                    }
+//
+//                                    // 最後のカンマとスペースを削除
+//                                    if (argsLog.length() > 0) {
+//                                        argsLog.setLength(argsLog.length() - 2);
+//                                    }
+//
+//                                    // XposedBridge.logを使用してログ出力
+//                                    XposedBridge.log(argsLog.toString());
+//
+//                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+//                                        ringtone = RingtoneManager.getRingtone(context, ringtoneUri);
+//                                        if (ringtone != null) {
+//                                            ringtone.setLooping(true);
+//                                            ringtone.play();
+//                                            isPlaying = true;
+//                                            XposedBridge.log("Ringtone started playing from getVoiceComplexityLevel.");
+//                                            return;
+//                                        }
+//                                    }
+//                                    if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+//                                        return;
+//                                    }
+//
+//                                    mediaPlayer = MediaPlayer.create(context, ringtoneUri);
+//                                    if (mediaPlayer != null) {
+//                                        mediaPlayer.setLooping(true);
+//                                        mediaPlayer.start();
+//                                        isPlaying = true;
+//                                        XposedBridge.log("MediaPlayer started playing from getVoiceComplexityLevel.");
+//                                    }
+//                                }
 
                                 if (method.getName().equals("setServerConfig") || method.getName().equals("stop")) {
                                     if (ringtone != null && isPlaying) {
@@ -473,20 +486,8 @@ public class RingTone implements IHook {
                                 }
 
                             }
-//
-//                            // 引数の値を取得してログに出力
-//                            StringBuilder argsLog = new StringBuilder("Method: " + methodName + ", Arguments: ");
-//                            for (Object arg : param.args) {
-//                                argsLog.append(arg).append(", ");
-//                            }
-//
-//                            // 最後のカンマとスペースを削除
-//                            if (argsLog.length() > 0) {
-//                                argsLog.setLength(argsLog.length() - 2);
-//                            }
-//
-//                            // XposedBridge.logを使用してログ出力
-//                            XposedBridge.log(argsLog.toString());
+
+
                         }
 
                     });
