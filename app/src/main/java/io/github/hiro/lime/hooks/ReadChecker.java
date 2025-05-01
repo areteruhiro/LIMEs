@@ -517,13 +517,11 @@ public class ReadChecker implements IHook {
                 }
 
                 if (existingItem == null) {
-                    // 新しいDataItemを作成
                     DataItem newItem = new DataItem(serverId, content, timeFormatted);
-                    newItem.id = id;  // IDを設定
+                    newItem.id = id;
                     newItem.user_names.addAll(user_nameList);
                     dataItems.add(newItem);
                 } else {
-                    // 既存のDataItemにユーザー名を追加（重複排除）
                     existingItem.user_names.addAll(user_nameList);
                 }
             }
