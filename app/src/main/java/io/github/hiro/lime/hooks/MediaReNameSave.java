@@ -25,7 +25,7 @@ import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
 
-public class PhotoSave implements IHook {
+public class MediaReNameSave implements IHook {
     private SQLiteDatabase db = null;
     private SQLiteDatabase dbContact = null;
 
@@ -239,9 +239,17 @@ public class PhotoSave implements IHook {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        XposedBridge.log("実行確認");
                         if (isDh1Invoked2 && "IMAGE".equals(currentContentType)) {
                             isDh1Invoked2 = false; // フラグをリセット
                             handleFileRename(db,dbContact);
+
+                        }
+                        if (isDh1Invoked2 && "VIDEO".equals(currentContentType)) {
+                            isDh1Invoked2 = false; // フラグをリセット
+                            handleFileRename(db,dbContact);
+                            XposedBridge.log("VIDEO");
+
                         }
                     }
                 }
@@ -254,9 +262,11 @@ public class PhotoSave implements IHook {
                 new XC_MethodHook() {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+
                         if (isDh1Invoked2 && "IMAGE".equals(currentContentType)) {
                             isDh1Invoked2 = false; // フラグをリセット
                             handleFileRename(db,dbContact);
+                            XposedBridge.log("setText");
                         }
                     }
                 }
@@ -486,19 +496,18 @@ public class PhotoSave implements IHook {
         cursor.close();
         return result;
     }
-
     private static class ImageFileTask {
         final long tempFileTime;
         final String createdTime;
         final String contentType;
         final String severid;
-        final  String chatid;
-        final  String senderMid;
+        final String chatid;
+        final String senderMid;
 
         boolean processed;
         int retryCount = 0;
 
-        ImageFileTask(long tempFileTime, String createdTime, String contentType, String Serverid,String chatid,String senderMid) {
+        ImageFileTask(long tempFileTime, String createdTime, String contentType, String Serverid, String chatid, String senderMid) {
             this.tempFileTime = tempFileTime;
             this.createdTime = createdTime;
             this.contentType = contentType;
@@ -506,13 +515,25 @@ public class PhotoSave implements IHook {
             this.chatid = chatid;
             this.senderMid = senderMid;
         }
+
+        @Override
+        public String toString() {
+            return "ImageFileTask{" +
+                    "tempFileTime=" + tempFileTime +
+                    ", createdTime='" + createdTime + '\'' +
+                    ", contentType='" + contentType + '\'' +
+                    ", severid='" + severid + '\'' +
+                    ", chatid='" + chatid + '\'' +
+                    ", senderMid='" + senderMid + '\'' +
+                    ", processed=" + processed +
+                    ", retryCount=" + retryCount +
+                    '}';
+        }
     }
-
-
 
     private final ConcurrentLinkedQueue<ImageFileTask> fileTasks = new ConcurrentLinkedQueue<>();
 
-    private void handleFileRename(SQLiteDatabase db,SQLiteDatabase dbContact) {
+    private void handleFileRename(SQLiteDatabase db, SQLiteDatabase dbContact) {
         new Handler(Looper.getMainLooper()).post(new Runnable() {
             final int MAX_RETRIES = 3;
             final long RETRY_INTERVAL = 300;
@@ -523,35 +544,54 @@ public class PhotoSave implements IHook {
                     Iterator<ImageFileTask> iterator = fileTasks.iterator();
                     while (iterator.hasNext()) {
                         ImageFileTask task = iterator.next();
+                        XposedBridge.log("Processing task: " + task.toString());
 
                         if (task.processed) {
+                            XposedBridge.log("Removing processed task: " + task.toString());
                             iterator.remove();
                             continue;
                         }
-                        String talkName = queryDatabase(dbContact, "SELECT profile_name FROM contacts WHERE mid=?", chatid);
-                        String groupName = queryDatabase(db, "SELECT name FROM groups WHERE id=?", chatid);
-                        String name = (groupName != null ? groupName : (talkName != null ? talkName : "No Name" + ":" + ":" + "talkId" + chatid));
 
-                        String SenderName = queryDatabase(dbContact, "SELECT profile_name FROM contacts WHERE mid=?", senderMid);
+                        String talkName = queryDatabase(dbContact, "SELECT profile_name FROM contacts WHERE mid=?", task.chatid);
+                        String groupName = queryDatabase(db, "SELECT name FROM groups WHERE id=?", task.chatid);
+                        String name = (groupName != null ? groupName : (talkName != null ? talkName : "No Name" + ":" + ":" + "talkId" + task.chatid));
+
+                        String SenderName = queryDatabase(dbContact, "SELECT profile_name FROM contacts WHERE mid=?", task.senderMid);
                         SenderName = SenderName != null ? SenderName : "Self";
+
                         try {
-                            String tempFileName = task.tempFileTime + ".jpg";
-                            String newFileName = SenderName +"-"+ formatForFilename(task.createdTime) +"-"+name+  ".jpg";
-                            File lineDir = new File(Environment.getExternalStoragePublicDirectory(
-                                    Environment.DIRECTORY_PICTURES), "LINE");
+                            String fileExtension = "jpg";
+                            if ("VIDEO".equalsIgnoreCase(task.contentType)) {
+                                fileExtension = "mp4";
+                            }
+
+                            String tempFileName = task.tempFileTime + "." + fileExtension;
+                            String newFileName = SenderName + "-" + formatForFilename(task.createdTime) + "-" + name + "." + fileExtension;
+                            File baseDir;
+                            if ("VIDEO".equalsIgnoreCase(task.contentType)) {
+                                baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MOVIES);
+                            } else {
+                                baseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES);
+                            }
+
+                            File lineDir = new File(baseDir, "LINE");
+                            XposedBridge.log("Using directory: " + lineDir.getAbsolutePath());
 
                             if (!lineDir.exists()) {
-                                lineDir.mkdirs();
+                                XposedBridge.log("Creating directory: " + lineDir.getAbsolutePath());
+                                if (!lineDir.mkdirs()) {
+                                    XposedBridge.log("Failed to create directory");
+                                }
                             }
 
                             File tempFile = new File(lineDir, tempFileName);
+                            XposedBridge.log("Looking for temp file: " + tempFile.getAbsolutePath());
 
                             if (tempFile.exists()) {
-                                // 重複処理
                                 int counter = 1;
                                 File newFile = new File(lineDir, newFileName);
                                 while (newFile.exists()) {
-                                    newFileName = SenderName +"-"+formatForFilename(task.createdTime) + "_" + name+ counter + ".jpg";
+                                    newFileName = SenderName + "-" + formatForFilename(task.createdTime) + "_" + name + counter + "." + fileExtension;
                                     newFile = new File(lineDir, newFileName);
                                     counter++;
                                 }
@@ -559,6 +599,8 @@ public class PhotoSave implements IHook {
                                 if (tempFile.renameTo(newFile)) {
                                     XposedBridge.log("Successfully renamed: " + tempFileName + " -> " + newFileName);
                                     task.processed = true;
+                                } else {
+                                    XposedBridge.log("Failed to rename file: " + tempFileName);
                                 }
                             } else if (task.retryCount < MAX_RETRIES) {
                                 task.retryCount++;
@@ -569,18 +611,20 @@ public class PhotoSave implements IHook {
                             }
                         } catch (Exception e) {
                             XposedBridge.log("Error processing file: " + e.getMessage());
+                            e.printStackTrace();
                         }
                     }
                 }
 
-                // 未処理のタスクがあれば再試行
                 if (!fileTasks.isEmpty()) {
+                    XposedBridge.log("Rescheduling handler for remaining tasks");
                     new Handler(Looper.getMainLooper()).postDelayed(this, RETRY_INTERVAL);
+                } else {
+                    XposedBridge.log("All tasks processed, stopping handler");
                 }
             }
         });
     }
-
     private String formatForFilename(String millisStr) {
         try {
             long millis = Long.parseLong(millisStr);

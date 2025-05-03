@@ -219,7 +219,7 @@
     <string name="call">着信音/発信音</string>
     <string name="chat">チャット</string>
     <string name="other">その他</string>
-    <string name="PhotoSave">PhotoSave(DevNow)</string>
+    <string name="PhotoSave">"MediaReNameSave (DevNow) "</string>
     <string name="media">Media</string>
     <string name="Send_Message">を送信しました</string>
     <string name="media_message_no_sender">%sが送信されました</string>

@@ -210,7 +210,7 @@
     <string name="call">來電/去電鈴聲</string>
     <string name="chat">聊天</string>
     <string name="other">其他</string>
-    <string name="PhotoSave">" PhotoSave (DevNow)"</string>
+    <string name="PhotoSave">"MediaReNameSave (DevNow) "</string>
     <string name="media">Media</string>
 
     <string name="Send_Message">請清除 LINE 快取</string>

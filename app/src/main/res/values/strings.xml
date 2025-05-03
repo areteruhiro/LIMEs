@@ -223,7 +223,7 @@
     <string name="chat">Theme</string>
     <string name="other">Other</string>
     <string name="NewOption">New Settings Screen</string>
-    <string name="PhotoSave">"PhotoSave (DevNow) "</string>
+    <string name="PhotoSave">"MediaReNameSave (DevNow) "</string>
     <string name="media">Media</string>
 
     <string name="media_message_no_sender">%s was sent</string>
