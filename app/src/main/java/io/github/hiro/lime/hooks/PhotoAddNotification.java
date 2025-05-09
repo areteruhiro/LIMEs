@@ -303,8 +303,10 @@ public class PhotoAddNotification implements IHook {
                 if (notificationManager != null) {
                     if (hasTag) {
                         notificationManager.notify(tag, originalId, newNotification);
+                        param.setResult(null);
                     } else {
                         notificationManager.notify(originalId, newNotification);
+                        param.setResult(null);
                     }
                 }
             } else {
@@ -313,8 +315,10 @@ public class PhotoAddNotification implements IHook {
                     if (hasTag) {
                         String tag = (String) param.args[0];
                         notificationManager.notify(tag, randomNotificationId, newNotification);
+                        param.setResult(null);
                     } else {
                         notificationManager.notify(randomNotificationId, newNotification);
+                        param.setResult(null);
                     }
                 }
             }

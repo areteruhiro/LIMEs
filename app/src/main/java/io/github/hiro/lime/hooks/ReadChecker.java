@@ -596,7 +596,6 @@ public class ReadChecker implements IHook {
                 String trimmed = userNameStr.trim();
                 String processedName = processUserName(trimmed, SentUser, db4);
 
-                // ベース名（日時部分を除去）を抽出
                 String baseName = processedName.replaceAll("\\s*\\[.*", "").trim();
                 String normalized = baseName.toLowerCase();
 
@@ -618,7 +617,7 @@ public class ReadChecker implements IHook {
 
         limeDatabase.beginTransaction();
         try {
-            // 削除対象IDを保持するリスト
+
             List<Integer> idsToDelete = new ArrayList<>();
 
             String query = "SELECT ID, user_name, Sent_User FROM read_message WHERE server_id=? ORDER BY CAST(ID AS INTEGER) ASC";
@@ -841,10 +840,9 @@ public class ReadChecker implements IHook {
         if (limeDatabase == null) {
             return;
         }
+        String deleteAllQuery = "DELETE FROM read_message";
+        limeDatabase.execSQL(deleteAllQuery);
 
-
-        String deleteQuery = "DELETE FROM read_message WHERE group_id=?";
-        limeDatabase.execSQL(deleteQuery, new String[]{groupId});
         Toast.makeText(activity, moduleContext.getResources().getString(R.string.Reader_Data_Delete_Success), Toast.LENGTH_SHORT).show();
     }
 
