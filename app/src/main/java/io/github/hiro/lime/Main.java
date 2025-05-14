@@ -131,7 +131,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
 
     private Button createConfigButton(Context context, XC_MethodHook.MethodHookParam param) {
         Button button = new Button(context);
-        button.setText("Open LimeBackup Folder  \n  Download/LimeBackupの中でこのフォルダを使用するをクリック");
+        button.setText("Open LimeBackup Folder  \n  Download/LimeBackup//Settingの中でこのフォルダを使用するをクリック");
         button.setBackgroundColor(0xFFBB86FC);
         button.setTextColor(Color.WHITE);
         button.setPadding(30, 20, 30, 20);
@@ -153,7 +153,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     private void launchDocumentTreeIntent(Context context, XC_MethodHook.MethodHookParam param) {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Uri initialUri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Download/LimeBackup");
+            Uri initialUri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Download/LimeBackup/Setting");
             intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri);
         }
 
@@ -204,14 +204,11 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         View rootView = (View) param.getResult();
                         Context context = rootView.getContext();
-
-                        // バージョン情報の取得
                         String packageName = context.getPackageName();
                         String versionName = context.getPackageManager()
                                 .getPackageInfo(packageName, 0)
                                 .versionName;
 
-                        // クラス名の決定
                         String fragmentClass;
                         if (isVersionInRange(versionName, "15.5.0", "15.6.0")) {
                             fragmentClass = "androidx.fragment.app.n";
@@ -222,7 +219,6 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                             return;
                         }
 
-                        // onActivityResultのフック設定
                         XposedHelpers.findAndHookMethod(
                                 fragmentClass,
                                 lpparam.classLoader,
@@ -242,7 +238,6 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                                 }
                         );
 
-                        // ボタンの追加処理
                         new Handler(Looper.getMainLooper()).post(() -> {
                             Button openFolderButton = createConfigButton(context, param);
                             if (rootView instanceof ViewGroup) {
