@@ -1,9 +1,9 @@
 package io.github.hiro.lime.hooks;
 
 import android.app.AndroidAppHelper;
+import android.content.Context;
 import android.os.Build;
 import android.util.Base64;
-import android.content.Context; // Explicitly import Android Context
 
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
@@ -24,14 +24,18 @@ public class ModifyRequest implements IHook {
                 new XC_MethodHook() {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        CustomPreferences customPreferences = new CustomPreferences(context); // Use Android context
-                        final String script = new String(Base64.decode(
-                                customPreferences.getSetting("encoded_js_modify_request", ""),
-                                Base64.NO_WRAP
-                        ));
-                        org.mozilla.javascript.Context rhinoContext = org.mozilla.javascript.Context.enter();
-                        rhinoContext.setOptimizationLevel(-1);
                         try {
+
+
+                            CustomPreferences customPreferences = new CustomPreferences(context); // Use Android context
+                            final String script = new String(Base64.decode(
+                                    customPreferences.getSetting("encoded_js_modify_request", ""),
+                                    Base64.NO_WRAP
+                            ));
+
+
+                            org.mozilla.javascript.Context rhinoContext = org.mozilla.javascript.Context.enter();
+                        rhinoContext.setOptimizationLevel(-1);
                             Scriptable scope = rhinoContext.initStandardObjects();
                             Object jsData = org.mozilla.javascript.Context.javaToJS(
                                     new Communication(Communication.Type.REQUEST, param.args[0].toString(), param.args[1]),
@@ -42,10 +46,10 @@ public class ModifyRequest implements IHook {
                                     org.mozilla.javascript.Context.javaToJS(new Console(), scope)
                             );
                             rhinoContext.evaluateString(scope, script, "Script", 1, null);
-                        } catch (Exception e) {
-                            XposedBridge.log(e.toString());
-                        } finally {
                             org.mozilla.javascript.Context.exit();
+                        } catch (Exception e) {
+                          //  XposedBridge.log(e.toString());
+
                         }
                     }
                 }
@@ -55,7 +59,7 @@ public class ModifyRequest implements IHook {
     private Context getTargetAppContext(XC_LoadPackage.LoadPackageParam lpparam) {
         Context context = null;
 
-        
+
         try {
             context = AndroidAppHelper.currentApplication();
             if (context != null) {
@@ -66,7 +70,7 @@ public class ModifyRequest implements IHook {
             XposedBridge.log("Lime: AndroidAppHelper failed: " + t.toString());
         }
 
-        
+
         try {
             Class<?> activityThreadClass = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader);
             Object activityThread = XposedHelpers.callStaticMethod(activityThreadClass, "currentActivityThread");
@@ -84,7 +88,7 @@ public class ModifyRequest implements IHook {
             XposedBridge.log("Lime: ActivityThread method failed: " + t.toString());
         }
 
-        
+
         try {
             Context systemContext = (Context) XposedHelpers.callStaticMethod(
                     XposedHelpers.findClass("android.app.ContextImpl", lpparam.classLoader),

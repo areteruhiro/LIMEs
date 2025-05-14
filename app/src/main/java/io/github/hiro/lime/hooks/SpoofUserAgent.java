@@ -42,9 +42,7 @@ public class SpoofUserAgent implements IHook {
                             param.setResult(spoofedUserAgent);
                             logUserAgentOnce(spoofedUserAgent);
 
-                        } catch (Exception e) {
-                            XposedBridge.log("Lime: SpoofUserAgent error - " + e);
-                            param.setResult(null);
+                        } catch (Exception ignored) {
                         }
                     }
                 }

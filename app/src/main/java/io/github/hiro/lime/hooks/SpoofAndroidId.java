@@ -3,9 +3,10 @@ package io.github.hiro.lime.hooks;
 import android.app.AndroidAppHelper;
 import android.content.ContentResolver;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.provider.Settings;
+
+import java.io.IOException;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
@@ -36,8 +37,8 @@ public class SpoofAndroidId implements IHook {
                                     param.setResult("0000000000000000");
                                     XposedBridge.log("Lime: Android ID spoofing activated");
                                 }
-                            } catch (PackageManager.NameNotFoundException ignored) {
-                                        }
+                            } catch (IOException e) {
+                            }
                         }
                     }
                 }

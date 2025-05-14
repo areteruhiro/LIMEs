@@ -12,7 +12,6 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
@@ -483,10 +482,8 @@ public class EmbedOptions implements IHook {
                                             CustomPreferences customPreferences1 = null;
                                             try {
                                                 customPreferences1 = new CustomPreferences(contextV);
-                                            } catch (
-                                                    PackageManager.NameNotFoundException e) {
-                                                throw new RuntimeException(e);
-                                            } catch (IOException e) {
+                                            } catch (IOException |
+                                                     PackageManager.NameNotFoundException e) {
                                                 throw new RuntimeException(e);
                                             }
                                             // Base64エンコードして設定を保存

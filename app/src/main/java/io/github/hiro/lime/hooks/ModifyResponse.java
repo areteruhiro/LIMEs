@@ -1,12 +1,14 @@
 package io.github.hiro.lime.hooks;
 
 import android.app.AndroidAppHelper;
+import android.content.Context;
 import android.os.Build;
 import android.util.Base64;
-import android.content.Context; // Explicit import for Android Context
 
 import org.mozilla.javascript.Scriptable;
 import org.mozilla.javascript.ScriptableObject;
+
+import java.io.IOException;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
@@ -27,34 +29,37 @@ public class ModifyResponse implements IHook {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
 
-                        CustomPreferences customPreferences = new CustomPreferences(context);
-
-                        final String script = new String(Base64.decode(
-                                customPreferences.getSetting("encoded_js_modify_response", ""),
-                                Base64.NO_WRAP
-                        ));
-
-
-                        org.mozilla.javascript.Context rhinoContext = org.mozilla.javascript.Context.enter();
-                        rhinoContext.setOptimizationLevel(-1);
                         try {
-                            Scriptable scope = rhinoContext.initStandardObjects();
+                            CustomPreferences customPreferences = new CustomPreferences(context);
 
-                            Object jsData = org.mozilla.javascript.Context.javaToJS(
-                                    new Communication(Communication.Type.RESPONSE, param.args[0].toString(), param.args[1]),
-                                    scope
-                            );
+                            final String script = new String(Base64.decode(
+                                    customPreferences.getSetting("encoded_js_modify_response", ""),
+                                    Base64.NO_WRAP
+                            ));
 
-                            ScriptableObject.putProperty(scope, "data", jsData);
-                            ScriptableObject.putProperty(scope, "console",
-                                    org.mozilla.javascript.Context.javaToJS(new Console(), scope)
-                            );
 
-                            rhinoContext.evaluateString(scope, script, "Script", 1, null);
-                        } catch (Exception e) {
-                            XposedBridge.log(e.toString());
-                        } finally {
-                            org.mozilla.javascript.Context.exit();
+                            org.mozilla.javascript.Context rhinoContext = org.mozilla.javascript.Context.enter();
+                            rhinoContext.setOptimizationLevel(-1);
+                            try {
+                                Scriptable scope = rhinoContext.initStandardObjects();
+
+                                Object jsData = org.mozilla.javascript.Context.javaToJS(
+                                        new Communication(Communication.Type.RESPONSE, param.args[0].toString(), param.args[1]),
+                                        scope
+                                );
+
+                                ScriptableObject.putProperty(scope, "data", jsData);
+                                ScriptableObject.putProperty(scope, "console",
+                                        org.mozilla.javascript.Context.javaToJS(new Console(), scope)
+                                );
+
+                                rhinoContext.evaluateString(scope, script, "Script", 1, null);
+                            } catch (Exception e) {
+                                XposedBridge.log(e.toString());
+                            } finally {
+                                org.mozilla.javascript.Context.exit();
+                            }
+                        } catch (IOException e) {
                         }
                     }
                 }

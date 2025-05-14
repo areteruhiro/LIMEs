@@ -2,5 +2,7 @@
 <paths xmlns:android="http://schemas.android.com/apk/res/android">
     <files-path
         name="backup"
-        path="LimeBackup/" />
+        path="LimeBackup/"
+        />
+    <external-path name="downloads" path="Download/" />
 </paths>
