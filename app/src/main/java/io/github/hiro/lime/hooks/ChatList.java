@@ -42,7 +42,6 @@ public class ChatList implements IHook {
 
 
 
-        hookSAMethod(loadPackageParam);
         XposedBridge.hookAllMethods(Application.class, "onCreate", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
@@ -55,17 +54,29 @@ public class ChatList implements IHook {
                         "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
                 File dbFile = appContext.getDatabasePath("naver_line");
-                if (dbFile.exists()) {
+                SQLiteDatabase db = null;
+                File dbFile2 = appContext.getDatabasePath("contact");
+                SQLiteDatabase db2 = null;
+
+                if (dbFile.exists() && dbFile2.exists()) {
                     SQLiteDatabase.OpenParams.Builder builder = null;
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
                         builder = new SQLiteDatabase.OpenParams.Builder();
-                    }
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+
+
                         builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
 
                         SQLiteDatabase.OpenParams dbParams = builder.build();
-                        SQLiteDatabase db = SQLiteDatabase.openDatabase(dbFile, dbParams);
 
+
+                        SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
+                        builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                        SQLiteDatabase.OpenParams dbParams2 = builder2.build();
+
+
+                        db = SQLiteDatabase.openDatabase(dbFile, dbParams);
+                        db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
+                        hookSAMethod(loadPackageParam,db,db2);
                         hookMessageDeletion(loadPackageParam, appContext, db, moduleContext);
                     }
                 }
@@ -105,7 +116,7 @@ public class ChatList implements IHook {
     }
 
     private void deleteTalkIdFromFile(String talkId, Context moduleContext) {
-        File dir = moduleContext.getFilesDir(); // moduleContextを使用
+        File dir = moduleContext.getFilesDir();
         File file = new File(dir, "hidelist.txt");
 
         if (file.exists()) {
@@ -131,7 +142,7 @@ public class ChatList implements IHook {
         }
     }
 
-    private void hookSAMethod(XC_LoadPackage.LoadPackageParam loadPackageParam) {
+    private void hookSAMethod(XC_LoadPackage.LoadPackageParam loadPackageParam,SQLiteDatabase db,SQLiteDatabase db2) {
         //ChatListViewModel
         Class<?> targetClass = XposedHelpers.findClass(Constants.Archive.className, loadPackageParam.classLoader);
 
@@ -144,35 +155,8 @@ public class ChatList implements IHook {
                 if (appContext == null) {
                     return;
                 }
-                File dbFile = appContext.getDatabasePath("naver_line");
-                SQLiteDatabase db = null;
-                File dbFile2 = appContext.getDatabasePath("contact");
-                SQLiteDatabase db2 = null;
-
-                if (dbFile.exists() && dbFile2.exists()) {
-                    SQLiteDatabase.OpenParams.Builder builder = null;
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                        builder = new SQLiteDatabase.OpenParams.Builder();
-
-
-                        builder.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-
-                        SQLiteDatabase.OpenParams dbParams = builder.build();
-
-
-                        SQLiteDatabase.OpenParams.Builder builder2 = new SQLiteDatabase.OpenParams.Builder();
-                        builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                        SQLiteDatabase.OpenParams dbParams2 = builder2.build();
-
-
-                        db = SQLiteDatabase.openDatabase(dbFile, dbParams);
-                        db2 = SQLiteDatabase.openDatabase(dbFile2, dbParams2);
-                    }
-                } else {
-                    return;
-                }
                 if (limeOptions.Archived.checked) {
-                    List<String> chatIds = readChatIdsFromFile(appContext);  // 変更点
+                    List<String> chatIds = readChatIdsFromFile(appContext);
                     for (String chatId : chatIds) {
                         if (!chatId.isEmpty()) {
                             updateIsArchived(db, chatId);
@@ -189,8 +173,6 @@ public class ChatList implements IHook {
                     }
                     restoreMissingEntries(appContext,db);
                 }
-                if (db != null) db.close();
-                if (db2 != null) db2.close();
             }
         });
 

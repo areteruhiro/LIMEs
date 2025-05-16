@@ -87,6 +87,8 @@ public class LimeOptions {
         public Option removeReplyMute = new Option("remove_reply_mute", R.string.switch_remove_reply_mute, true, OptionCategory.NOTIFICATIONS);
         public Option original_ID = new Option("original_ID", R.string.original_ID, false, OptionCategory.NOTIFICATIONS);
 
+    public Option NotificationNull = new Option("NotificationNull", R.string.NotificationNull, false, OptionCategory.NOTIFICATIONS);
+
 
         public Option DarkColor = new Option("DarkColor", R.string.DarkColor, false, OptionCategory.Theme);
         public Option DarkModSync = new Option("DarkModSync", R.string.DarkkModSync, true, OptionCategory.Theme);
@@ -152,7 +154,7 @@ public class LimeOptions {
                 DialTone,
                 DarkColor, DarkModSync,
                 MuteGroup,
-                PhotoAddNotification, GroupNotification, CansellNotification, AddCopyAction, original_ID,
+                PhotoAddNotification, GroupNotification, CansellNotification, AddCopyAction, original_ID,NotificationNull,
                 RemoveVoiceRecord,
                 AgeCheckSkip,
                 CallOpenApplication,

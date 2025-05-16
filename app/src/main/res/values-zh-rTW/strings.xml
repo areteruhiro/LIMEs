@@ -148,7 +148,7 @@
     <string name="removeNaviAlbum">移除聊天清單中的相簿圖標</string>
     <string name="removeSearchBar">刪除搜尋欄</string>
     <string name="CallOpenApplication">在通話畫面上創建打開LINE的按鈕</string>
-    <string name="save_failed">設定保存失敗 \\n 請刪除 settings.properties</string>
+    <string name="save_failed">Please Restart</string>
     <string name="NotiFication_Setting">通知設置</string>
     <string name="GroupName">群組名稱</string>
     <string name="Add">添加</string>
@@ -237,5 +237,6 @@
     <string name="call_cancelled">已取消通話</string>
     <string name="ReactionCount">ReactionCount</string>
     <string name="WhiteToDark">WhiteToDark(DevNow)</string>
+    <string name="NotificationNull">NotificationNull</string>
 
 </resources>

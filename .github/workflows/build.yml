@@ -137,7 +137,7 @@ jobs:
             # 更新内容
 
             ## 対応するLINEのバージョン
-            14.19.1 <br>14.21.1 <br>15.0.0  <br>15.1.X <br>15.2.1 <br>15.3.X <br> 15.4.0-15.4.1<br>15.5.1 -15.5.4
+            14.19.1 <br>14.21.1 <br>15.0.0  <br>15.1.X <br>15.2.1 <br>15.3.X <br> 15.4.0-15.4.1<br>15.5.1 -15.5.4 <br>15.6.x(Maybe)
 
             ### 差分
             https://github.com/${{ github.repository }}/compare/${{ env.version }}^...${{ env.version }}

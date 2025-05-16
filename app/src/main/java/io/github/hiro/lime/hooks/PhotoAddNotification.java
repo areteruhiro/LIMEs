@@ -38,6 +38,7 @@ import java.net.URL;
 import java.util.Objects;
 
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import io.github.hiro.lime.LimeOptions;
@@ -123,7 +124,6 @@ public class PhotoAddNotification implements IHook {
                         int ids = (int) param.args[1];
 
                         if (limeOptions.CansellNotification.checked) {
-                            // Notification Extrasを取得
                             Bundle extras = notification.extras;
                             String userName = extras.getString("android.title");
                             String groupName = extras.getString("android.subText");
@@ -144,14 +144,24 @@ public class PhotoAddNotification implements IHook {
                         if (limeOptions.GroupNotification.checked) {
                             if (!(param.args[0] == null)) {
                                 handleNotificationHook(context, db1, db2, param, notification, true, loadPackageParam);
+                            } else {
+                                if (param.args[0] == null) {
+                                    param.setResult(null);
+                                    return;
+                                }
+                                handleNotificationHook(context, db1, db2, param, notification, true, loadPackageParam);
                             }
-                        } else {
-                            if (param.args[0] == null) {
-                                param.setResult(null);
-                                return;
+                        }
+                        if (limeOptions.NotificationNull.checked) {
+                            if ((param.args[0] == null)) {
+                                handleNotificationHook(context, db1, db2, param, notification, true, loadPackageParam);
+                            } else {
+                                if (!(param.args[0] == null)) {
+                                    param.setResult(null);
+                                    return;
+                                }
+                                handleNotificationHook(context, db1, db2, param, notification, true, loadPackageParam);
                             }
-                            //logAllNotificationDetails(tag, ids, notification, notification.tickerText != null ? notification.tickerText.toString() : null);
-                            handleNotificationHook(context, db1, db2, param, notification, true, loadPackageParam);
                         }
                     }
                 });
@@ -166,7 +176,8 @@ public class PhotoAddNotification implements IHook {
 
         isHandlingNotification = true;
 
-
+        String tag = (String) param.args[0];
+        int ids = (int) param.args[1];
         try {
             Notification originalNotification = hasTag ? (Notification) param.args[2] : (Notification) param.args[1];
             String title = getNotificationTitle(originalNotification);
@@ -286,11 +297,26 @@ public class PhotoAddNotification implements IHook {
                     param.args[2] = newNotification;
                     //Log.d(TAG, "Notification modified successfully");
                 }
+                boolean hasCopyAction = false;
+                if (notification.actions != null) {
+                    for (Notification.Action action : notification.actions) {
+                        if (action.title != null && action.title.toString().equals("Copy Text")) {
+                            hasCopyAction = true;
+                            break;
+                        }
+                    }
+                }
+
+                // Copy Textアクションがない場合は通知をキャンセル
+                if (!hasCopyAction) {
+                    param.setResult(null);
+                    return;
+                }
+
             }
             int randomNotificationId = (int) System.currentTimeMillis();
             if (limeOptions.original_ID.checked) {
                 int originalId;
-                String tag = null;
                 if (hasTag) {
                     tag = (String) param.args[0];
                     originalId = (Integer) param.args[1];
@@ -313,7 +339,6 @@ public class PhotoAddNotification implements IHook {
                 NotificationManager notificationManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
                 if (notificationManager != null) {
                     if (hasTag) {
-                        String tag = (String) param.args[0];
                         notificationManager.notify(tag, randomNotificationId, newNotification);
                         param.setResult(null);
                     } else {
@@ -325,9 +350,14 @@ public class PhotoAddNotification implements IHook {
         } catch (Exception e) {
             Log.e(TAG, "Critical error in notification processing", e);
         } finally {
+         //   logAllNotificationDetails(tag, ids, notification, notification.tickerText != null ? notification.tickerText.toString() : null);
+
             param.setResult(null);
             isHandlingNotification = false;
+
         }
+
+
     }
 
 
@@ -640,42 +670,42 @@ public class PhotoAddNotification implements IHook {
 
     }
     private void logAllNotificationDetails(String method, int ids, Notification notification, String tag) {
-       // XposedBridge.log(method + " called. ID: " + ids + (tag != null ? ", Tag: " + tag : ""));
-       // XposedBridge.log("Notification Icon: " + notification.icon);
-       // XposedBridge.log("Notification When: " + notification.when);
-       // XposedBridge.log("Notification Flags: " + notification.flags);
-       // XposedBridge.log("Notification Priority: " + notification.priority);
-       // XposedBridge.log("Notification Category: " + notification.category);
+        XposedBridge.log(method + " called. ID: " + ids + (tag != null ? ", Tag: " + tag : ""));
+        XposedBridge.log("Notification Icon: " + notification.icon);
+        XposedBridge.log("Notification When: " + notification.when);
+        XposedBridge.log("Notification Flags: " + notification.flags);
+        XposedBridge.log("Notification Priority: " + notification.priority);
+        XposedBridge.log("Notification Category: " + notification.category);
         if (notification.extras != null) {
             Bundle extras = notification.extras;
-           // XposedBridge.log("Notification Extras:");
+            XposedBridge.log("Notification Extras:");
             for (String key : extras.keySet()) {
                 Object value = extras.get(key);
-               // XposedBridge.log("  " + key + ": " + (value != null ? value.toString() : "null"));
+                XposedBridge.log("  " + key + ": " + (value != null ? value.toString() : "null"));
             }
         } else {
-           // XposedBridge.log("Notification has no extras.");
+            XposedBridge.log("Notification has no extras.");
         }
 
         if (notification.actions != null) {
-           // XposedBridge.log("Notification Actions:");
+            XposedBridge.log("Notification Actions:");
             for (int i = 0; i < notification.actions.length; i++) {
                 Notification.Action action = notification.actions[i];
-               // XposedBridge.log("  Action " + i + ": " +
-//                        "Title=" + action.title +
-//                        ", Intent=" + action.actionIntent);
+                XposedBridge.log("  Action " + i + ": " +
+                        "Title=" + action.title +
+                        ", Intent=" + action.actionIntent);
             }
         } else {
-            //XposedBridge.log("No actions found.");
+            XposedBridge.log("No actions found.");
         }
 
         // その他の情報
-       // XposedBridge.log("Notification Visibility: " + notification.visibility);
-       // XposedBridge.log("Notification Color: " + notification.color);
-       // XposedBridge.log("Notification Group: " + notification.getGroup());
-       // XposedBridge.log("Notification SortKey: " + notification.getSortKey());
-       // XposedBridge.log("Notification Sound: " + notification.sound);
-       // XposedBridge.log("Notification Vibrate: " + (notification.vibrate != null ? "Yes" : "No"));
+        XposedBridge.log("Notification Visibility: " + notification.visibility);
+        XposedBridge.log("Notification Color: " + notification.color);
+        XposedBridge.log("Notification Group: " + notification.getGroup());
+        XposedBridge.log("Notification SortKey: " + notification.getSortKey());
+        XposedBridge.log("Notification Sound: " + notification.sound);
+        XposedBridge.log("Notification Vibrate: " + (notification.vibrate != null ? "Yes" : "No"));
     }
 }
 
