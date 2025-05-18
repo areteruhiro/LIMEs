@@ -2,6 +2,8 @@ package io.github.hiro.lime;
 
 import android.content.Context;
 
+import io.github.hiro.lime.hooks.DisableSilentMessage;
+
 public class LimeOptions {
 
     public class Option {
@@ -86,8 +88,9 @@ public class LimeOptions {
         public Option AddCopyAction = new Option("AddCopyAction", R.string.AddCopyAction, false, OptionCategory.NOTIFICATIONS);
         public Option removeReplyMute = new Option("remove_reply_mute", R.string.switch_remove_reply_mute, true, OptionCategory.NOTIFICATIONS);
         public Option original_ID = new Option("original_ID", R.string.original_ID, false, OptionCategory.NOTIFICATIONS);
+         public Option DisableSilentMessage = new Option("DisableSilentMessage", R.string.DisableSilentMessage, false, OptionCategory.NOTIFICATIONS);
 
-    public Option NotificationNull = new Option("NotificationNull", R.string.NotificationNull, false, OptionCategory.NOTIFICATIONS);
+        public Option NotificationNull = new Option("NotificationNull", R.string.NotificationNull, false, OptionCategory.NOTIFICATIONS);
 
 
         public Option DarkColor = new Option("DarkColor", R.string.DarkColor, false, OptionCategory.Theme);
@@ -154,7 +157,7 @@ public class LimeOptions {
                 DialTone,
                 DarkColor, DarkModSync,
                 MuteGroup,
-                PhotoAddNotification, GroupNotification, CansellNotification, AddCopyAction, original_ID,NotificationNull,
+                PhotoAddNotification, GroupNotification, CansellNotification, AddCopyAction, original_ID,NotificationNull,DisableSilentMessage,
                 RemoveVoiceRecord,
                 AgeCheckSkip,
                 CallOpenApplication,

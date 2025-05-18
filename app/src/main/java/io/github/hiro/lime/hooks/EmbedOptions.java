@@ -293,6 +293,7 @@ public class EmbedOptions implements IHook {
                                         case "CansellNotification":
                                         case "AddCopyAction":
                                         case "original_ID":
+                                        case "DisableSilentMessage":
                                             photoNotificationChildSwitches.add(switchView);
                                             switchView.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked());
                                             break;
@@ -1072,7 +1073,6 @@ public class EmbedOptions implements IHook {
                     });
                     break;
 
-                // 子スイッチの登録
                 case "open_in_browser":
                     webViewChildSwitches.add(switchView);
                     switchView.setEnabled(switchRedirectWebView != null && switchRedirectWebView.isChecked());
@@ -1086,6 +1086,7 @@ public class EmbedOptions implements IHook {
                 case "GroupNotification":
                 case "CansellNotification":
                 case "AddCopyAction":
+                case "DisableSilentMessage":
                     photoNotificationChildSwitches.add(switchView);
                     switchView.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked());
                     break;
