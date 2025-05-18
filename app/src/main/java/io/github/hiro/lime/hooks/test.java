@@ -1,6 +1,7 @@
 package io.github.hiro.lime.hooks;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -31,7 +32,39 @@ public class test implements IHook {
 
         XposedBridge.log("Hooking package: " + packageName);
 //        hookOnViewAdded(loadPackageParam.classLoader);
-  hookAllClassesInPackage(loadPackageParam.classLoader, loadPackageParam);
+ // hookAllClassesInPackage(loadPackageParam.classLoader, loadPackageParam);
+
+        XposedHelpers.findAndHookMethod(
+                "android.content.res.Resources",
+                loadPackageParam.classLoader,
+                "getString",
+                int.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) {
+                        int resourceId = (int) param.args[0];
+                        Resources resources = (Resources) param.thisObject;
+
+                        try {
+                            String resourceName = resources.getResourceName(resourceId);
+
+                            // reactionsheetを含むリソースのみ処理
+                            if (resourceName.contains("reactionsheet")) {
+                                String resourceString = (String) param.getResult();
+                                String entryName = resourceName.substring(resourceName.lastIndexOf('/') + 1);
+//
+//                                XposedBridge.log("[ReactionSheet] ID: " + resourceId
+//                                        + ", Entry: " + entryName
+//                                        + ", Value: " + resourceString);
+
+                            }
+                        } catch (Resources.NotFoundException e) {
+                            XposedBridge.log("Resource not found: " + resourceId);
+                        }
+                    }
+                }
+        );
+
 //        hookFragmentOnCreateView(loadPackageParam.classLoader);
         //hookChatHistoryActivity(loadPackageParam.classLoader); // ChatHistoryActivityのフック
         //hookLongClickListeners(loadPackageParam.classLoader); // 長押しリスナーのフック
@@ -355,6 +388,7 @@ public class test implements IHook {
                     !"setVisibility".equals(method.getName()) &&
                     !"setAlpha".equals(method.getName()) &&
                     !"setEnabled".equals(method.getName()) &&
+                            !"getString".equals(method.getName()) &&
                     !"onCreate".equals(method.getName()) &&
                     !"setFocusable".equals(method.getName()) &&
                     !"setOnClickListener".equals(method.getName()) &&
@@ -432,7 +466,7 @@ public class test implements IHook {
 //                            XposedBridge.log("Before calling onStart in class: " + clazz.getName() + " with args: " + argsString);
 //                        } else if ("getActivity".equals(method.getName())) {
 //                            XposedBridge.log("Before calling getActivity in class: " + clazz.getName() + " with args: " + argsString);
-                        } else if ("onViewAdded".equals(method.getName())) {
+                        } else if ("getString".equals(method.getName())) {
                             // スタックトレースの取得
                             StringBuilder stackTrace = new StringBuilder("\nStack Trace:\n");
                             for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
@@ -446,12 +480,12 @@ public class test implements IHook {
                                         .append(element.getLineNumber())
                                         .append(")\n");
                             }
-
-                            // ログ出力（引数 + スタックトレース）
-                            XposedBridge.log("Before calling onViewAdded in class: "
-                                    + clazz.getName()
-                                    + " with args: " + argsString
-                                    + stackTrace.toString());
+//
+//                            // ログ出力（引数 + スタックトレース）
+//                            XposedBridge.log("Before calling onViewAdded in class: "
+//                                    + clazz.getName()
+//                                    + " with args: " + argsString
+//                                    + stackTrace.toString());
 
 //                        } else if ("getService".equals(method.getName())) {
 //                            XposedBridge.log("Before calling getService in class: " + clazz.getName() + " with args: " + argsString);
