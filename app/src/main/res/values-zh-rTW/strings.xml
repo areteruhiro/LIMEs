@@ -239,5 +239,6 @@
     <string name="WhiteToDark">WhiteToDark(DevNow)</string>
     <string name="NotificationNull">NotificationNull</string>
     <string name="DisableSilentMessage">DevNow Disable silent messages (You will be notified with a notification for the next notification)</string>
+    <string name="SilentCheck">SilentCheck</string>
 
 </resources>

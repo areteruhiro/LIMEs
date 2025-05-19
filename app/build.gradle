@@ -10,7 +10,7 @@ android {
         minSdk 22
         targetSdk 35
         versionCode 116160
-        versionName "1.24.2"
+        versionName "1.24.3beta"
         multiDexEnabled true
 
 

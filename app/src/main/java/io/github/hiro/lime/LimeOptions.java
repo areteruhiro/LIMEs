@@ -100,9 +100,11 @@ public class LimeOptions {
         public Option MuteTone = new Option("MuteTone", R.string.MuteTone, false, OptionCategory.CALL);
         public Option DialTone = new Option("DialTone", R.string.DialTone, false, OptionCategory.CALL);
         public Option ringtonevolume = new Option("ringtonevolume", R.string.ringtonevolume, false, OptionCategory.CALL);
+        public Option SilentCheck = new Option("SilentCheck", R.string.SilentCheck, false, OptionCategory.CALL);
 
 
-        public Option RemoveVoiceRecord = new Option("RemoveVoiceRecord", R.string.RemoveVoiceRecord, false, OptionCategory.CHAT);
+
+    public Option RemoveVoiceRecord = new Option("RemoveVoiceRecord", R.string.RemoveVoiceRecord, false, OptionCategory.CHAT);
         public Option CallOpenApplication = new Option("CallOpenApplication", R.string.CallOpenApplication, true, OptionCategory.CALL);
         public Option SettingClick = new Option("SettingClick", R.string.SettingClick, false, OptionCategory.OTHER);
         public Option photoboothButtonOption = new Option("photoboothButtonOption", R.string.photoboothButtonOption, true, OptionCategory.CHAT);
@@ -154,7 +156,7 @@ public class LimeOptions {
                 outputCommunication,
                 callTone, ringtonevolume,
                 MuteTone,
-                DialTone,
+                DialTone,SilentCheck,
                 DarkColor, DarkModSync,
                 MuteGroup,
                 PhotoAddNotification, GroupNotification, CansellNotification, AddCopyAction, original_ID,NotificationNull,DisableSilentMessage,

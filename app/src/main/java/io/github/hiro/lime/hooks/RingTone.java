@@ -72,6 +72,13 @@ public class RingTone implements IHook {
                             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                                 String paramValue = param.args[1].toString();
                                 Context context = AndroidAppHelper.currentApplication().getApplicationContext();
+
+                                AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+                                if (limeOptions.SilentCheck.checked) {
+                                    if (audioManager.getRingerMode() == AudioManager.RINGER_MODE_SILENT) {
+                                        return;
+                                    }
+                                }
                                 Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                         "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
@@ -96,11 +103,10 @@ public class RingTone implements IHook {
                                     XposedBridge.log(paramValue);
                                     if (context != null) {
                                         if (isPlaying) {
-                                           XposedBridge.log("Xposed"+ "Already playing");
+                                            XposedBridge.log("Xposed"+ "Already playing");
                                             return;
                                         }
                                         Uri ringtoneUri = Uri.fromFile(destFile);
-                                        // Android P (API 28) 以上の場合
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                                             ringtone = RingtoneManager.getRingtone(context, ringtoneUri);
                                             if (ringtone != null) {
@@ -110,9 +116,8 @@ public class RingTone implements IHook {
                                                 XposedBridge.log("Ringtone started playing.");
                                             }
                                         } else {
-                                            // Android P 未満の場合は MediaPlayer を使用
                                             if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                                               XposedBridge.log("Xposed"+ "MediaPlayer is already playing. Not starting new playback.");
+                                                XposedBridge.log("Xposed"+ "MediaPlayer is already playing. Not starting new playback.");
                                                 return;
                                             }
                                             mediaPlayer = MediaPlayer.create(context, ringtoneUri);
@@ -278,7 +283,6 @@ public class RingTone implements IHook {
                                                 XposedBridge.log("Ringtone started playing from processToneEvent.");
                                             }
                                         } else {
-                                            // Android P 未満の場合は MediaPlayer を使用
                                             if (mediaPlayer != null) {
                                                 if (mediaPlayer.isPlaying()) {
                                                     XposedBridge.log("Xposed"+ "MediaPlayer is already playing. Stopping playback.");
@@ -319,7 +323,12 @@ public class RingTone implements IHook {
                         } else {
                                 if (methodName.equals("getVoiceComplexityLevel")) {
                                     if (isPlaying) return;
-
+                                    AudioManager audioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+                                    if (limeOptions.SilentCheck.checked) {
+                                        if (audioManager.getRingerMode() == AudioManager.RINGER_MODE_SILENT) {
+                                            return;
+                                        }
+                                    }
                                     File destFile = new File(ringtoneDir, "ringtone.wav");
                                     Uri ringtoneUri = Uri.fromFile(destFile);
 
@@ -402,7 +411,6 @@ public class RingTone implements IHook {
                                                     mediaPlayer = new MediaPlayer();
                                                     try {
                                                         mediaPlayer.setDataSource(appContext, ringtoneUriA);
-                                                        // ストリームタイプをアラームに設定
                                                         mediaPlayer.setAudioStreamType(AudioManager.STREAM_ALARM);
                                                         mediaPlayer.setLooping(true);
                                                         mediaPlayer.prepare();
@@ -423,7 +431,6 @@ public class RingTone implements IHook {
 
                                 if (method.getName().equals("activate")) {
                                     if (appContext != null) {
-                                        // 既存の再生を停止
                                         if (ringtone != null && isPlaying) {
                                             ringtone.stop();
                                             ringtone = null;

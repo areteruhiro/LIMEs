@@ -98,7 +98,6 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new ReactionList(),
             new WhiteToDark(),
             new DisableSilentMessage()
-
     };
 
 

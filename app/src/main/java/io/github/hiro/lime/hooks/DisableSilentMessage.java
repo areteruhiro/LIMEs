@@ -18,8 +18,11 @@ import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedBridge;
@@ -30,9 +33,9 @@ import io.github.hiro.lime.R;
 
 public class DisableSilentMessage implements IHook {
     private SQLiteDatabase db3 = null;
-
-
-    private static  Context context; // Static context to be shared
+    private SQLiteDatabase db4 = null;
+    private static final Set<String> processedMessages = Collections.synchronizedSet(new HashSet<>());
+    private static  Context context;
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.DisableSilentMessage.checked) return;
@@ -41,7 +44,43 @@ public class DisableSilentMessage implements IHook {
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 context = (Application) param.thisObject;
                 Application appContext = (Application) param.thisObject;
-                initDatabase(appContext);
+                File dbFile3 = appContext.getDatabasePath("naver_line");
+                File dbFile4 = appContext.getDatabasePath("contact");
+                if (dbFile3.exists() && dbFile4.exists()) {
+                    SQLiteDatabase.OpenParams.Builder builder1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams1 = builder1.build();
+                    }
+
+
+                    SQLiteDatabase.OpenParams.Builder builder2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams2 = builder2.build();
+                    }
+
+
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db3 = SQLiteDatabase.openDatabase(dbFile3, dbParams1);
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db4 = SQLiteDatabase.openDatabase(dbFile4, dbParams2);
+                    }
+
+                }
             }
         });
 
@@ -59,26 +98,24 @@ public class DisableSilentMessage implements IHook {
                             operationResponseField.setAccessible(true);
                             Object operationResponse = operationResponseField.get(wrapper);
                             if (operationResponse == null) return;
-
                             ArrayList<?> operations = (ArrayList<?>) operationResponse.getClass().getDeclaredField("a").get(operationResponse);
                             if (operations == null) return;
-
                             for (Object operation : operations) {
                                 Field[] fields = operation.getClass().getDeclaredFields();
                                 for (Field field : fields) {
                                     field.setAccessible(true);
-                                    try {
-                                        Object value = field.get(operation);
-                                      //  XposedBridge.log("Field [" + field.getName() + "] = " + (value != null ? value.toString() : "null"));
-                                        try {
-                                            Method valueOfMethod = operation.getClass().getMethod("valueOf");
-                                            Object valueOfResult = valueOfMethod.invoke(operation);
-                                            XposedBridge.log("valueOf() result = " + (valueOfResult != null ? valueOfResult.toString() : "null"));
-                                        } catch (NoSuchMethodException e) {
-                                        }
-                                    } catch (Exception e) {
-                                     //   XposedBridge.log("Error accessing field " + field.getName() + ": " + e.getMessage());
-                                    }
+//                                    try {
+//                                        Object value = field.get(operation);
+//                                      //  XposedBridge.log("Field [" + field.getName() + "] = " + (value != null ? value.toString() : "null"));
+//                                        try {
+//                                            Method valueOfMethod = operation.getClass().getMethod("valueOf");
+//                                            Object valueOfResult = valueOfMethod.invoke(operation);
+//                                          //  XposedBridge.log("valueOf() result = " + (valueOfResult != null ? valueOfResult.toString() : "null"));
+//                                        } catch (NoSuchMethodException e) {
+//                                        }
+//                                    } catch (Exception e) {
+//                                     //   XposedBridge.log("Error accessing field " + field.getName() + ": " + e.getMessage());
+//                                    }
                                 }
                                 Field typeField = operation.getClass().getDeclaredField("c");
                                 typeField.setAccessible(true);
@@ -117,40 +154,64 @@ public class DisableSilentMessage implements IHook {
                                       contentMetadata.remove("app_extension_type");
                                       metadataField.set(message, contentMetadata);
 
+                                      String finalServerId = serverId;
 
-                                      String content = queryDatabase(db3,
-                                              "SELECT content FROM chat_history WHERE server_id=?",
-                                              serverId);
+                                          Class<?> GetHook = XposedHelpers.findClass("com.linecorp.line.fullsync.c", loadPackageParam.classLoader);
 
-                                      String media = queryDatabase(db3, "SELECT parameter FROM chat_history WHERE server_id=?", serverId);
-                                      media = media != null ? media : "null";
-                                      Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                                              "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                                      String finalServerId1 = serverId;
+                                      String finalServerId2 = serverId;
+                                      XposedBridge.hookAllMethods(GetHook, "invokeSuspend", new XC_MethodHook() {
+                                              @Override
+                                              protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                                                  String content = queryDatabase(db3,
+                                                          "SELECT content FROM chat_history WHERE server_id=?",
+                                                          finalServerId);
 
-                                      String mediaDescription = "";
-                                      if (media != null) {
-                                          if (media.contains("IMAGE")) {
-                                              mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                                          } else if (media.contains("video")) {
-                                              mediaDescription = moduleContext.getResources().getString(R.string.video);
-                                          } else if (media.contains("STKPKGID")) {
-                                              mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                                          } else if (media.contains("FILE")) {
-                                              mediaDescription = moduleContext.getResources().getString(R.string.file);
-                                          } else if (media.contains("LOCATION")) {
-                                              mediaDescription = moduleContext.getResources().getString(R.string.location);
-                                          }
-                                      } else {
-                                          mediaDescription = "null";
-                                      }
-                                      String finalContent = determineFinalContent(content, mediaDescription);
-                                      XposedBridge.log(content);
-                                      generateCustomNotification(
-                                              context,
-                                              "サイレントメッセージが送信されました",
-                                              "",
-                                              serverId
-                                      );
+                                                  String media = queryDatabase(db3, "SELECT parameter FROM chat_history WHERE server_id=?", finalServerId);
+                                                  media = media != null ? media : "null";
+
+
+                                                  String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", finalServerId);
+                                                  SendUser = SendUser != null ? SendUser : "null";
+
+                                                  String name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", SendUser);
+                                                  name = name != null ? name : "null";
+
+                                                  Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                                                          "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+
+                                                  String mediaDescription = "";
+                                                  if (media != null) {
+                                                      if (media.contains("IMAGE")) {
+                                                          mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                                                      } else if (media.contains("video")) {
+                                                          mediaDescription = moduleContext.getResources().getString(R.string.video);
+                                                      } else if (media.contains("STKPKGID")) {
+                                                          mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                                                      } else if (media.contains("FILE")) {
+                                                          mediaDescription = moduleContext.getResources().getString(R.string.file);
+                                                      } else if (media.contains("LOCATION")) {
+                                                          mediaDescription = moduleContext.getResources().getString(R.string.location);
+                                                      }
+                                                  } else {
+                                                      mediaDescription = "null";
+                                                  }
+                                                  String finalContent = determineFinalContent(content, mediaDescription);
+                                                  XposedBridge.log(content);
+                                                  if (processedMessages.contains(finalServerId2)) {
+                                                      return;
+                                                  }
+                                                  generateCustomNotification(
+                                                          context,
+                                                           name,
+                                                          finalContent,
+                                                          finalServerId
+                                                  );
+                                                  processedMessages.add(finalServerId1);
+                                              }
+                                          });
+
+
                                   }
                               }
 
@@ -169,24 +230,6 @@ public class DisableSilentMessage implements IHook {
 
     }
 
-
-    private synchronized void initDatabase(Context context) {
-        try {
-            File dbFile = new File(context.getDatabasePath("naver_line").getPath());
-            if (dbFile.exists()) {
-                db3 = SQLiteDatabase.openDatabase(
-                        dbFile.getPath(),
-                        null,
-                        SQLiteDatabase.OPEN_READONLY | SQLiteDatabase.NO_LOCALIZED_COLLATORS
-                );
-                XposedBridge.log("Database initialized successfully");
-            } else {
-                XposedBridge.log("Database file not found");
-            }
-        } catch (SQLiteException e) {
-            XposedBridge.log("DB init error: " + e.getMessage());
-        }
-    }
     private String determineFinalContent(String content, String mediaDescription) {
         String result;
         if (content != null && !content.isEmpty() && !content.equals("null")) {

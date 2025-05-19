@@ -248,5 +248,6 @@
     <string name="WhiteToDark">WhiteToDark(DevNow)</string>
     <string name="NotificationNull">NotificationNull</string>
     <string name="DisableSilentMessage">DevNow サイレントメッセージの無効(次回の通知ありの通知で通知されます)</string>
+    <string name="SilentCheck">SilentCheck</string>
 
 </resources>

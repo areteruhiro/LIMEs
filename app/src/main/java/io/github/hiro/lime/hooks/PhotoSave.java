@@ -316,7 +316,7 @@ public class PhotoSave implements IHook {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
 
-                        album1 = true; // フラグをリセット
+                        album1 = true;
                     }
                 }
         );
