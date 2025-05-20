@@ -5,6 +5,8 @@ https://t.me/LsPosedLIMEs
 
 GitHubは更新を頻繁にしません、テレグラムで最新の情報を確認してください
 
+# Support Server
+https://t.me/LsPosedLIMEs
 
  # 導入方法
  
@@ -21,10 +23,7 @@ GitHubは更新を頻繁にしません、テレグラムで最新の情報を�
  
 
 # 確認済みのバグやエラー
-アプリがクラッシュする→トラッキング通信をブロックするを無効にしてください <br>
-・LIMEの設定ボタンが作成されない <br>
 ・設定が保存されない場合 <br>
-/storage/emulated/0/Download/LimeBackup/Setting/settings.properties を削除
 
 詳しくは
 https://t.me/LsPosedLIMEs/2425/2450
