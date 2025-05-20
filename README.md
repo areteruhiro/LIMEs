@@ -85,7 +85,7 @@ hiro_1114
 * [GitHub Sponsors](https://github.com/sponsors/areteruhiro)
 
 * [PayPal](Contact us / お問い合わせください)
-
+https://t.me/areteruhiro
 
 # 更新について
 更新内容を記載していないReleaseについては、差分を押してください、必要でない更新でなければ無理して更新を行う必要はありません。
