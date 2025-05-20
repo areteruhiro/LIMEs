@@ -75,12 +75,7 @@ We are very grateful to the following people for making this possible:
 継続した開発時間の確保のため寄付のほどお願いいたします<br>
 Please donate to ensure continued development time.
 
-* [100円 PayPay](https://qr.paypay.ne.jp/p2p01_ubl01Ai8og514kXo)<br>
-* [300円
-PayPay](https://qr.paypay.ne.jp/p2p01_R3ArtRGFheTBTId3)<br>
-
-* [Free yen 
-PayPay〜3/2](https://qr.paypay.ne.jp/p2p01_cAiX6AGzTTzmtxkZ)<br>
+* [Pay Pay 2025/6/4まで](https://qr.paypay.ne.jp/p2p01_cAiX6AGzTTzmtxkZ)<br>
 
 *PayPay ID
 hiro_1114
