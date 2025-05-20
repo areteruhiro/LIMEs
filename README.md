@@ -68,6 +68,9 @@ We are very grateful to the following people for making this possible:
 @Fuku5656 さん
 @としさん
 @kurage pucapucaさん
+@Naotoさん
+@C1el_55K
+@かなでさん
 
 継続した開発時間の確保のため寄付のほどお願いいたします<br>
 Please donate to ensure continued development time.
