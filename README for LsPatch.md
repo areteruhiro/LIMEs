@@ -3,6 +3,8 @@
 1,Patched LINE <br>
 2,LIMEs モジュールをインストール
 
+![Screenshot_2025-05-26-22-03-29-905_com.github.android-edit.jpg](https://github.com/user-attachments/assets/838ca346-8423-4224-813e-80760643bf35)
+
 
 ⚠LIMEs自体のインストールも必ず必要です
 
