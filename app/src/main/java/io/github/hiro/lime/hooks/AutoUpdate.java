@@ -96,7 +96,7 @@ public class AutoUpdate implements IHook {
                                 @Override
                                 public void onUpdateAvailable(String latestVersion, List<String> apkUrls) {
                                     createDownloadButtons(activity, rootContainer, apkUrls);
-                                    isUpdateChecked = true; // アップデート確認を実行済みとしてマーク
+                                    isUpdateChecked = true;
                                 }
                                 @Override
                                 public void onUpToDate() {
@@ -193,7 +193,7 @@ public class AutoUpdate implements IHook {
                     ));
                     Button parentButton = new Button(context);
                     setupParentButtonStyle(parentButton, context);
-                    parentButton.setBackgroundColor(Color.TRANSPARENT); // 背景を透明に
+                    parentButton.setBackgroundColor(Color.TRANSPARENT);
                     parentButton.setText("更新有");
                     mainContainer.addView(parentButton);
                     LinearLayout subContainer = new LinearLayout(context);
@@ -237,14 +237,10 @@ public class AutoUpdate implements IHook {
 
                     controlLayout.addView(cancelButton);
                     controlLayout.addView(hideButton);
-
-                    // ビューの組み立て
                     scrollView.addView(buttonLayout);
                     subContainer.addView(scrollView);
                     subContainer.addView(controlLayout);
                     mainContainer.addView(subContainer);
-
-                    // 親ボタンのクリック処理
                     parentButton.setOnClickListener(v -> {
                         if (subContainer.getVisibility() == View.VISIBLE) {
                             subContainer.setVisibility(View.GONE);

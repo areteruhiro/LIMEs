@@ -58,6 +58,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     public static LimeOptions limeOptions = new LimeOptions();
     private static Context context; // Static context to be shared
     static final IHook[] hooks = {
+            new InstallModule(),
             new OutputResponse(),
             new ModifyRequest(),
             new CheckHookTargetVersion(),
@@ -131,7 +132,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
 
     private Button createConfigButton(Context context, XC_MethodHook.MethodHookParam param) {
         Button button = new Button(context);
-        button.setText("Open LimeBackup Folder  \n  Download/LimeBackup//Settingの中でこのフォルダを使用するをクリック");
+        button.setText("Open LimeBackup Folder  \n  Download/LimeBackup/Settingの中でこのフォルダを使用するをクリック");
         button.setBackgroundColor(0xFFBB86FC);
         button.setTextColor(Color.WHITE);
         button.setPadding(30, 20, 30, 20);
@@ -190,8 +191,6 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             XposedBridge.log("Lime Settings Error: " + e.getMessage());
         }
     }
-    String fragmentClass;
-    String versionName;
 
     private void setupUriConfiguration(XC_LoadPackage.LoadPackageParam lpparam) throws ClassNotFoundException {
         XposedHelpers.findAndHookMethod(
@@ -214,6 +213,8 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                             fragmentClass = "androidx.fragment.app.n";
                         } else if (isVersionInRange(versionName, "15.6.0", "15.7.0")) {
                             fragmentClass = "androidx.fragment.app.m";
+                        } else if (isVersionInRange(versionName, "15.7.0", "15.8.0")) {
+                            fragmentClass = "androidx.fragment.app.n";
                         } else {
                             XposedBridge.log("Unsupported version: " + versionName);
                             return;

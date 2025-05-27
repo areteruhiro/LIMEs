@@ -247,7 +247,7 @@ public class Constants {
             WEBVIEW_CLIENT_HOOK = new HookTarget("FS0.l", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("Xh1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("mQ.c$d", "run");
-            Archive = new HookTarget("JC.Y", "invokeSuspend");
+            Archive = new HookTarget("jD.T", "invokeSuspend");
 
             NOTIFICATION_READ_HOOK = new HookTarget("yj1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
@@ -305,33 +305,88 @@ public class Constants {
             MARK_AS_READ_HOOK = new HookTarget("vQ.c$d", "run");
             Archive = new HookTarget("JC.b0", "invokeSuspend");
 
-            NOTIFICATION_READ_HOOK = new HookTarget("Rj1.b", "invokeSuspend");
+            NOTIFICATION_READ_HOOK = new HookTarget("mj1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.m", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.m", "a");
 
             RemoveVoiceRecord_Hook_a = new HookTarget("h.j", "run");
 
-            ChatRestore = new HookTarget("androidx.fragment.app.m", "onActivityResult");
+            ChatRestore = new HookTarget("androidx.fragment.app.n", "onActivityResult");
 //jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
             //getAllChatIds
-            PhotoSave = new HookTarget("Vg1.l0", "");
+            PhotoSave = new HookTarget("rg1.n0", "");
 
 //jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
             //VideoPlaybackSyncEvent(localMessageId
-            PhotoSave1 = new HookTarget("hc1.C", "");
+            PhotoSave1 = new HookTarget("Db1.S", "");
 
             //DIRECTORY_PICTURES
             PhotoSave2 = new HookTarget("sR.g", "");
 
 //com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
             //createAlbum
-            PhotoSave3 = new HookTarget("gm.A", "");
+            PhotoSave3 = new HookTarget("zm.C", "");
             //reactionListModel
-            ReactionList = new HookTarget("Iy.m", "");
+            ReactionList = new HookTarget("iz.j", "");
 
 
-        }
+    } else if (isVersionInRange(versionName, "15.7.0", "15.8.0")) {
 
+        XposedBridge.log("15.7.0 Patched ");
+
+                     /*
+            TRADITIONAL_CHINESE
+            static  HookTarget USER_AGENT_HOOK = new HookTarget("ek1.c", "j");
+            HANDLED_AND_RETURN_TRUE
+            static     WEBVIEW_CLIENT_HOOK = new HookTarget("CR0.m", "onPageFinished");
+            NOTIFICATION_DISABLED
+            static  HookTarget MUTE_MESSAGE_HOOK = new HookTarget("Xi1.b", "I");
+            PROCESSING
+            static  HookTarget   MARK_AS_READ_HOOK = new HookTarget("aQ.c$d", "run");
+
+        ChatListViewModel
+            static  HookTarget Archive = new HookTarget("tC.S", "invokeSuspend");
+          StreamingFetchOperationHandler
+            static  HookTargetNOTIFICATION_READ_HOOK = new HookTarget("yk1.b", "invokeSuspend");
+
+            //%s failed: out of sequence response: expected %d but got %d
+            static  HookTarget   REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+            static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+          */
+
+        //BackEventCompat
+        USER_AGENT_HOOK = new HookTarget("Si1.c", "j");
+        WEBVIEW_CLIENT_HOOK = new HookTarget("CS0.m", "onPageFinished");
+        MUTE_MESSAGE_HOOK = new HookTarget("Lh1.b", "I");
+        MARK_AS_READ_HOOK = new HookTarget("dR.d$d", "run");
+        Archive = new HookTarget("JC.b0", "invokeSuspend");
+
+        NOTIFICATION_READ_HOOK = new HookTarget("Rj1.b", "invokeSuspend");
+        REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+        RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+
+        RemoveVoiceRecord_Hook_a = new HookTarget("h.j", "run");
+
+        ChatRestore = new HookTarget("androidx.fragment.app.m", "onActivityResult");
+//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
+        //getAllChatIds
+        PhotoSave = new HookTarget("Vg1.l0", "");
+
+//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
+        //VideoPlaybackSyncEvent(localMessageId
+        PhotoSave1 = new HookTarget("hc1.C", "");
+
+        //DIRECTORY_PICTURES
+        PhotoSave2 = new HookTarget("sR.g", "");
+
+//com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
+        //createAlbum
+        PhotoSave3 = new HookTarget("gm.A", "");
+        //reactionListModel
+        ReactionList = new HookTarget("Iy.m", "");
+
+
+    }
 
     }
 
