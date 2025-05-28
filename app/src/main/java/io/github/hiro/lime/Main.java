@@ -203,15 +203,12 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         View rootView = (View) param.getResult();
                         Context context = rootView.getContext();
-                        String packageName = context.getPackageName();
-                        String versionName = context.getPackageManager()
-                                .getPackageInfo(packageName, 0)
-                                .versionName;
-
+                        PackageManager pm = context.getPackageManager();
+                        String versionName = pm.getPackageInfo(lpparam.packageName, 0).versionName;
                         String fragmentClass;
                         if (isVersionInRange(versionName, "15.5.0", "15.6.0")) {
                             fragmentClass = "androidx.fragment.app.n";
-                        } else if (isVersionInRange(versionName, "15.6.0", "15.7.0")) {
+                        } else if (isVersionInRange(versionName, "15.6.0", "15.6.9")) {
                             fragmentClass = "androidx.fragment.app.m";
                         } else if (isVersionInRange(versionName, "15.7.0", "15.8.0")) {
                             fragmentClass = "androidx.fragment.app.n";

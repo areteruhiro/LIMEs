@@ -53,6 +53,7 @@ public class Constants {
 
         PackageManager pm = context.getPackageManager();
         String versionName = ""; // 初期化
+        String versionNameStr = String.valueOf(versionName);
         try {
             versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
         } catch (PackageManager.NameNotFoundException e) {
@@ -70,11 +71,7 @@ public class Constants {
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("af0.e", "run");
-
             ChatRestore = new HookTarget("androidx.fragment.app.r", "onActivityResult");
-
-//            RemoveVoiceRecord_Hook_b = new HookTarget("xg1.e$a", "run");
-            //          RemoveVoiceRecord_Hook_c = new HookTarget("TS.f", "run");
         } else if (versionName.equals("14.21.1")) {
             USER_AGENT_HOOK = new HookTarget("vf1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("pN0.l", "onPageFinished");
@@ -85,10 +82,7 @@ public class Constants {
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
-
             ChatRestore = new HookTarget("androidx.fragment.app.o", "onActivityResult");
-            //       RemoveVoiceRecord_Hook_b = new HookTarget("Fi1.j", "run");
-            //     RemoveVoiceRecord_Hook_c = new HookTarget("Fi1.j", "run");
         } else if (versionName.equals("15.0.0")) {
             USER_AGENT_HOOK = new HookTarget("Sg1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("FO0.l", "onPageFinished");
@@ -99,11 +93,7 @@ public class Constants {
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
-
             ChatRestore = new HookTarget("androidx.fragment.app.o", "onActivityResult");
-
-//            RemoveVoiceRecord_Hook_b = new HookTarget("uk1.e$a", "run");
-//            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
         } else if (isVersionInRange(versionName, "15.1.0", "15.2.0")) {
             USER_AGENT_HOOK = new HookTarget("qi1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("VP0.k", "onPageFinished");
@@ -114,11 +104,8 @@ public class Constants {
             REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
-
             ChatRestore = new HookTarget("androidx.fragment.app.o", "onActivityResult");
-
 //        null cannot be cast to non-null type androidx.activity.result.ActivityResultCallback<O of androidx.activity.result.ActivityResultRegistry.dispatchResult>
-//            RemoveVoiceRecord_Hook_c = new HookTarget("C30.f", "run");
 
         } else if (isVersionInRange(versionName, "15.2.0", "15.2.1")) {
 
@@ -131,7 +118,6 @@ public class Constants {
         REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
         RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
         RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
-
         ChatRestore = new HookTarget("androidx.fragment.app.p", "onActivityResult");
 
     } else if (isVersionInRange(versionName, "15.3.0", "15.4.0")) {
@@ -222,32 +208,11 @@ public class Constants {
 
             XposedBridge.log("15.5.1-15.5.4 Patched ");
 
-                     /*
-            TRADITIONAL_CHINESE
-            static  HookTarget USER_AGENT_HOOK = new HookTarget("ek1.c", "j");
-            HANDLED_AND_RETURN_TRUE
-            static     WEBVIEW_CLIENT_HOOK = new HookTarget("CR0.m", "onPageFinished");
-            NOTIFICATION_DISABLED
-            static  HookTarget MUTE_MESSAGE_HOOK = new HookTarget("Xi1.b", "I");
-            PROCESSING
-            static  HookTarget   MARK_AS_READ_HOOK = new HookTarget("aQ.c$d", "run");
-
-        ChatListViewModel
-            static  HookTarget Archive = new HookTarget("tC.S", "invokeSuspend");
-          StreamingFetchOperationHandler
-            static  HookTargetNOTIFICATION_READ_HOOK = new HookTarget("yk1.b", "invokeSuspend");
-
-            //%s failed: out of sequence response: expected %d but got %d
-            static  HookTarget   REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
-            static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
-          */
-
-            //BackEventCompat
             USER_AGENT_HOOK = new HookTarget("ej1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("FS0.l", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("Xh1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("mQ.c$d", "run");
-            Archive = new HookTarget("jD.T", "invokeSuspend");
+            Archive = new HookTarget("JC.Z", "invokeSuspend");
 
             NOTIFICATION_READ_HOOK = new HookTarget("yj1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
@@ -256,49 +221,16 @@ public class Constants {
             RemoveVoiceRecord_Hook_a = new HookTarget("h.j", "run");
 
             ChatRestore = new HookTarget("androidx.fragment.app.n", "onActivityResult");
-//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
-            //getAllChatIds
             PhotoSave = new HookTarget("Cg1.s0", "");
-
-//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
-            //VideoPlaybackSyncEvent(localMessageId
             PhotoSave1 = new HookTarget("Ib1.L", "");
-
-            //DIRECTORY_PICTURES
             PhotoSave2 = new HookTarget("jR.g", "");
-
-//com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
-            //createAlbum
             PhotoSave3 = new HookTarget("gm.y", "");
-            //reactionListModel
             ReactionList = new HookTarget("Ky.m", "");
 
 
         } else if (isVersionInRange(versionName, "15.6.0", "15.7.0")) {
 
             XposedBridge.log("15.6.0 Patched ");
-
-                     /*
-            TRADITIONAL_CHINESE
-            static  HookTarget USER_AGENT_HOOK = new HookTarget("ek1.c", "j");
-            HANDLED_AND_RETURN_TRUE
-            static     WEBVIEW_CLIENT_HOOK = new HookTarget("CR0.m", "onPageFinished");
-            NOTIFICATION_DISABLED
-            static  HookTarget MUTE_MESSAGE_HOOK = new HookTarget("Xi1.b", "I");
-            PROCESSING
-            static  HookTarget   MARK_AS_READ_HOOK = new HookTarget("aQ.c$d", "run");
-
-        ChatListViewModel
-            static  HookTarget Archive = new HookTarget("tC.S", "invokeSuspend");
-          StreamingFetchOperationHandler
-            static  HookTargetNOTIFICATION_READ_HOOK = new HookTarget("yk1.b", "invokeSuspend");
-
-            //%s failed: out of sequence response: expected %d but got %d
-            static  HookTarget   REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
-            static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
-          */
-
-            //BackEventCompat
             USER_AGENT_HOOK = new HookTarget("xj1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("bT0.l", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("qi1.b", "I");
@@ -359,7 +291,7 @@ public class Constants {
         WEBVIEW_CLIENT_HOOK = new HookTarget("CS0.m", "onPageFinished");
         MUTE_MESSAGE_HOOK = new HookTarget("Lh1.b", "I");
         MARK_AS_READ_HOOK = new HookTarget("dR.d$d", "run");
-        Archive = new HookTarget("JC.b0", "invokeSuspend");
+        Archive = new HookTarget("jD.T", "invokeSuspend");
 
         NOTIFICATION_READ_HOOK = new HookTarget("Rj1.b", "invokeSuspend");
         REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
@@ -367,7 +299,7 @@ public class Constants {
 
         RemoveVoiceRecord_Hook_a = new HookTarget("h.j", "run");
 
-        ChatRestore = new HookTarget("androidx.fragment.app.m", "onActivityResult");
+        ChatRestore = new HookTarget("androidx.fragment.app.n", "onActivityResult");
 //jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
         //getAllChatIds
         PhotoSave = new HookTarget("Vg1.l0", "");

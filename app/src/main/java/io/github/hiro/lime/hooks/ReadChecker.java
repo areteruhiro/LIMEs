@@ -334,48 +334,47 @@ public class ReadChecker implements IHook {
             limeDatabase.beginTransaction();
 
 // NULLグループIDの処理
-            try (Cursor nullGroupIdCursor = limeDatabase.rawQuery(
-                    "SELECT server_id, user_name FROM read_message WHERE group_id = 'null'", null)) {
-
-                XposedBridge.log(TAG + " - Processing null groupIds...");
-                while (nullGroupIdCursor.moveToNext()) {
-                    String serverId = nullGroupIdCursor.getString(0);
-                    String userName = nullGroupIdCursor.getString(1);
-                    XposedBridge.log(TAG + " - Processing serverId: " + serverId + ", user: " + userName);
-
-                    String chatId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
-                    XposedBridge.log(TAG + " - Retrieved chatId: " + chatId);
-
-                    if (chatId != null && !"null".equals(chatId)) {
-                        try {
-                            // グループIDを更新
-                            limeDatabase.execSQL("UPDATE read_message SET group_id=? WHERE server_id=?",
-                                    new String[]{chatId, serverId});
-                            XposedBridge.log(TAG + " - Updated group_id for serverId: " + serverId);
-
-                            // コンテンツ情報を取得
-                            String contentRetry = queryDatabaseWithRetry(db3,
-                                    "SELECT content FROM chat_history WHERE server_id=?", serverId);
-                            contentRetry = (contentRetry != null && !"null".equals(contentRetry)) ? contentRetry : "null";
-                            String mediaDescription = getMediaDescription(serverId, contentRetry, moduleContext);
-                            String finalContent = "null".equals(contentRetry) ? mediaDescription : contentRetry;
-
-                            // 関連レコード処理を実行（新しいグループIDで）
-                            processRelatedRecords(chatId, serverId, finalContent);
-
-                            processSameGroupId(serverId, chatId, userName);
-                            updateSendUser(serverId);
-
-                        } catch (SQLException e) {
-                            XposedBridge.log(TAG + " - UPDATE failed for serverId: " + serverId);
-                            XposedBridge.log(e);
-                        }
-                    }
-                }
-            } catch (SQLException e) {
-                XposedBridge.log(TAG + " - Error processing null groupIds");
-                XposedBridge.log(e);
-            }
+//            try (Cursor nullGroupIdCursor = limeDatabase.rawQuery(
+//                    "SELECT server_id, user_name FROM read_message WHERE group_id = 'null'", null)) {
+//                XposedBridge.log(TAG + " - Processing null groupIds...");
+//                while (nullGroupIdCursor.moveToNext()) {
+//                    String serverId = nullGroupIdCursor.getString(0);
+//                    String userName = nullGroupIdCursor.getString(1);
+//                    XposedBridge.log(TAG + " - Processing serverId: " + serverId + ", user: " + userName);
+//
+//                    String chatId = queryDatabase(db3, "SELECT chat_id FROM chat_history WHERE server_id=?", serverId);
+//                    XposedBridge.log(TAG + " - Retrieved chatId: " + chatId);
+//
+//                    if (chatId != null && !"null".equals(chatId)) {
+//                        try {
+//                            // グループIDを更新
+//                            limeDatabase.execSQL("UPDATE read_message SET group_id=? WHERE server_id=?",
+//                                    new String[]{chatId, serverId});
+//                            XposedBridge.log(TAG + " - Updated group_id for serverId: " + serverId);
+//
+//                            // コンテンツ情報を取得
+//                            String contentRetry = queryDatabaseWithRetry(db3,
+//                                    "SELECT content FROM chat_history WHERE server_id=?", serverId);
+//                            contentRetry = (contentRetry != null && !"null".equals(contentRetry)) ? contentRetry : "null";
+//                            String mediaDescription = getMediaDescription(serverId, contentRetry, moduleContext);
+//                            String finalContent = "null".equals(contentRetry) ? mediaDescription : contentRetry;
+//
+//                            // 関連レコード処理を実行（新しいグループIDで）
+//                            processRelatedRecords(chatId, serverId, finalContent);
+//
+//                            processSameGroupId(serverId, chatId, userName);
+//                            updateSendUser(serverId);
+//
+//                        } catch (SQLException e) {
+//                            XposedBridge.log(TAG + " - UPDATE failed for serverId: " + serverId);
+//                            XposedBridge.log(e);
+//                        }
+//                    }
+//                }
+//            } catch (SQLException e) {
+//                XposedBridge.log(TAG + " - Error processing null groupIds");
+//                XposedBridge.log(e);
+//            }
 
             // 指定groupIdの処理
             try (Cursor groupCursor = limeDatabase.rawQuery(
@@ -433,6 +432,8 @@ public class ReadChecker implements IHook {
             }
         }
     }
+
+
     private void processSameGroupId(String serverId, String chatId, String userName) {
         try (Cursor sameGroupIdCursor = limeDatabase.rawQuery(
                 "SELECT server_id, user_name FROM read_message WHERE group_id=? AND server_id != ?",
@@ -1195,12 +1196,14 @@ public class ReadChecker implements IHook {
                     timeFormatted
             });
         } catch (SQLException e) {
+
             XposedBridge.log("Database insert error: " + e.getMessage());
             XposedBridge.log(e);
             XposedBridge.log("Failed data: " +
                     "group=" + groupName + ", " +
                     "sender=" + SendUser + ", " +
                     "content=" + finalContent);
+            return;
         }
     }
 }
