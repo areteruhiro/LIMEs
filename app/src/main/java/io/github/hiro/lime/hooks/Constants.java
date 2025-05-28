@@ -243,7 +243,7 @@ public class Constants {
 
             RemoveVoiceRecord_Hook_a = new HookTarget("h.j", "run");
 
-            ChatRestore = new HookTarget("androidx.fragment.app.n", "onActivityResult");
+            ChatRestore = new HookTarget("androidx.fragment.app.m", "onActivityResult");
 //jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
             //getAllChatIds
             PhotoSave = new HookTarget("rg1.n0", "");

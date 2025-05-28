@@ -206,7 +206,17 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                         PackageManager pm = context.getPackageManager();
                         String versionName = pm.getPackageInfo(lpparam.packageName, 0).versionName;
                         String fragmentClass;
-                        if (isVersionInRange(versionName, "15.5.0", "15.6.0")) {
+                        if (isVersionInRange(versionName, "14.19.1", "14.20.0")) {
+                            fragmentClass = "androidx.fragment.app.r";
+                        } else if (isVersionInRange(versionName, "14.2.0", "15.2.0")) {
+                            fragmentClass = "androidx.fragment.app.o";
+                        } else if (isVersionInRange(versionName, "15.2.0", "15.3.0")) {
+                            fragmentClass = "androidx.fragment.app.p";
+                        } else if (isVersionInRange(versionName, "15.3.0", "15.4.0")) {
+                            fragmentClass = "androidx.fragment.app.n";
+                        } else  if (isVersionInRange(versionName, "15.4.0", "15.4.1")) {
+                                fragmentClass = "androidx.fragment.app.p";
+                        } else  if (isVersionInRange(versionName, "15.5.0", "15.6.0")) {
                             fragmentClass = "androidx.fragment.app.n";
                         } else if (isVersionInRange(versionName, "15.6.0", "15.6.9")) {
                             fragmentClass = "androidx.fragment.app.m";
