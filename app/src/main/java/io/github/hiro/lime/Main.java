@@ -219,7 +219,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                         } else  if (isVersionInRange(versionName, "15.5.0", "15.6.0")) {
                             fragmentClass = "androidx.fragment.app.n";
                         } else if (isVersionInRange(versionName, "15.6.0", "15.6.9")) {
-                            fragmentClass = "androidx.fragment.app.m";
+                            fragmentClass = "androidx.fragment.app.n";
                         } else if (isVersionInRange(versionName, "15.7.0", "15.8.0")) {
                             fragmentClass = "androidx.fragment.app.n";
                         } else {
