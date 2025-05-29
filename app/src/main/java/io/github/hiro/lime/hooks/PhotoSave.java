@@ -68,7 +68,7 @@ public class PhotoSave implements IHook {
             e.printStackTrace();
         }
 
-        if (!isVersionInRange(versionName, "15.3.0", "15.6.0"))return;
+        if (!isVersionInRange(versionName, "15.3.0", "99.99.99"))return;
         XposedHelpers.findAndHookMethod(Application.class, "onCreate", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -254,7 +254,7 @@ public class PhotoSave implements IHook {
         );
 
         XposedBridge.hookAllMethods(
-                loadPackageParam.classLoader.loadClass("YP.I"),
+                loadPackageParam.classLoader.loadClass(Constants.Video.className),
                 "invokeSuspend",
                 new XC_MethodHook() {
                     @Override
@@ -266,7 +266,7 @@ public class PhotoSave implements IHook {
         );
 
 
-        // Ec1.Uのフック
+
         XposedBridge.hookAllMethods(
                 loadPackageParam.classLoader.loadClass(Constants.PhotoSave1.className),
                 "invokeSuspend",

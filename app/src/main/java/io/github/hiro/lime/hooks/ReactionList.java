@@ -59,7 +59,8 @@ public class ReactionList implements IHook {
             e.printStackTrace();
         }
 
-        if (!isVersionInRange(versionName, "15.4.1", "15.6.0"))return;
+        if (!isVersionInRange(versionName, "15.3.0", "99.99.99"))return;
+
         XposedBridge.hookAllMethods(
                 loadPackageParam.classLoader.loadClass(Constants.ReactionList.className),
                 "invokeSuspend",

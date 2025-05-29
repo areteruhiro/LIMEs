@@ -98,7 +98,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new PhotoSave(),
             new ReactionList(),
             new WhiteToDark(),
-            new DisableSilentMessage()
+            new DisableSilentMessage(),
     };
 
 
