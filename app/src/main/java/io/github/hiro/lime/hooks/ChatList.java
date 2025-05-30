@@ -143,7 +143,6 @@ public class ChatList implements IHook {
     }
 
     private void hookSAMethod(XC_LoadPackage.LoadPackageParam loadPackageParam,SQLiteDatabase db,SQLiteDatabase db2) {
-        //ChatListViewModel
         Class<?> targetClass = XposedHelpers.findClass(Constants.Archive.className, loadPackageParam.classLoader);
 
         XposedBridge.hookAllMethods(targetClass, Constants.Archive.methodName, new XC_MethodHook() {

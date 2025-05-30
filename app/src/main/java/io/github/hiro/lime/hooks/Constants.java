@@ -215,7 +215,7 @@ public class Constants {
             WEBVIEW_CLIENT_HOOK = new HookTarget("FS0.l", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("Xh1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("mQ.c$d", "run");
-            Archive = new HookTarget("JC.Z", "invokeSuspend");
+            Archive = new HookTarget("JC.Y", "invokeSuspend");
 
             NOTIFICATION_READ_HOOK = new HookTarget("yj1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
@@ -275,7 +275,7 @@ public class Constants {
             WEBVIEW_CLIENT_HOOK = new HookTarget("CS0.m", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("Lh1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("dR.d$d", "run");
-            Archive = new HookTarget("jD.T", "invokeSuspend");
+            Archive = new HookTarget("jD.S", "invokeSuspend");
 
             NOTIFICATION_READ_HOOK = new HookTarget("Rj1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");

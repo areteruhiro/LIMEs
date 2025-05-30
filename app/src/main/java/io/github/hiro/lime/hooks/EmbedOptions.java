@@ -109,7 +109,7 @@ public class EmbedOptions implements IHook {
                                 }
 
                                 CustomPreferences customPreferences = new CustomPreferences(contextV);
-                                Set<String> checkedOptions = new HashSet<>(); // 重複をチェックするためのセット
+                                Set<String> checkedOptions = new HashSet<>();
 
                                 for (LimeOptions.Option option : limeOptions.options) {
                                     if (!checkedOptions.contains(option.name)) {
@@ -122,13 +122,11 @@ public class EmbedOptions implements IHook {
                                 Context context = viewGroup.getContext();
                                 Utils.addModuleAssetPath(context);
 
-                                // 画面全体に表示するためのレイアウト
                                 FrameLayout rootLayout = new FrameLayout(context);
                                 rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
                                         ViewGroup.LayoutParams.MATCH_PARENT,
                                         ViewGroup.LayoutParams.MATCH_PARENT));
 
-                                // ボタンの設定
                                 Button button = new Button(context);
                                 button.setText(R.string.app_name);
 
@@ -138,7 +136,6 @@ public class EmbedOptions implements IHook {
                                 layoutParams.gravity = Gravity.TOP | Gravity.END;
                                 layoutParams.rightMargin = Utils.dpToPx(10, context);
 
-                                // ステータスバーの高さを取得
                                 int statusBarHeight = getStatusBarHeight(context);
 
                                 String versionNameStr = String.valueOf(versionName);
@@ -1616,23 +1613,14 @@ public class EmbedOptions implements IHook {
 
     private void Cancel_Message_Button(Context context, Context moduleContext) {
 
-        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/Setting");
+        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
 
 
-        if (!dir.exists()) {
-
-            dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/LimeBackup/Setting");
-
-            if (!dir.exists()) {
-                dir = new File(context.getFilesDir(), "LimeBackup/Setting");
-            }
-
-
-            if (!dir.exists() && !dir.mkdirs()) {
-                Toast.makeText(context, "Failed to create directory", Toast.LENGTH_SHORT).show();
-                return;
-            }
+        if (!dir.exists() && !dir.mkdirs()) {
+            Toast.makeText(context, "Failed to create directory", Toast.LENGTH_SHORT).show();
+            return;
         }
+
 
         File file = new File(dir, "canceled_message.txt");
 

@@ -606,7 +606,7 @@ public class UnsentRec implements IHook {
 
     private String getCanceledContentFromFile(Context context,Context moduleContext) {
         // フォルダのパスを設定
-        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/Setting");
+        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
         if (!dir.exists()) {
             if (!dir.mkdirs()) {
                 return moduleContext.getResources().getString(R.string.canceled_message_txt); // フォルダ作成失敗時のデフォルト値
