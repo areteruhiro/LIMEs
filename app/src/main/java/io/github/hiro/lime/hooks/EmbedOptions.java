@@ -151,7 +151,7 @@ public class EmbedOptions implements IHook {
 
                                 button.setOnClickListener(view -> {
                                     // カテゴリ一覧画面を生成
-                                    LinearLayout categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
+                                    ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
                                     showView(rootLayout, categoryLayout);
                                 });
 
@@ -823,7 +823,14 @@ public class EmbedOptions implements IHook {
         parent.addView(view);
     }
 
-    private LinearLayout createCategoryListLayout(Context context, List<LimeOptions.Option> options, CustomPreferences customPreferences, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
+    private ScrollView createCategoryListLayout(Context context, List<LimeOptions.Option> options, CustomPreferences customPreferences, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
+        // ScrollView を親レイアウトとして作成
+        ScrollView scrollView = new ScrollView(context);
+        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT));
+
+        // スクロール対象の LinearLayout（WRAP_CONTENT で高さを自動調整）
         LinearLayout layout = new LinearLayout(context);
         layout.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -833,17 +840,19 @@ public class EmbedOptions implements IHook {
         layout.setBackgroundColor(Color.BLACK);
         layout.setClickable(true);
         layout.setFocusable(true);
+        scrollView.setFillViewport(true);
 
-        String LIMEs_versionName = BuildConfig.VERSION_NAME; // versionNameを取得
+         // バージョン情報を表示
+        String LIMEs_versionName = BuildConfig.VERSION_NAME;
         TextView versionTextView = new TextView(context);
         versionTextView.setText("LIMEs" + " (" + LIMEs_versionName + ")");
         versionTextView.setTextSize(16);
         versionTextView.setTextColor(Color.WHITE);
-        versionTextView.setGravity(Gravity.CENTER); // 中央揃え
-        versionTextView.setPadding(0, Utils.dpToPx(10, context), 0, Utils.dpToPx(10, context)); // 上下に10dpのパディングを設定
+        versionTextView.setGravity(Gravity.CENTER);
+        versionTextView.setPadding(0, Utils.dpToPx(10, context), 0, Utils.dpToPx(10, context));
         layout.addView(versionTextView);
 
-
+        // カテゴリごとにオプションを分類
         Map<LimeOptions.OptionCategory, List<LimeOptions.Option>> categorizedOptions = new LinkedHashMap<>();
 
         List<LimeOptions.OptionCategory> categoryOrder = Arrays.asList(
@@ -856,11 +865,12 @@ public class EmbedOptions implements IHook {
                 LimeOptions.OptionCategory.OTHER
         );
 
-
+        // カテゴリごとに空のリストを初期化
         for (LimeOptions.OptionCategory category : categoryOrder) {
             categorizedOptions.put(category, new ArrayList<>());
         }
 
+        // オプションをカテゴリごとに分類
         for (LimeOptions.Option option : options) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 categorizedOptions
@@ -869,6 +879,7 @@ public class EmbedOptions implements IHook {
             }
         }
 
+        // 各カテゴリのタイトルとクリックイベントを設定
         for (Map.Entry<LimeOptions.OptionCategory, List<LimeOptions.Option>> entry : categorizedOptions.entrySet()) {
             LimeOptions.OptionCategory category = entry.getKey();
             List<LimeOptions.Option> optionsInCategory = entry.getValue();
@@ -880,7 +891,6 @@ public class EmbedOptions implements IHook {
             categoryTitle.setTextColor(Color.WHITE);
             categoryTitle.setClickable(true);
             categoryTitle.setOnClickListener(v -> {
-
                 LinearLayout optionsLayout = createOptionsLayout(context, optionsInCategory, customPreferences, moduleContext, loadPackageParam);
                 showView((ViewGroup) layout.getParent(), optionsLayout);
             });
@@ -888,15 +898,17 @@ public class EmbedOptions implements IHook {
             layout.addView(categoryTitle);
         }
 
+        // 追加ボタンを設置（例: 設定リセットなど）
         addAdditionalButtons(context, layout, customPreferences, moduleContext);
 
+        // 保存（再起動）ボタン
         Button saveButton = new Button(context);
         saveButton.setText(moduleContext.getString(R.string.Restart));
-        saveButton.setTextColor(Color.WHITE); // テキスト色を白色に設定
-        saveButton.setBackgroundColor(Color.DKGRAY); // ボタンの背景色を暗い灰色に設定
+        saveButton.setTextColor(Color.WHITE);
+        saveButton.setBackgroundColor(Color.DKGRAY);
         saveButton.setOnClickListener(v -> {
             boolean optionChanged = false;
-            boolean saveSuccess = true; // 保存成功フラグ
+            boolean saveSuccess = true;
 
             for (LimeOptions.Option option : limeOptions.options) {
                 if (!customPreferences.saveSetting(option.name, String.valueOf(option.checked))) {
@@ -908,33 +920,26 @@ public class EmbedOptions implements IHook {
                 Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();
             } else {
                 Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                // 順序変更: 先に再起動処理を実行
                 context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
                 Process.killProcess(Process.myPid());
             }
         });
         layout.addView(saveButton);
 
-        // 一覧を非表示にするボタン
+        // 戻るボタン
         Button hideButton = new Button(context);
         hideButton.setText(moduleContext.getString(R.string.back));
-        hideButton.setTextColor(Color.WHITE); // テキスト色を白色に設定
-        hideButton.setBackgroundColor(Color.DKGRAY); // ボタンの背景色を暗い灰色に設定
+        hideButton.setTextColor(Color.WHITE);
+        hideButton.setBackgroundColor(Color.DKGRAY);
         hideButton.setOnClickListener(v -> {
-            // 一覧を非表示にする
             showView((ViewGroup) layout.getParent(), createButtonLayout(context, customPreferences, moduleContext, loadPackageParam, loadPackageParam));
         });
         layout.addView(hideButton);
 
-        ScrollView scrollView = new ScrollView(context);
-        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
+        // LinearLayout を ScrollView に追加
         scrollView.addView(layout);
-
-        return layout;
+        return scrollView;
     }
-
     private LinearLayout createOptionsLayout(Context context, List<LimeOptions.Option> options, CustomPreferences customPreferences, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
         LinearLayout layout = new LinearLayout(context);
         layout.setLayoutParams(new LinearLayout.LayoutParams(
@@ -1120,7 +1125,7 @@ public class EmbedOptions implements IHook {
         backButton.setTextColor(Color.WHITE);
         backButton.setBackgroundColor(Color.DKGRAY);
         backButton.setOnClickListener(v -> {
-            LinearLayout categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
+            ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
             showView((ViewGroup) layout.getParent(), categoryLayout);
         });
         layout.addView(backButton);
@@ -1188,7 +1193,7 @@ public class EmbedOptions implements IHook {
 
         button.setOnClickListener(view -> {
 
-            LinearLayout categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
+            ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
             showView(rootLayout, categoryLayout);
         });
 
