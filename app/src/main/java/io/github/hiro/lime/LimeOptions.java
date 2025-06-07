@@ -91,9 +91,10 @@ public class LimeOptions {
          public Option DisableSilentMessage = new Option("DisableSilentMessage", R.string.DisableSilentMessage, false, OptionCategory.NOTIFICATIONS);
 
         public Option NotificationNull = new Option("NotificationNull", R.string.NotificationNull, false, OptionCategory.NOTIFICATIONS);
+        public Option NotificationReaction = new Option("NotificationReaction", R.string.NotificationReaction, false, OptionCategory.NOTIFICATIONS);
 
 
-        public Option DarkColor = new Option("DarkColor", R.string.DarkColor, false, OptionCategory.Theme);
+    public Option DarkColor = new Option("DarkColor", R.string.DarkColor, false, OptionCategory.Theme);
         public Option DarkModSync = new Option("DarkModSync", R.string.DarkkModSync, true, OptionCategory.Theme);
 
         public Option callTone = new Option("callTone", R.string.callTone, false, OptionCategory.CALL);
@@ -122,6 +123,7 @@ public class LimeOptions {
         public Option PhotoSave = new Option("PhotoSave", R.string.PhotoSave, false, OptionCategory.CHAT);
         public Option stopVersionCheck = new Option("stop_version_check", R.string.switch_stop_version_check, false, OptionCategory.OTHER);
         public Option WhiteToDark = new Option("WhiteToDark", R.string.WhiteToDark, false, OptionCategory.Theme);
+
 
 
     public Option[] options = {
@@ -167,7 +169,7 @@ public class LimeOptions {
                 photoboothButtonOption, voiceButtonOption, videoButtonOption, videoSingleButtonOption,
                 AutoUpDateCheck, PinList,
                 NewOption, PhotoSave,
-                ReactionCount,WhiteToDark
+                ReactionCount,WhiteToDark,NotificationReaction
         };
 
 

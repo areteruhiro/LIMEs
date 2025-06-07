@@ -226,8 +226,6 @@
     <string name="PhotoSave">"MediaReNameSave (DevNow) "</string>
     <string name="media">Media</string>
 
-    <string name="media_message_no_sender">%s was sent</string>
-    <string name="media_message_with_sender">%s sent %s</string>
     <string name="restoring_chat_history">Restoring Chat History</string>
     <string name="preparing">Preparing...</string>
     <string name="progress_message">%1$d/%2$d items (%3$d%%)</string>
@@ -245,7 +243,6 @@
     <string name="SettingSave">保存成功</string>
     <string name="file_copy_error">Failed to Copy Temporary File</string>
     <string name="Delete_Cache">Please Clear LINE Cache</string>
-    <string name="Send_Message">was sent</string>
 
     <string name="call_duration_format">Call duration %02d:%02d</string>
     <string name="missed_call">Missed call</string>
@@ -255,4 +252,5 @@
     <string name="NotificationNull">NotificationNull</string>
     <string name="DisableSilentMessage">DevNow Disable silent messages (You will be notified with a notification for the next notification)</string>
     <string name="SilentCheck">SilentCheck</string>
+    <string name="NotificationReaction">NotificationReaction</string>
 </resources>

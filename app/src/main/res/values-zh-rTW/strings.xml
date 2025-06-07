@@ -213,9 +213,6 @@
     <string name="PhotoSave">"MediaReNameSave (DevNow) "</string>
     <string name="media">Media</string>
 
-    <string name="Send_Message">請清除 LINE 快取</string>
-    <string name="media_message_no_sender">已發送%s</string>
-    <string name="media_message_with_sender">%1$s發送了%2$s</string>
     <string name="Restore_Cancelled">恢復已取消</string>
     <string name="original_ID">使用原始通知 ID（回覆錯誤將被修正，但通知會被覆蓋）</string>
     <string name="NewOption">新的設定畫面</string>
@@ -240,5 +237,6 @@
     <string name="NotificationNull">NotificationNull</string>
     <string name="DisableSilentMessage">DevNow Disable silent messages (You will be notified with a notification for the next notification)</string>
     <string name="SilentCheck">SilentCheck</string>
+    <string name="NotificationReaction">NotificationReaction</string>
 
 </resources>

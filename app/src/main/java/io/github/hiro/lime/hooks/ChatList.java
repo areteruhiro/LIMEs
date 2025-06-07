@@ -347,7 +347,10 @@ public class ChatList implements IHook {
         long newTime = UNIX_MAX - number;
 
         long originalTime = getOriginalLastCreatedTime(db, chatId);
-        if (originalTime == -1) return;
+
+        if (originalTime == -1 || originalTime == newTime) {
+            return;
+        }
 
         saveChangeToFile(chatId, originalTime);
 
@@ -361,7 +364,7 @@ public class ChatList implements IHook {
             statement.executeUpdateDelete();
             db.setTransactionSuccessful();
 
-            PinListFix(db, db2, moduleContext, chatId);
+            // PinListFix(db, db2, moduleContext, chatId);
         } catch (SQLException e) {
             XposedBridge.log("Update error: " + e.getMessage());
         } finally {
@@ -369,111 +372,6 @@ public class ChatList implements IHook {
         }
     }
 
-    private void PinListFix(SQLiteDatabase db, SQLiteDatabase db2, Context moduleContext, String chatId) {
-        String latestMessageQuery = "SELECT content, parameter, type, from_mid FROM chat_history WHERE chat_id = ? ORDER BY id DESC LIMIT 1";
-
-        try (Cursor cursor = db.rawQuery(latestMessageQuery, new String[]{chatId})) {
-            if (cursor != null && cursor.moveToFirst()) {
-                String latestContent = cursor.getString(cursor.getColumnIndexOrThrow("content"));
-                String parameter = cursor.getString(cursor.getColumnIndexOrThrow("parameter"));
-                String fromMid = cursor.getString(cursor.getColumnIndexOrThrow("from_mid"));
-
-                if (latestContent == null || latestContent.isEmpty()) {
-                    String mediaType = getMediaDescription(moduleContext, parameter);
-
-                    if (fromMid == null) {
-                        latestContent = String.format(
-                                moduleContext.getString(R.string.media_message_no_sender),
-                                mediaType
-                        );
-                    } else {
-                        String senderName = getSenderName(db2, fromMid);
-                        latestContent = String.format(
-                                moduleContext.getString(R.string.media_message_with_sender),
-                                senderName,
-                                mediaType
-                        );
-                    }
-                } else if (latestContent.startsWith("Call History :")) {
-                    // Handle call history formatting
-                    int result = 0;
-                    long millisecs = 0;
-
-                    // Extract millisecs and result from the content
-                    try {
-                        String[] parts = latestContent.split(", ");
-                        for (String part : parts) {
-                            if (part.startsWith("Call History :")) {
-                                millisecs = Long.parseLong(part.replace("Call History :", "").replace(" millisecs", "").trim());
-                            } else if (part.startsWith("Result:")) {
-                                result = Integer.parseInt(part.replace("Result:", "").trim());
-                            }
-                        }
-
-                        if (result == 16) {
-                            // Format as "通話時間 00:00"
-                            long seconds = millisecs / 1000;
-                            long minutes = seconds / 60;
-                            seconds = seconds % 60;
-                            latestContent = String.format(moduleContext.getString(R.string.call_duration_format),
-                                    minutes, seconds);
-                        } else if (result == 77 && millisecs == 0) {
-                            if (fromMid == null) {
-                                latestContent = moduleContext.getString(R.string.call_cancelled);
-                            } else {
-                                latestContent = moduleContext.getString(R.string.missed_call);
-                            }
-                        }
-                    } catch (Exception e) {
-                        XposedBridge.log("Error parsing call history: " + e.getMessage());
-                    }
-                }
-
-                updateChatLastMessage(db, chatId, latestContent);
-            } else {
-                // XposedBridge.log("No message found for chat: " + chatId);
-            }
-        } catch (SQLException e) {
-            XposedBridge.log("DB error: " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            XposedBridge.log("Column error: " + e.getMessage());
-        }
-    }
-
-    private void updateChatLastMessage(SQLiteDatabase db, String chatId, String newMessage) {
-        String query = "SELECT last_message FROM chat WHERE chat_id = ?";
-        try (Cursor cursor = db.rawQuery(query, new String[]{chatId})) {
-            if (cursor != null && cursor.moveToFirst()) {
-                String current = cursor.getString(0);
-                if (current == null || !current.equals(newMessage)) {
-                    db.execSQL("UPDATE chat SET last_message = ? WHERE chat_id = ?",
-                            new Object[]{newMessage, chatId});
-                    //   XposedBridge.log("Updated last message for chat: " + chatId);
-                }
-            }
-        }
-    }
-
-    private String getSenderName(SQLiteDatabase db, String mid) {
-        if (mid == null) return "Unknown";
-        try (Cursor cursor = db.rawQuery(
-                "SELECT profile_name FROM contacts WHERE mid = ?", new String[]{mid})) {
-            return (cursor != null && cursor.moveToFirst()) ?
-                    cursor.getString(0) : "Unknown";
-        }
-    }
-
-    private String getMediaDescription(Context moduleContext, String parameter) {
-        if (parameter == null) return  moduleContext.getResources().getString(R.string.file);
-
-        if (parameter.contains("IMAGE")) return  moduleContext.getResources().getString(R.string.picture);
-        if (parameter.contains("video")) return  moduleContext.getResources().getString(R.string.video);
-        if (parameter.contains("STKPKGID")) return  moduleContext.getResources().getString(R.string.sticker);
-        if (parameter.contains("FILE")) return  moduleContext.getResources().getString(R.string.file);
-        if (parameter.contains("LOCATION")) return  moduleContext.getResources().getString(R.string.location);
-
-        return  moduleContext.getResources().getString(R.string.file);
-    }
     private void restoreMissingEntries(Context appContext,SQLiteDatabase db) {
         // XposedBridge.log("復元処理開始");
 

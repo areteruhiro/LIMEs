@@ -48,6 +48,8 @@ public class InstallModule implements IHook {
                         try {
                             Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                     "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                            moduleContext.getResources();
+
                         } catch (Exception e) {
                             fetchLatestReleaseVersion(context, new UpdateCheckCallback() {
                                 @Override
@@ -208,6 +210,4 @@ public class InstallModule implements IHook {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show();
         });
     }
-
-    // ...既存のヘルパーメソッド...
 }

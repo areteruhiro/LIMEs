@@ -35,7 +35,7 @@ public class DisableSilentMessage implements IHook {
     private SQLiteDatabase db3 = null;
     private SQLiteDatabase db4 = null;
     private static final Set<String> processedMessages = Collections.synchronizedSet(new HashSet<>());
-    private static  Context context;
+    private Context context;
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.DisableSilentMessage.checked) return;

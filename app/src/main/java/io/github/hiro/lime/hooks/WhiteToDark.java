@@ -60,11 +60,10 @@ public class WhiteToDark implements IHook {
                     "com.linecorp.line.chatskin.impl.main.ChatSkinSettingsActivity$d",
                     loadPackageParam.classLoader,
                     "invokeSuspend",
-                    Object.class, // 引数の型を指定
+                    Object.class,
                     new XC_MethodHook() {
                         @Override
                         protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                            // DARKモードを強制するための列挙型を取得
                             Class<?> modeClass = XposedHelpers.findClass("Xv0.m$b", loadPackageParam.classLoader);
                             Object darkEnum = Enum.valueOf((Class<Enum>) modeClass, "DARK");
                             param.args[0] = darkEnum; // 引数をDARKに設定
@@ -97,7 +96,6 @@ public class WhiteToDark implements IHook {
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                     Object hInstance = param.args[0]; // 引数を取得
-                    // 常に DARK_MODE を返す
                     Object mode = fClass.getField("DARK_MODE").get(null); // DARK_MODEを取得
                     param.setResult(eClass.getConstructor(fClass, String.class, String.class, Integer.class)
                             .newInstance(mode, hClass.getMethod("c").invoke(hInstance), hClass.getMethod("d").invoke(hInstance), hClass.getMethod("a").invoke(hInstance)));

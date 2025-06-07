@@ -221,9 +221,6 @@
     <string name="other">その他</string>
     <string name="PhotoSave">"MediaReNameSave (DevNow) "</string>
     <string name="media">Media</string>
-    <string name="Send_Message">を送信しました</string>
-    <string name="media_message_no_sender">%sが送信されました</string>
-    <string name="media_message_with_sender">%sが%sを送信しました</string>
 
     <string name="restoring_chat_history">チャット履歴を復元中</string>
     <string name="preparing">準備中…</string>
@@ -240,14 +237,11 @@
     <string name="back">戻る</string>
     <string name="UserSet">ユーザー設定</string>
     <string name="save">保存</string>
-
-    <string name="call_duration_format">通話時間 %02d:%02d</string>
-    <string name="missed_call">不在着信</string>
-    <string name="call_cancelled">通話をキャンセルしました</string>
     <string name="ReactionCount">ReactionCount</string>
     <string name="WhiteToDark">WhiteToDark(DevNow)</string>
     <string name="NotificationNull">NotificationNull</string>
     <string name="DisableSilentMessage">DevNow サイレントメッセージの無効(次回の通知ありの通知で通知されます)</string>
     <string name="SilentCheck">SilentCheck</string>
+    <string name="NotificationReaction">NotificationReaction</string>
 
 </resources>
