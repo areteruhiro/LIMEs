@@ -275,7 +275,7 @@ public class Constants {
             WEBVIEW_CLIENT_HOOK = new HookTarget("CS0.m", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("Lh1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("dR.d$d", "run");
-            Archive = new HookTarget("Do.c", "run");
+            Archive = new HookTarget("jD.S", "invokeSuspend");
 
             NOTIFICATION_READ_HOOK = new HookTarget("Rj1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
