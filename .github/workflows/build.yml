@@ -127,6 +127,8 @@ jobs:
         if: github.event.inputs.release == 'true'
         with:
           tag_name: ${{ env.version }}
+          draft: false
+          prerelease: false
           files: |
             ${{ env.repo }}-${{ env.version }}.apk
             Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk
