@@ -123,17 +123,17 @@ jobs:
           if-no-files-found: error
 
       - name: Release
-        uses: softprops/action-gh-release@v2
         if: github.event.inputs.release == 'true'
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.version }}
+          name: Release ${{ env.version }}
           draft: false
           prerelease: false
           files: |
             ${{ env.repo }}-${{ env.version }}.apk
             Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk
             Patched_${{ env.version }}_LINE-15-5-4-armeabi-v7a.apk
-          body: |
             # 更新内容
 
             ## 対応するLINEのバージョン
