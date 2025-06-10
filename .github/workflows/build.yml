@@ -1,6 +1,3 @@
-
-
-
 name: Build
 
 on:
@@ -75,6 +72,7 @@ jobs:
         run: |
           curl -L -o LINE-15.5.4-arm64-v8a.armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm64-v8a.+.arm-v7a.apk
           curl -L -o LINE-15-5-4-armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm-v7a.apk
+
       - name: Download LSPatch
         if: github.event.inputs.release == 'true'
         run: |
@@ -92,15 +90,14 @@ jobs:
           else
             ./gradlew assembleDebug --no-daemon --stacktrace
           fi
-      - name: LSPatch
 
+      - name: LSPatch
         if: github.event.inputs.release == 'true'
         run: |
           for file in LINE-15.5.4-arm64-v8a.armeabi-v7a.apk LINE-15-5-4-armeabi-v7a.apk; do
-          
             echo "Patching $file..."
             java -jar lspatch.jar "$file" -m "${{ env.repo }}-${{ env.version }}.apk" -l 2 -v
-
+            
             # Determine the expected output file name
             output_file="${file%.apk}-430-lspatched.apk"
 
@@ -111,7 +108,6 @@ jobs:
             # Move the patched file using the correct naming convention
             mv "$output_file" "Patched_${{ env.version }}_$file" || echo "Patched file not found for $file"
           done
-          
 
       - name: Upload module (Debug)
         uses: actions/upload-artifact@v4
@@ -121,23 +117,59 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
-      - name: Release
+      # リリース作成ステップ (softprops/action-gh-release の代わり)
+      - name: Create Release
         if: github.event.inputs.release == 'true'
-        uses: softprops/action-gh-release@v2
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ env.version }}
-          name: Release ${{ env.version }}
+          release_name: Release ${{ env.version }}
           draft: false
           prerelease: false
-          files: |
-            ${{ env.repo }}-${{ env.version }}.apk
-            Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk
-            Patched_${{ env.version }}_LINE-15-5-4-armeabi-v7a.apk
           body: |
             # 更新内容
-
+            
             ## 対応するLINEのバージョン  
-            14.19.1 <br>14.21.1 <br>15.0.0  <br>15.1.X <br>15.2.1 <br>15.3.X <br> 15.4.0-15.4.1<br>15.5.1 -15.5.4 <br>15.6.x <br>15.7.x(Maybe)
-
+            14.19.1 <br>14.21.1 <br>15.0.0  <br>15.1.X <br>15.2.1 <br>15.3.X <br>15.4.0-15.4.1<br>15.5.1-15.5.4 <br>15.6.x <br>15.7.x(Maybe)
+            
             ### 差分  
             https://github.com/${{ github.repository }}/compare/${{ env.version }}^...${{ env.version }}
+
+      # メインAPKのアップロード
+      - name: Upload Main APK
+        if: github.event.inputs.release == 'true'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.repo }}-${{ env.version }}.apk
+          asset_name: ${{ env.repo }}-${{ env.version }}.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      # パッチ適用済みAPKのアップロード (1つ目)
+      - name: Upload Patched APK 1
+        if: github.event.inputs.release == 'true'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk
+          asset_name: Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk
+          asset_content_type: application/vnd.android.package-archive
+
+      # パッチ適用済みAPKのアップロード (2つ目)
+      - name: Upload Patched APK 2
+        if: github.event.inputs.release == 'true'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: Patched_${{ env.version }}_LINE-15-5-4-armeabi-v7a.apk
+          asset_name: Patched_${{ env.version }}_LINE-15-5-4-armeabi-v7a.apk
+          asset_content_type: application/vnd.android.package-archive
