@@ -66,50 +66,50 @@ public class NotificationReaction implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.NotificationReaction.checked) return;
-    XposedHelpers.findAndHookMethod(Application.class, "onCreate", new XC_MethodHook() {
-        @Override
-        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-            context = (Application) param.thisObject;
-            Application appContext = (Application) param.thisObject;
-            File dbFile3 = appContext.getDatabasePath("naver_line");
-            File dbFile4 = appContext.getDatabasePath("contact");
-            if (dbFile3.exists() && dbFile4.exists()) {
-                SQLiteDatabase.OpenParams.Builder builder1 = null;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    builder1 = new SQLiteDatabase.OpenParams.Builder();
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                }
-                SQLiteDatabase.OpenParams dbParams1 = null;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    dbParams1 = builder1.build();
-                }
+        XposedHelpers.findAndHookMethod(Application.class, "onCreate", new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                context = (Application) param.thisObject;
+                Application appContext = (Application) param.thisObject;
+                File dbFile3 = appContext.getDatabasePath("naver_line");
+                File dbFile4 = appContext.getDatabasePath("contact");
+                if (dbFile3.exists() && dbFile4.exists()) {
+                    SQLiteDatabase.OpenParams.Builder builder1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder1.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams1 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams1 = builder1.build();
+                    }
 
 
-                SQLiteDatabase.OpenParams.Builder builder2 = null;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    builder2 = new SQLiteDatabase.OpenParams.Builder();
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
-                }
-                SQLiteDatabase.OpenParams dbParams2 = null;
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    dbParams2 = builder2.build();
-                }
+                    SQLiteDatabase.OpenParams.Builder builder2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2 = new SQLiteDatabase.OpenParams.Builder();
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        builder2.addOpenFlags(SQLiteDatabase.OPEN_READWRITE);
+                    }
+                    SQLiteDatabase.OpenParams dbParams2 = null;
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        dbParams2 = builder2.build();
+                    }
 
 
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    db3 = SQLiteDatabase.openDatabase(dbFile3, dbParams1);
-                }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
-                    db4 = SQLiteDatabase.openDatabase(dbFile4, dbParams2);
-                }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db3 = SQLiteDatabase.openDatabase(dbFile3, dbParams1);
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
+                        db4 = SQLiteDatabase.openDatabase(dbFile4, dbParams2);
+                    }
 
+                }
             }
-        }
-    });
+        });
 
         XposedBridge.hookAllMethods(
                 loadPackageParam.classLoader.loadClass(Constants.RESPONSE_HOOK.className),
@@ -120,106 +120,111 @@ public class NotificationReaction implements IHook {
                         String paramValue = param.args[1].toString();
                         XposedBridge.log(paramValue);
                         if (paramValue.contains("type:NOTIFIED_SEND_REACTION,")) {
+                            Class<?> GetHook = XposedHelpers.findClass("com.linecorp.line.fullsync.c", loadPackageParam.classLoader);
 
-                            String[] operations = paramValue.split("Operation\\(");
-                            for (String operation : operations) {
-                                if (operation.trim().isEmpty()) continue;
+                            XposedBridge.hookAllMethods(GetHook, "invokeSuspend", new XC_MethodHook() {
+                                @Override
+                                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                                    String[] operations = paramValue.split("Operation\\(");
+                                    for (String operation : operations) {
+                                        if (operation.trim().isEmpty()) continue;
 
-                                String revision = null;
-                                String createdTime = null;
-                                String type = null;
-                                String serverId = null;
-                                String reactionJson = null;
-                                String chatMid = null;
-                                String param3 = null;
+                                        String revision = null;
+                                        String createdTime = null;
+                                        String type = null;
+                                        String serverId = null;
+                                        String reactionJson = null;
+                                        String chatMid = null;
+                                        String param3 = null;
 
-                                String[] parts = operation.split(",");
-                                for (String part : parts) {
-                                    part = part.trim();
-                                    if (part.startsWith("revision:")) {
-                                        revision = part.substring("revision:".length()).trim();
-                                    } else if (part.startsWith("createdTime:")) {
-                                        createdTime = part.substring("createdTime:".length()).trim();
-                                    } else if (part.startsWith("type:")) {
-                                        type = part.substring("type:".length()).trim();
-                                    } else if (part.startsWith("param1:")) {
-                                        serverId = part.substring("param1:".length()).trim();
-                                    } else if (part.startsWith("param3:")) {
+                                        String[] parts = operation.split(",");
+                                        for (String part : parts) {
+                                            part = part.trim();
+                                            if (part.startsWith("revision:")) {
+                                                revision = part.substring("revision:".length()).trim();
+                                            } else if (part.startsWith("createdTime:")) {
+                                                createdTime = part.substring("createdTime:".length()).trim();
+                                            } else if (part.startsWith("type:")) {
+                                                type = part.substring("type:".length()).trim();
+                                            } else if (part.startsWith("param1:")) {
+                                                serverId = part.substring("param1:".length()).trim();
+                                            } else if (part.startsWith("param3:")) {
 
-                                        param3 = part.substring("param3:".length()).trim();
-                                        param3 = param3.replaceAll("\\)\\]$", "");
-                                    } else if (part.startsWith("param2:")) {
-                                        reactionJson = part.substring("param2:".length()).trim();
-                                        if (reactionJson.contains("chatMid")) {
-                                            int start = reactionJson.indexOf("chatMid\":\"") + 10;
-                                            int end = reactionJson.indexOf("\"", start);
-                                            chatMid = reactionJson.substring(start, end);
+                                                param3 = part.substring("param3:".length()).trim();
+                                                param3 = param3.replaceAll("\\)\\]$", "");
+                                            } else if (part.startsWith("param2:")) {
+                                                reactionJson = part.substring("param2:".length()).trim();
+                                                if (reactionJson.contains("chatMid")) {
+                                                    int start = reactionJson.indexOf("chatMid\":\"") + 10;
+                                                    int end = reactionJson.indexOf("\"", start);
+                                                    chatMid = reactionJson.substring(start, end);
+                                                }
+                                            }
+
+
+                                        }
+
+                                        if ("NOTIFIED_SEND_REACTION".equals(type)) {
+                                            String content = queryDatabase(db3,
+                                                    "SELECT content FROM chat_history WHERE server_id=?",
+                                                    serverId);
+
+                                            String media = queryDatabase(db3, "SELECT parameter FROM chat_history WHERE server_id=?", serverId);
+                                            media = media != null ? media : "null";
+
+
+                                            String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
+                                            SendUser = SendUser != null ? SendUser : "null";
+
+                                            String name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", param3);
+                                            name = name != null ? name : "null";
+
+                                            Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                                                    "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                                            XposedBridge.log(chatMid);
+                                            String talkName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", chatMid);
+                                            if (Objects.equals(talkName, "null")) {
+                                                talkName = queryDatabase(db3, "SELECT name FROM groups WHERE id=?", chatMid);
+                                            }
+
+                                            XposedBridge.log(talkName);
+                                            String mediaDescription = "";
+                                            if (media != null) {
+                                                if (media.contains("IMAGE")) {
+                                                    mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                                                } else if (media.contains("video")) {
+                                                    mediaDescription = moduleContext.getResources().getString(R.string.video);
+                                                } else if (media.contains("STKPKGID")) {
+                                                    mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                                                } else if (media.contains("FILE")) {
+                                                    mediaDescription = moduleContext.getResources().getString(R.string.file);
+                                                } else if (media.contains("LOCATION")) {
+                                                    mediaDescription = moduleContext.getResources().getString(R.string.location);
+                                                }
+                                            } else {
+                                                mediaDescription = "null";
+                                            }
+                                            String finalContent = determineFinalContent(content, mediaDescription);
+                                            XposedBridge.log(content);
+
+                                            generateCustomNotification(
+                                                    context,
+                                                    name,
+                                                    finalContent,
+                                                    talkName,
+                                                    createdTime
+                                            );
                                         }
                                     }
 
-
                                 }
-
-                                if ("NOTIFIED_SEND_REACTION".equals(type)) {
-                                    String content = queryDatabase(db3,
-                                            "SELECT content FROM chat_history WHERE server_id=?",
-                                            serverId);
-
-                                    String media = queryDatabase(db3, "SELECT parameter FROM chat_history WHERE server_id=?", serverId);
-                                    media = media != null ? media : "null";
-
-
-                                    String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
-                                    SendUser = SendUser != null ? SendUser : "null";
-
-                                    String name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", param3);
-                                    name = name != null ? name : "null";
-
-                                    Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                                            "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
-                                    XposedBridge.log(chatMid);
-                                    String talkName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", chatMid);
-                                    if (Objects.equals(talkName, "null")) {
-                                        talkName = queryDatabase(db3, "SELECT name FROM groups WHERE id=?", chatMid);
-                                    }
-
-                                    XposedBridge.log(talkName);
-                                    String mediaDescription = "";
-                                    if (media != null) {
-                                        if (media.contains("IMAGE")) {
-                                            mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                                        } else if (media.contains("video")) {
-                                            mediaDescription = moduleContext.getResources().getString(R.string.video);
-                                        } else if (media.contains("STKPKGID")) {
-                                            mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                                        } else if (media.contains("FILE")) {
-                                            mediaDescription = moduleContext.getResources().getString(R.string.file);
-                                        } else if (media.contains("LOCATION")) {
-                                            mediaDescription = moduleContext.getResources().getString(R.string.location);
-                                        }
-                                    } else {
-                                        mediaDescription = "null";
-                                    }
-                                    String finalContent = determineFinalContent(content, mediaDescription);
-                                    XposedBridge.log(content);
-
-                                    generateCustomNotification(
-                                            context,
-                                            name,
-                                            finalContent,
-                                            talkName,
-                                            createdTime
-                                    );
-                                }
-                            }
-
-
+                            });
 
 
                         }
                     }
                 });
-}
+    }
     private void generateCustomNotification(Context context, String name, String content, String talkName, String createdTime) {
         try {
             NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
@@ -268,36 +273,33 @@ public class NotificationReaction implements IHook {
             return result;
         }
     }
-private String queryDatabase(SQLiteDatabase db, String query, String... selectionArgs) {
-    if (db == null || !db.isOpen()) {
-        XposedBridge.log("Database not initialized");
-        return "null";
-    }
-
-    Cursor cursor = null;
-    try {
-        db.beginTransaction();
-        cursor = db.rawQuery(query, selectionArgs);
-
-        String result = "null";
-        if (cursor != null && cursor.moveToFirst()) {
-            result = cursor.getString(0);
-            XposedBridge.log("Query success: " + result);
+    private String queryDatabase(SQLiteDatabase db, String query, String... selectionArgs) {
+        if (db == null || !db.isOpen()) {
+            XposedBridge.log("Database not initialized");
+            return "null";
         }
 
-        db.setTransactionSuccessful();
-        return result;
-    } catch (Exception e) {
-        XposedBridge.log("Query error: " + e.getMessage());
-        return "null";
-    } finally {
-        if (cursor != null) {
-            cursor.close();
+        Cursor cursor = null;
+        try {
+            db.beginTransaction();
+            cursor = db.rawQuery(query, selectionArgs);
+
+            String result = "null";
+            if (cursor != null && cursor.moveToFirst()) {
+                result = cursor.getString(0);
+                XposedBridge.log("Query success: " + result);
+            }
+
+            db.setTransactionSuccessful();
+            return result;
+        } catch (Exception e) {
+            XposedBridge.log("Query error: " + e.getMessage());
+            return "null";
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+            db.endTransaction();
         }
-        db.endTransaction();
     }
 }
-}
-
-
-
