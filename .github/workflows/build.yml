@@ -1,7 +1,6 @@
 
 
 
-
 name: Build
 
 on:
@@ -134,10 +133,11 @@ jobs:
             ${{ env.repo }}-${{ env.version }}.apk
             Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk
             Patched_${{ env.version }}_LINE-15-5-4-armeabi-v7a.apk
+          body: |
             # 更新内容
 
-            ## 対応するLINEのバージョン
+            ## 対応するLINEのバージョン  
             14.19.1 <br>14.21.1 <br>15.0.0  <br>15.1.X <br>15.2.1 <br>15.3.X <br> 15.4.0-15.4.1<br>15.5.1 -15.5.4 <br>15.6.x <br>15.7.x(Maybe)
 
-            ### 差分
+            ### 差分  
             https://github.com/${{ github.repository }}/compare/${{ env.version }}^...${{ env.version }}
