@@ -133,6 +133,8 @@ jobs:
             ${{ env.repo }}-${{ env.version }}.apk
             Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk
             Patched_${{ env.version }}_LINE-15-5-4-armeabi-v7a.apk
+            draft: false
+            prerelease: true
           body: |
             # 更新内容
 
