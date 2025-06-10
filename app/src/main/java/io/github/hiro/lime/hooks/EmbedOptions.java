@@ -407,6 +407,7 @@ public class EmbedOptions implements IHook {
                                     backupfolderButton.setText(moduleContext.getResources().getString(R.string.Talk_Picture_Back_up));
                                     backupfolderButton.setOnClickListener(v -> backupChatsFolder(context, moduleContext));
                                     layout.addView(backupfolderButton);
+
                                     Button restorefolderButton = new Button(context);
                                     restorefolderButton.setLayoutParams(buttonParams);
                                     restorefolderButton.setText(moduleContext.getResources().getString(R.string.Picure_Restore));

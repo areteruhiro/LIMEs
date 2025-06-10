@@ -120,7 +120,11 @@ public class NotificationReaction implements IHook {
                         String paramValue = param.args[1].toString();
                         XposedBridge.log(paramValue);
                         if (paramValue.contains("type:NOTIFIED_SEND_REACTION,")) {
+                            Class<?> GetHook = XposedHelpers.findClass("com.linecorp.line.fullsync.c", loadPackageParam.classLoader);
 
+                            XposedBridge.hookAllMethods(GetHook, "invokeSuspend", new XC_MethodHook() {
+                                @Override
+                                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                             String[] operations = paramValue.split("Operation\\(");
                             for (String operation : operations) {
                                 if (operation.trim().isEmpty()) continue;
@@ -213,7 +217,8 @@ public class NotificationReaction implements IHook {
                                 }
                             }
 
-
+                                }
+                            });
 
 
                         }
