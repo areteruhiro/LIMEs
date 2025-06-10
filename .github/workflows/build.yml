@@ -1,3 +1,7 @@
+
+
+
+
 name: Build
 
 on:
@@ -72,7 +76,6 @@ jobs:
         run: |
           curl -L -o LINE-15.5.4-arm64-v8a.armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm64-v8a.+.arm-v7a.apk
           curl -L -o LINE-15-5-4-armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm-v7a.apk
-
       - name: Download LSPatch
         if: github.event.inputs.release == 'true'
         run: |
@@ -90,14 +93,15 @@ jobs:
           else
             ./gradlew assembleDebug --no-daemon --stacktrace
           fi
-
       - name: LSPatch
+
         if: github.event.inputs.release == 'true'
         run: |
           for file in LINE-15.5.4-arm64-v8a.armeabi-v7a.apk LINE-15-5-4-armeabi-v7a.apk; do
+          
             echo "Patching $file..."
             java -jar lspatch.jar "$file" -m "${{ env.repo }}-${{ env.version }}.apk" -l 2 -v
-          
+
             # Determine the expected output file name
             output_file="${file%.apk}-430-lspatched.apk"
 
@@ -108,21 +112,21 @@ jobs:
             # Move the patched file using the correct naming convention
             mv "$output_file" "Patched_${{ env.version }}_$file" || echo "Patched file not found for $file"
           done
+          
 
       - name: Upload module (Debug)
         uses: actions/upload-artifact@v4
-        if: github.event.inputs.release != 'true'
+        if: github.event.inputs.release != 'true' 
         with:
           name: ${{ env.repo }}-${{ env.versionName }}@${{ env.commit }}
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
 
       - name: Release
-        if: github.event.inputs.release == 'true'
         uses: softprops/action-gh-release@v2
+        if: github.event.inputs.release == 'true'
         with:
           tag_name: ${{ env.version }}
-          name: Release ${{ env.version }}
           draft: false
           prerelease: false
           files: |
@@ -133,7 +137,7 @@ jobs:
             # 更新内容
 
             ## 対応するLINEのバージョン
-            14.19.1 <br>14.21.1 <br>15.0.0  <br>15.1.X <br>15.2.1 <br>15.3.X <br>15.4.0-15.4.1<br>15.5.1-15.5.4 <br>15.6.x <br>15.7.x(Maybe)
+            14.19.1 <br>14.21.1 <br>15.0.0  <br>15.1.X <br>15.2.1 <br>15.3.X <br> 15.4.0-15.4.1<br>15.5.1 -15.5.4 <br>15.6.x <br>15.7.x(Maybe)
 
             ### 差分
             https://github.com/${{ github.repository }}/compare/${{ env.version }}^...${{ env.version }}
