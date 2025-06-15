@@ -22,8 +22,7 @@ public class Constants {
 
     //ChatListViewModel
     static  HookTarget Archive = new HookTarget("LB.W", "invokeSuspend");
-    //StreamingFetchOperationHandler
-    static  HookTarget NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
+
     static  HookTarget REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
     static  HookTarget RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
     //BackEventCompat
@@ -68,7 +67,7 @@ public class Constants {
             MUTE_MESSAGE_HOOK = new HookTarget("Ob1.b", "H");
             MARK_AS_READ_HOOK = new HookTarget("WM.c$d", "run");
             Archive = new HookTarget("sB.Q", "invokeSuspend");
-            NOTIFICATION_READ_HOOK = new HookTarget("qd1.b", "invokeSuspend");
+
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("af0.e", "run");
@@ -79,7 +78,6 @@ public class Constants {
             MARK_AS_READ_HOOK = new HookTarget("xN.b$d", "run");
             MUTE_MESSAGE_HOOK = new HookTarget("ne1.b", "H");
             Archive = new HookTarget("tB.N", "invokeSuspend");
-            NOTIFICATION_READ_HOOK = new HookTarget("Pf1.c", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
@@ -90,7 +88,6 @@ public class Constants {
             MUTE_MESSAGE_HOOK = new HookTarget("Lf1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("KO.d$d", "run");
             Archive = new HookTarget("tB.P", "invokeSuspend");
-            NOTIFICATION_READ_HOOK = new HookTarget("mh1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
@@ -101,7 +98,6 @@ public class Constants {
             MUTE_MESSAGE_HOOK = new HookTarget("jh1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("nP.d$d", "run");
             Archive = new HookTarget("LB.U", "invokeSuspend");
-            NOTIFICATION_READ_HOOK = new HookTarget("Ki1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.n", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.n", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
@@ -115,7 +111,6 @@ public class Constants {
         MUTE_MESSAGE_HOOK = new HookTarget("Fh1.b", "I");
         MARK_AS_READ_HOOK = new HookTarget("GP.e$d", "run");
         Archive = new HookTarget("aC.P", "invokeSuspend");
-        NOTIFICATION_READ_HOOK = new HookTarget("gj1.b", "invokeSuspend");
         REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
         RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
         RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
@@ -128,7 +123,6 @@ public class Constants {
         MUTE_MESSAGE_HOOK = new HookTarget("Xi1.b", "I");
         MARK_AS_READ_HOOK = new HookTarget("aQ.c$d", "run");
         Archive = new HookTarget("tC.S", "invokeSuspend");
-        NOTIFICATION_READ_HOOK = new HookTarget("yk1.b", "invokeSuspend");
         REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
         RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
         RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
@@ -151,7 +145,6 @@ public class Constants {
             MUTE_MESSAGE_HOOK = new HookTarget("Ki1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("pQ.d$d", "run");
             Archive = new HookTarget("GC.Z", "invokeSuspend");
-            NOTIFICATION_READ_HOOK = new HookTarget("lk1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("h.i", "run");
@@ -179,7 +172,6 @@ public class Constants {
             MUTE_MESSAGE_HOOK = new HookTarget("Ki1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("pQ.c$d", "run");
             Archive = new HookTarget("GC.a0", "invokeSuspend");
-            NOTIFICATION_READ_HOOK = new HookTarget("lk1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
             RemoveVoiceRecord_Hook_a = new HookTarget("h.j", "run");
@@ -217,7 +209,6 @@ public class Constants {
             MARK_AS_READ_HOOK = new HookTarget("mQ.c$d", "run");
             Archive = new HookTarget("JC.Y", "invokeSuspend");
 
-            NOTIFICATION_READ_HOOK = new HookTarget("yj1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
 
@@ -241,7 +232,6 @@ public class Constants {
             MARK_AS_READ_HOOK = new HookTarget("vQ.c$d", "run");
             Archive = new HookTarget("JC.b0", "invokeSuspend");
 
-            NOTIFICATION_READ_HOOK = new HookTarget("Rj1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.m", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.m", "a");
 
@@ -277,7 +267,6 @@ public class Constants {
             MARK_AS_READ_HOOK = new HookTarget("dR.d$d", "run");
             Archive = new HookTarget("jD.S", "invokeSuspend");
 
-            NOTIFICATION_READ_HOOK = new HookTarget("Rj1.b", "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
 
@@ -304,7 +293,44 @@ public class Constants {
 //skipMemoryCache
             Video = new HookTarget("PQ.J", "");
 
-    }
+        } else if (isVersionInRange(versionName, "15.9.0", "15.10.0")) {
+
+            XposedBridge.log("15.9.0 Patched ");
+
+            USER_AGENT_HOOK = new HookTarget("Bk1.d", "j");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("ZT0.l", "onPageFinished");
+            MUTE_MESSAGE_HOOK = new HookTarget("uj1.b", "I");
+            MARK_AS_READ_HOOK = new HookTarget("dS.e$d", "run");
+            Archive = new HookTarget("LD.S", "invokeSuspend");
+
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+//%s failed: out of sequence response: expected %d but got %d
+
+            RemoveVoiceRecord_Hook_a = new HookTarget("h.j", "run");
+
+            ChatRestore = new HookTarget("androidx.fragment.app.t", "onActivityResult");
+//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
+            //getAllChatIds
+            PhotoSave = new HookTarget("ai1.p0", "");
+
+//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
+            //VideoPlaybackSyncEvent(localMessageId
+            PhotoSave1 = new HookTarget("ld1.F", "");
+
+            //DIRECTORY_PICTURES
+            PhotoSave2 = new HookTarget("aT.g", "");
+
+//com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
+            //createAlbum
+            PhotoSave3 = new HookTarget("Nm.L", "");
+
+            //reactionListModel
+            ReactionList = new HookTarget("Jz.l", "");
+//skipMemoryCache
+            Video = new HookTarget("PR.I", "");
+
+        }
 
     }
 

@@ -62,6 +62,7 @@ public class NotificationReaction implements IHook {
     private SQLiteDatabase db3 = null;
     private SQLiteDatabase db4 = null;
     private Context context;
+    private static final Set<String> sentNotifications = Collections.synchronizedSet(new HashSet<>());
 
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
@@ -205,15 +206,21 @@ public class NotificationReaction implements IHook {
                                                 mediaDescription = "null";
                                             }
                                             String finalContent = determineFinalContent(content, mediaDescription);
-                                            XposedBridge.log(content);
+            //                                XposedBridge.log(content);
 
-                                            generateCustomNotification(
-                                                    context,
-                                                    name,
-                                                    finalContent,
-                                                    talkName,
-                                                    createdTime
-                                            );
+                                            String notificationKey = serverId + "|" + param3 + "|" + finalContent + "|" + talkName;
+
+                                            if (!sentNotifications.contains(notificationKey)) {
+                                                sentNotifications.add(notificationKey);
+
+                                                generateCustomNotification(
+                                                        context,
+                                                        name,
+                                                        finalContent,
+                                                        talkName,
+                                                        createdTime
+                                                );
+                                            }
                                         }
                                     }
 

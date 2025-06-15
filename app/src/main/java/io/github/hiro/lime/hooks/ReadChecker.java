@@ -837,12 +837,12 @@ public class ReadChecker implements IHook {
     private void catchNotification(XC_LoadPackage.LoadPackageParam loadPackageParam, SQLiteDatabase db3, SQLiteDatabase db4, Context appContext, Context moduleContext) {
         try {
             XposedBridge.hookAllMethods(
-                    loadPackageParam.classLoader.loadClass(Constants.NOTIFICATION_READ_HOOK.className),
-                    "invokeSuspend",
+                    loadPackageParam.classLoader.loadClass(Constants.RESPONSE_HOOK.className),
+                    Constants.RESPONSE_HOOK.methodName,
                     new XC_MethodHook() {
                         @Override
                         protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                            String paramValue = param.args[0].toString();
+                            String paramValue =  param.args[1].toString();
                             if (appContext == null) {
 
                                 return;
@@ -856,7 +856,11 @@ public class ReadChecker implements IHook {
                                 return;
                             }
 
+
+
+                          //  XposedBridge.log(paramValue);
                             if (paramValue != null && paramValue.contains("type:NOTIFIED_READ_MESSAGE")) {
+
                                 List<String> messages = extractMessages(paramValue);
                                 for (String message : messages) {
                                     fetchDataAndSave(db3, db4, message, appContext, moduleContext);
