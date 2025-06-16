@@ -124,6 +124,7 @@ public class LimeOptions {
         public Option stopVersionCheck = new Option("stop_version_check", R.string.switch_stop_version_check, false, OptionCategory.OTHER);
         public Option WhiteToDark = new Option("WhiteToDark", R.string.WhiteToDark, false, OptionCategory.Theme);
 
+    public Option StopCallTone = new Option("StopCallTone", R.string.StopCallTone, false, OptionCategory.CALL);
 
 
     public Option[] options = {
@@ -169,7 +170,7 @@ public class LimeOptions {
                 photoboothButtonOption, voiceButtonOption, videoButtonOption, videoSingleButtonOption,
                 AutoUpDateCheck, PinList,
                 NewOption, PhotoSave,
-                ReactionCount,WhiteToDark,NotificationReaction
+                ReactionCount,WhiteToDark,NotificationReaction,StopCallTone
         };
 
 

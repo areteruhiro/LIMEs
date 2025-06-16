@@ -119,7 +119,7 @@ public class NotificationReaction implements IHook {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         String paramValue = param.args[1].toString();
-                        XposedBridge.log(paramValue);
+                     //   XposedBridge.log(paramValue);
                         if (paramValue.contains("type:NOTIFIED_SEND_REACTION,")) {
                             Class<?> GetHook = XposedHelpers.findClass("com.linecorp.line.fullsync.c", loadPackageParam.classLoader);
 

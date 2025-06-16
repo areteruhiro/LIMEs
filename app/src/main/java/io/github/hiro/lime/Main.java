@@ -223,6 +223,10 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                             fragmentClass = "androidx.fragment.app.n";
                         } else if (isVersionInRange(versionName, "15.7.0", "15.8.0")) {
                             fragmentClass = "androidx.fragment.app.n";
+                        } else if (isVersionInRange(versionName, "15.9.0", "15.9.3")) {
+                            fragmentClass = "androidx.fragment.app.t";
+                        } else if (isVersionInRange(versionName, "15.9.3", "15.9.4")) {
+                            fragmentClass = "androidx.fragment.app.r";
                         } else {
                             XposedBridge.log("Unsupported version: " + versionName);
                             return;

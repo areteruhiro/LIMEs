@@ -243,5 +243,6 @@
     <string name="DisableSilentMessage">DevNow サイレントメッセージの無効(次回の通知ありの通知で通知されます)</string>
     <string name="SilentCheck">SilentCheck</string>
     <string name="NotificationReaction">NotificationReaction</string>
+    <string name="StopCallTone">MakeStopCallToneButton</string>
 
 </resources>

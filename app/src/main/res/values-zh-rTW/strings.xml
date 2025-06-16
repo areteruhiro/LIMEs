@@ -238,5 +238,6 @@
     <string name="DisableSilentMessage">DevNow Disable silent messages (You will be notified with a notification for the next notification)</string>
     <string name="SilentCheck">SilentCheck</string>
     <string name="NotificationReaction">NotificationReaction</string>
+    <string name="StopCallTone">MakeStopCallToneButton</string>
 
 </resources>

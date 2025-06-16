@@ -309,7 +309,6 @@ public class Constants {
 
             RemoveVoiceRecord_Hook_a = new HookTarget("h.j", "run");
 
-            ChatRestore = new HookTarget("androidx.fragment.app.t", "onActivityResult");
 //jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
             //getAllChatIds
             PhotoSave = new HookTarget("ai1.p0", "");
@@ -329,7 +328,18 @@ public class Constants {
             ReactionList = new HookTarget("Jz.l", "");
 //skipMemoryCache
             Video = new HookTarget("PR.I", "");
+            String chatRestoreClassName;
+            if (versionName.equals("15.9.2")) {
+                chatRestoreClassName = "androidx.fragment.app.t";
+            } else if (versionName.equals("15.9.3")) {
+                chatRestoreClassName = "androidx.fragment.app.r";
+                XposedBridge.log("15.9.3 Patched ");
+            } else {
 
+                chatRestoreClassName = "androidx.fragment.app.r";
+                XposedBridge.log("15.9.0 Patched ");
+            }
+            ChatRestore = new HookTarget(chatRestoreClassName, "onActivityResult");
         }
 
     }

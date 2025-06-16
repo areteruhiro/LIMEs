@@ -1,8 +1,10 @@
 package io.github.hiro.lime.hooks;
 
+import android.app.Activity;
 import android.app.AndroidAppHelper;
 import android.app.Application;
 import android.content.Context;
+import android.content.Intent;
 import android.media.AudioAttributes;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
@@ -12,6 +14,11 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
 import android.util.Log;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.widget.Button;
+import android.widget.FrameLayout;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -43,6 +50,7 @@ public class RingTone implements IHook {
                 Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                         "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
+                // dial_toneの準備
                 String resourceNameA = "dial_tone";
                 int resourceIdA = moduleContext.getResources().getIdentifier(resourceNameA, "raw", "io.github.hiro.lime");
                 File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
@@ -61,7 +69,28 @@ public class RingTone implements IHook {
                         e.printStackTrace();
                     }
                 }
+                if (!limeOptions.StopCallTone.checked) {
+                    Class<?> voIPBaseFragmentClass = loadPackageParam.classLoader.loadClass("com.linecorp.voip2.common.base.VoIPBaseFragment");
+                    XposedBridge.hookAllMethods(voIPBaseFragmentClass, "onCreate", new XC_MethodHook() {
+                        @Override
+                        protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                            Activity activity = null;
+                            try {
+                                Object fragment = param.thisObject;
+                                activity = (Activity) XposedHelpers.callMethod(fragment, "getActivity");
+                            } catch (Throwable t) {
+                                Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
+                                if (context instanceof Activity) {
+                                    activity = (Activity) context;
+                                }
+                            }
 
+                            if (activity != null) {
+                                addButton(activity);
+                            }
+                        }
+                    });
+                }
                 XposedBridge.hookAllMethods(
                         loadPackageParam.classLoader.loadClass(Constants.RESPONSE_HOOK.className),
                         Constants.RESPONSE_HOOK.methodName,
@@ -502,7 +531,50 @@ public class RingTone implements IHook {
 
         });
 
+    }
+    private Button stopButton;
+    private void addButton(Activity activity) {
+        boolean isMediaPlaying = mediaPlayer != null && mediaPlayer.isPlaying();
+
+        if (isPlaying || isMediaPlaying) {
+            if (stopButton != null) {
+                return;
+            }
+            stopButton = new Button(activity);
+            stopButton.setText("STOP");
+            stopButton.setBackgroundResource(0);
+            stopButton.setPadding(0, 0, 0, 0);
+            FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
+                    FrameLayout.LayoutParams.WRAP_CONTENT,
+                    FrameLayout.LayoutParams.WRAP_CONTENT
+            );
+
+            params.gravity = Gravity.CENTER | Gravity.END;
+            params.setMargins(0, 0, 0, 0);
+            stopButton.setLayoutParams(params);
+
+            stopButton.setOnClickListener(v -> {
+                if (ringtone != null && isPlaying) {
+                    ringtone.stop();
+                    ringtone = null;
+                    isPlaying = false;
+                }
+                if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+                    mediaPlayer.stop();
+                    mediaPlayer.release();
+                    mediaPlayer = null;
+                }
+                if (stopButton != null) {
+                    ViewGroup layout = activity.findViewById(android.R.id.content);
+                    layout.removeView(stopButton);
+                    stopButton = null;
+                }
+            });
+
+            ViewGroup layout = activity.findViewById(android.R.id.content);
+            layout.addView(stopButton);
+        }
+    }
 
 
-}
 }

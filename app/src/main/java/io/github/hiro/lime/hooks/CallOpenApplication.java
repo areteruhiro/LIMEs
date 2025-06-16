@@ -33,13 +33,11 @@ public class CallOpenApplication implements IHook {
         XposedBridge.hookAllMethods(voIPBaseFragmentClass, "onCreate", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                // 任意のオブジェクトからActivityを取得
                 Activity activity = null;
                 try {
                     Object fragment = param.thisObject;
                     activity = (Activity) XposedHelpers.callMethod(fragment, "getActivity");
                 } catch (Throwable t) {
-                    // 代替方法でContextを取得
                     Context context = (Context) XposedHelpers.getObjectField(param.thisObject, "mContext");
                     if (context instanceof Activity) {
                         activity = (Activity) context;
@@ -80,8 +78,6 @@ public class CallOpenApplication implements IHook {
                 Toast.makeText(activity, "アプリが見つかりません", Toast.LENGTH_SHORT).show();
             }
         });
-
-        // レイアウトに追加
         ViewGroup layout = activity.findViewById(android.R.id.content);
         layout.addView(button);
     }
