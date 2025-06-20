@@ -76,6 +76,8 @@ jobs:
         run: |
           curl -L -o LINE-15.5.4-arm64-v8a.armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm64-v8a.+.arm-v7a.apk
           curl -L -o LINE-15-5-4-armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm-v7a.apk
+          curl -L -o LINE-15-9-3-armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.9.3/15.9.3_armeabi-v7a.xapk
+          curl -L -o LINE-15.9.3-arm64-v8a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.9.3/line-15-9-3arm64-v8a.xapk
       - name: Download LSPatch
         if: github.event.inputs.release == 'true'
         run: |
@@ -97,7 +99,7 @@ jobs:
 
         if: github.event.inputs.release == 'true'
         run: |
-          for file in LINE-15.5.4-arm64-v8a.armeabi-v7a.apk LINE-15-5-4-armeabi-v7a.apk; do
+          for file in LINE-15.5.4-arm64-v8a.armeabi-v7a.apk LINE-15-5-4-armeabi-v7a.apk LINE-15-9-3-armeabi-v7a.apk LINE-15.9.3-arm64-v8a.apk ; do
           
             echo "Patching $file..."
             java -jar lspatch.jar "$file" -m "${{ env.repo }}-${{ env.version }}.apk" -l 2 -v
@@ -131,6 +133,8 @@ jobs:
             ${{ env.repo }}-${{ env.version }}.apk
             Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk
             Patched_${{ env.version }}_LINE-15-5-4-armeabi-v7a.apk
+            Patched_${{ env.version }}_LINE-15-9-3-armeabi-v7a.apk
+            Patched_${{ env.version }}_LINE-15.9.3-arm64-v8a.apk
           body: |
             # 更新内容
 

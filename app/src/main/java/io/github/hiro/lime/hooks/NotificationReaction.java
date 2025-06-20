@@ -121,11 +121,7 @@ public class NotificationReaction implements IHook {
                         String paramValue = param.args[1].toString();
                      //   XposedBridge.log(paramValue);
                         if (paramValue.contains("type:NOTIFIED_SEND_REACTION,")) {
-                            Class<?> GetHook = XposedHelpers.findClass("com.linecorp.line.fullsync.c", loadPackageParam.classLoader);
 
-                            XposedBridge.hookAllMethods(GetHook, "invokeSuspend", new XC_MethodHook() {
-                                @Override
-                                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                                     String[] operations = paramValue.split("Operation\\(");
                                     for (String operation : operations) {
                                         if (operation.trim().isEmpty()) continue;
@@ -166,66 +162,78 @@ public class NotificationReaction implements IHook {
                                         }
 
                                         if ("NOTIFIED_SEND_REACTION".equals(type)) {
-                                            String content = queryDatabase(db3,
-                                                    "SELECT content FROM chat_history WHERE server_id=?",
-                                                    serverId);
 
-                                            String media = queryDatabase(db3, "SELECT parameter FROM chat_history WHERE server_id=?", serverId);
-                                            media = media != null ? media : "null";
+                                            Class<?> GetHook = XposedHelpers.findClass("com.linecorp.line.fullsync.c", loadPackageParam.classLoader);
+
+                                            String finalCreatedTime = createdTime;
+                                            String finalServerId = serverId;
+                                            String finalParam = param3;
+                                            String finalChatMid = chatMid;
+                                            XposedBridge.hookAllMethods(GetHook, "invokeSuspend", new XC_MethodHook() {
+                                                @Override
+                                                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
 
 
-                                            String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
-                                            SendUser = SendUser != null ? SendUser : "null";
+                                                    String content = queryDatabase(db3,
+                                                            "SELECT content FROM chat_history WHERE server_id=?",
+                                                            finalServerId);
 
-                                            String name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", param3);
-                                            name = name != null ? name : "null";
+                                                    String media = queryDatabase(db3, "SELECT parameter FROM chat_history WHERE server_id=?", finalServerId);
+                                                    media = media != null ? media : "null";
 
-                                            Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                                                    "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
-                                            XposedBridge.log(chatMid);
-                                            String talkName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", chatMid);
-                                            if (Objects.equals(talkName, "null")) {
-                                                talkName = queryDatabase(db3, "SELECT name FROM groups WHERE id=?", chatMid);
-                                            }
 
-                                            XposedBridge.log(talkName);
-                                            String mediaDescription = "";
-                                            if (media != null) {
-                                                if (media.contains("IMAGE")) {
-                                                    mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                                                } else if (media.contains("video")) {
-                                                    mediaDescription = moduleContext.getResources().getString(R.string.video);
-                                                } else if (media.contains("STKPKGID")) {
-                                                    mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                                                } else if (media.contains("FILE")) {
-                                                    mediaDescription = moduleContext.getResources().getString(R.string.file);
-                                                } else if (media.contains("LOCATION")) {
-                                                    mediaDescription = moduleContext.getResources().getString(R.string.location);
+                                                    String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", finalServerId);
+                                                    SendUser = SendUser != null ? SendUser : "null";
+
+                                                    String name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", finalParam);
+                                                    name = name != null ? name : "null";
+
+                                                    Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                                                            "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                                                    XposedBridge.log(finalChatMid);
+                                                    String talkName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", finalChatMid);
+                                                    if (Objects.equals(talkName, "null")) {
+                                                        talkName = queryDatabase(db3, "SELECT name FROM groups WHERE id=?", finalChatMid);
+                                                    }
+
+                                                    XposedBridge.log(talkName);
+                                                    String mediaDescription = "";
+                                                    if (media != null) {
+                                                        if (media.contains("IMAGE")) {
+                                                            mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                                                        } else if (media.contains("video")) {
+                                                            mediaDescription = moduleContext.getResources().getString(R.string.video);
+                                                        } else if (media.contains("STKPKGID")) {
+                                                            mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                                                        } else if (media.contains("FILE")) {
+                                                            mediaDescription = moduleContext.getResources().getString(R.string.file);
+                                                        } else if (media.contains("LOCATION")) {
+                                                            mediaDescription = moduleContext.getResources().getString(R.string.location);
+                                                        }
+                                                    } else {
+                                                        mediaDescription = "null";
+                                                    }
+                                                    String finalContent = determineFinalContent(content, mediaDescription);
+                                                    //                                XposedBridge.log(content);
+
+                                                    String notificationKey = finalServerId + "|" + finalParam + "|" + finalContent + "|" + talkName;
+
+                                                    if (!sentNotifications.contains(notificationKey)) {
+                                                        sentNotifications.add(notificationKey);
+
+                                                        generateCustomNotification(
+                                                                context,
+                                                                name,
+                                                                finalContent,
+                                                                talkName,
+                                                                finalCreatedTime
+                                                        );
+                                                    }
                                                 }
-                                            } else {
-                                                mediaDescription = "null";
-                                            }
-                                            String finalContent = determineFinalContent(content, mediaDescription);
-            //                                XposedBridge.log(content);
-
-                                            String notificationKey = serverId + "|" + param3 + "|" + finalContent + "|" + talkName;
-
-                                            if (!sentNotifications.contains(notificationKey)) {
-                                                sentNotifications.add(notificationKey);
-
-                                                generateCustomNotification(
-                                                        context,
-                                                        name,
-                                                        finalContent,
-                                                        talkName,
-                                                        createdTime
-                                                );
-                                            }
+                                            });
                                         }
                                     }
 
-                                }
-                            });
 
 
                         }
