@@ -6,12 +6,14 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
+import android.provider.DocumentsContract;
 import android.provider.Settings;
 import android.text.InputType;
 import android.text.method.ScrollingMovementMethod;
@@ -23,19 +25,29 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
 import android.Manifest;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.documentfile.provider.DocumentFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Properties;
 
 import io.github.hiro.lime.hooks.CustomPreferences;
+import io.github.hiro.lime.hooks.DocumentPreferences;
 
 public class MainActivity extends Activity {
     public LimeOptions limeOptions = new LimeOptions();
     private static final int REQUEST_CODE = 100;
+    private static final int REQUEST_SETTINGS_URI = 101; // 設定ファイルURI選択用
 
+    private DocumentPreferences docPrefs;
+    private Uri settingsUri;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -76,11 +88,19 @@ public class MainActivity extends Activity {
 
     private void safelyInitializeApp() {
         try {
+            // 設定URIを読み込む
+            settingsUri = loadSettingsUri();
+            if (settingsUri == null) {
+                // URIが未設定の場合はピッカーを起動
+                launchSettingsUriPicker();
+                return;
+            }
+
+            // DocumentPreferencesを初期化
+            docPrefs = new DocumentPreferences(this, settingsUri);
             initializeApp();
-        } catch (PackageManager.NameNotFoundException e) {
+        } catch (Exception e) {
             handleInitializationError(e);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -116,13 +136,68 @@ public class MainActivity extends Activity {
         intent.setData(Uri.parse("package:" + getPackageName()));
         startActivity(intent);
     }
-    private void initializeApp() throws PackageManager.NameNotFoundException, IOException {
 
-        CustomPreferences customPrefs = new CustomPreferences(this);
+    private Uri loadSettingsUri() {
+        SharedPreferences prefs = getSharedPreferences("LimePrefs", Context.MODE_PRIVATE);
+        String uriString = prefs.getString("settings_uri", null);
+        return uriString != null ? Uri.parse(uriString) : null;
+    }
 
-        for (LimeOptions.Option option : limeOptions.options) {
-            option.checked = Boolean.parseBoolean(customPrefs.getSetting(option.name, String.valueOf(option.checked)));
+    private void saveSettingsUri(Uri uri) {
+        SharedPreferences prefs = getSharedPreferences("LimePrefs", Context.MODE_PRIVATE);
+        prefs.edit().putString("settings_uri", uri.toString()).apply();
+    }
+
+    private void launchSettingsUriPicker() {
+        Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                Intent.FLAG_GRANT_WRITE_URI_PERMISSION |
+                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+
+        // 初期ディレクトリを設定
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            Uri initialUri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Download/LimeBackup/Setting");
+            intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri);
         }
+
+        startActivityForResult(intent, REQUEST_SETTINGS_URI);
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+
+        if (requestCode == REQUEST_SETTINGS_URI && resultCode == RESULT_OK && data != null) {
+            Uri treeUri = data.getData();
+            if (treeUri != null) {
+                // 永続的な権限を取得
+                getContentResolver().takePersistableUriPermission(
+                        treeUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                );
+
+                // URIを保存
+                saveSettingsUri(treeUri);
+                settingsUri = treeUri;
+
+                try {
+                    docPrefs = new DocumentPreferences(this, settingsUri);
+                    initializeApp();
+                } catch (Exception e) {
+                    handleInitializationError(e);
+                }
+            }
+        } else if (requestCode == REQUEST_SETTINGS_URI) {
+            // ユーザーがピッカーをキャンセルした場合
+            Toast.makeText(this, "設定ファイルの選択が必要です", Toast.LENGTH_LONG).show();
+            finish();
+        }
+    }
+
+    private void initializeApp() throws PackageManager.NameNotFoundException, IOException {
+        // 設定を読み込む
+        docPrefs.loadSettings(limeOptions);
 
         ScrollView mainScrollView = new ScrollView(this);
         mainScrollView.setLayoutParams(new ViewGroup.LayoutParams(
@@ -134,7 +209,8 @@ public class MainActivity extends Activity {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT));
         mainLayout.setOrientation(LinearLayout.VERTICAL);
-// パディングの設定（Android 15以降は上部パディングを大きく）
+
+        // パディングの設定（Android 15以降は上部パディングを大きく）
         if (Build.VERSION.SDK_INT >= 35) {
             mainLayout.setPadding(
                     Utils.dpToPx(20, this),
@@ -150,6 +226,7 @@ public class MainActivity extends Activity {
                     Utils.dpToPx(20, this)
             );
         }
+
         Switch switchRedirectWebView = null;
         for (LimeOptions.Option option : limeOptions.options) {
             final String name = option.name;
@@ -163,16 +240,26 @@ public class MainActivity extends Activity {
             switchView.setLayoutParams(params);
 
             switchView.setChecked(option.checked);
-            switchView.setOnCheckedChangeListener((buttonView, isChecked) -> customPrefs.saveSetting(name, String.valueOf(isChecked)));
+            switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+                try {
+                    docPrefs.saveSetting(name, String.valueOf(isChecked));
+                } catch (IOException e) {
+                    Toast.makeText(MainActivity.this, "設定の保存に失敗しました", Toast.LENGTH_SHORT).show();
+                }
+            });
 
             if (name.equals("redirect_webview")) {
                 switchRedirectWebView = switchView;
             } else if (name.equals("open_in_browser")) {
                 switchRedirectWebView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                    customPrefs.saveSetting("redirect_webview", String.valueOf(isChecked));
-                    switchView.setEnabled(isChecked);
+                    try {
+                        docPrefs.saveSetting("redirect_webview", String.valueOf(isChecked));
+                        switchView.setEnabled(isChecked);
+                    } catch (IOException e) {
+                        Toast.makeText(MainActivity.this, "設定の保存に失敗しました", Toast.LENGTH_SHORT).show();
+                    }
                 });
-                switchView.setEnabled(Boolean.parseBoolean(customPrefs.getSetting("redirect_webview", "false")));
+                switchView.setEnabled(option.checked); // 初期状態を設定
             }
 
             mainLayout.addView(switchView);
@@ -201,7 +288,7 @@ public class MainActivity extends Activity {
             editText.setHorizontallyScrolling(true);
             editText.setVerticalScrollBarEnabled(true);
             editText.setHorizontalScrollBarEnabled(true);
-            editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP)));
+            editText.setText(new String(Base64.decode(docPrefs.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP)));
 
             layoutModifyRequest.addView(editText);
 
@@ -246,11 +333,15 @@ public class MainActivity extends Activity {
                     .setTitle(R.string.modify_request)
                     .setView(dialogScrollView)
                     .setPositiveButton(R.string.positive_button, (dialog, which) -> {
-                        customPrefs.saveSetting("encoded_js_modify_request", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
+                        try {
+                            docPrefs.saveSetting("encoded_js_modify_request", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
+                        } catch (IOException e) {
+                            Toast.makeText(MainActivity.this, "設定の保存に失敗しました", Toast.LENGTH_SHORT).show();
+                        }
                     })
                     .setNegativeButton(R.string.negative_button, null)
                     .setOnDismissListener(dialog -> {
-                        editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP)));
+                        editText.setText(new String(Base64.decode(docPrefs.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP)));
                     });
 
             AlertDialog dialog = builder.create();
@@ -290,7 +381,7 @@ public class MainActivity extends Activity {
             editText.setHorizontallyScrolling(true);
             editText.setVerticalScrollBarEnabled(true);
             editText.setHorizontalScrollBarEnabled(true);
-            editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP)));
+            editText.setText(new String(Base64.decode(docPrefs.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP)));
 
             layoutModifyResponse.addView(editText);
 
@@ -335,11 +426,15 @@ public class MainActivity extends Activity {
                     .setTitle(R.string.modify_response)
                     .setView(dialogScrollView)
                     .setPositiveButton(R.string.positive_button, (dialog, which) -> {
-                        customPrefs.saveSetting("encoded_js_modify_response", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
+                        try {
+                            docPrefs.saveSetting("encoded_js_modify_response", Base64.encodeToString(editText.getText().toString().getBytes(), Base64.NO_WRAP));
+                        } catch (IOException e) {
+                            Toast.makeText(MainActivity.this, "設定の保存に失敗しました", Toast.LENGTH_SHORT).show();
+                        }
                     })
                     .setNegativeButton(R.string.negative_button, null)
                     .setOnDismissListener(dialog -> {
-                        editText.setText(new String(Base64.decode(customPrefs.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP)));
+                        editText.setText(new String(Base64.decode(docPrefs.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP)));
                     });
 
             AlertDialog dialog = builder.create();

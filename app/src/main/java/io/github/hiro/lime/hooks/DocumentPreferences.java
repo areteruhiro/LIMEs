@@ -1,235 +1,313 @@
 package io.github.hiro.lime.hooks;
 
-import static io.github.hiro.lime.Main.limeOptions;
-
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
-import android.os.Environment;
+import android.os.Build;
+import android.provider.DocumentsContract;
 import android.util.Log;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.documentfile.provider.DocumentFile;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.Properties;
 
-import de.robv.android.xposed.XposedBridge;
 import io.github.hiro.lime.LimeOptions;
 
 public class DocumentPreferences {
-    private static final String SETTINGS_FILE = "settings.properties";
-    private final Context context;
-    private final Uri treeUri;
+    private static final String TAG = "DocumentPreferences";
+    private static final String SETTINGS_FILE_NAME = "settings.properties";
+    private static final String MIME_TYPE = "application/x-java-properties";
 
-    public DocumentPreferences(Context context, Uri treeUri) {
-        this.context = context;
-        this.treeUri = treeUri;
+    private final Context mContext;
+    private final Uri mTreeUri;
+    private DocumentFile mSettingsFile;
+
+    public DocumentPreferences(@NonNull Context context, @NonNull Uri treeUri) {
+        this.mContext = context;
+        this.mTreeUri = treeUri;
+        initialize();
     }
 
-    public void recreateSettingsFile(Context context) throws IOException {
-        final String TAG = "LimeDocPrefs";
-
+    private void initialize() {
         try {
-            XposedBridge.log(TAG + ": Starting file recreation process");
+            logUriDetails("Initializing DocumentPreferences with URI");
 
-            DocumentFile dir = DocumentFile.fromTreeUri(context, treeUri);
-            XposedBridge.log(TAG + ": Resolved directory URI: " + treeUri);
-
-            if (dir == null || !dir.exists()) {
-                String msg = "Directory not accessible - URI: " + treeUri;
-                XposedBridge.log(TAG + ": " + msg);
-                throw new IOException(msg);
+            try {
+                mContext.getContentResolver().takePersistableUriPermission(
+                        mTreeUri,
+                        Intent.FLAG_GRANT_READ_URI_PERMISSION |
+                                Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                );
+            } catch (SecurityException e) {
+                logError("SecurityException when taking permissions: " + e.getMessage(), e);
+                // 権限が不足している場合はここでリターン
+                return;
             }
 
-            DocumentFile existingFile = dir.findFile("settings.properties");
-            if (existingFile != null) {
-                XposedBridge.log(TAG + ": Found existing file: " + existingFile.getUri());
+            logDebug("Creating DocumentFile from URI");
+            DocumentFile dir = DocumentFile.fromTreeUri(mContext, mTreeUri);
 
-                if (existingFile.delete()) {
-                    XposedBridge.log(TAG + ": Successfully deleted existing file");
-                } else {
-                    String msg = "Failed to delete file: " + existingFile.getUri();
-                    XposedBridge.log(TAG + ": " + msg);
-                    throw new IOException(msg);
+            if (dir == null) {
+                logError("Failed to resolve directory from URI: " + mTreeUri);
+                return;
+            }
+
+            // ディレクトリの存在チェック
+            if (!dir.exists()) {
+                logWarning("Directory does not exist, attempting to create: " + mTreeUri);
+
+                // 改良されたディレクトリ作成方法
+                Uri createdDirUri = createDirectorySafely(dir);
+                if (createdDirUri == null) {
+                    logError("Directory creation failed");
+                    return;
                 }
-            } else {
-                XposedBridge.log(TAG + ": No existing file to delete");
+
+                dir = DocumentFile.fromTreeUri(mContext, createdDirUri);
+                if (dir == null || !dir.exists()) {
+                    logError("New directory does not exist after creation");
+                    return;
+                }
+
+                logInfo("Directory created successfully: " + dir.getUri());
             }
 
-            XposedBridge.log(TAG + ": Starting copy from internal storage");
-            copyFromInternalStorage(context, dir);
-            XposedBridge.log(TAG + ": File recreation completed successfully");
-
-        } catch (IOException e) {
-            XposedBridge.log(TAG + ": Critical error in recreateSettingsFile: " + e.getClass().getSimpleName());
-            XposedBridge.log(TAG + ": Error details: " + e.getMessage());
-            XposedBridge.log(TAG + ": Stack trace: " + Log.getStackTraceString(e));
-            throw e;
+            // 設定ファイルのチェック
+            mSettingsFile = dir.findFile(SETTINGS_FILE_NAME);
+            if (mSettingsFile == null) {
+                logDebug("Settings file not found, will create when needed");
+            } else {
+                logInfo("Settings file found: " + mSettingsFile.getUri());
+            }
+        } catch (SecurityException e) {
+            logError("SecurityException in initialize: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logError("Unexpected error in initialize: " + e.getMessage(), e);
         }
     }
 
-    private void copyFromInternalStorage(Context context, DocumentFile targetDir) throws IOException {
-        final String TAG = "LimeDocPrefs-Copy";
-
+    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private Uri createDirectorySafely(DocumentFile parentDir) {
         try {
-            File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            File limeBackupDir = new File(downloadsDir, "LimeBackup");
-            File settingDir = new File(limeBackupDir, "Setting");
+            String displayName = getDisplayNameFromUri(mTreeUri);
+            logDebug("Creating directory with name: " + displayName);
 
-            if (!settingDir.exists() && !settingDir.mkdirs()) {
-                throw new IOException("Failed to create directory: " + settingDir.getAbsolutePath());
-            }
-
-            File internalFile = new File(settingDir, "settings.properties");
-            XposedBridge.log(TAG + ": External file path: " + internalFile.getAbsolutePath());
-
-            if (!internalFile.exists()) {
-                XposedBridge.log(TAG + ": External file not found, creating default");
-                createDefaultSettingsFile(internalFile);
-            }
-
-            DocumentFile newFile = targetDir.createFile(
-                    "application/x-java-properties",
-                    "settings.properties"
+            // DocumentsContract APIを使用してディレクトリを作成
+            Uri createdUri = DocumentsContract.createDocument(
+                    mContext.getContentResolver(),
+                    parentDir.getUri(),
+                    DocumentsContract.Document.MIME_TYPE_DIR,
+                    displayName
             );
 
-            if (newFile == null) {
-                throw new IOException("Failed to create new file in target directory");
-            }
-            XposedBridge.log(TAG + ": Created new file: " + newFile.getUri());
-
-            try (InputStream is = new FileInputStream(internalFile);
-                 OutputStream os = context.getContentResolver().openOutputStream(newFile.getUri())) {
-
-                XposedBridge.log(TAG + ": Starting file copy...");
-                long startTime = System.currentTimeMillis();
-
-                byte[] buffer = new byte[4096];
-                int length;
-                long totalBytes = 0;
-
-                while ((length = is.read(buffer)) > 0) {
-                    os.write(buffer, 0, length);
-                    totalBytes += length;
-                }
-
-                long duration = System.currentTimeMillis() - startTime;
-                XposedBridge.log(TAG + ": Copy completed - Bytes: " + totalBytes
-                        + ", Duration: " + duration + "ms");
+            if (createdUri == null) {
+                logError("DocumentsContract.createDocument returned null");
+                return null;
             }
 
+            logDebug("Directory created via DocumentsContract: " + createdUri);
+            return createdUri;
+        } catch (Exception e) {
+            logError("Error creating directory with DocumentsContract: " + e.getMessage(), e);
+            return null;
+        }
+    }
+    public boolean saveSetting(String key, String value) throws IOException {
+        try {
+            ensureSettingsFile();
+
+            Properties properties = new Properties();
+            if (mSettingsFile != null && mSettingsFile.exists()) {
+                try (InputStream is = mContext.getContentResolver().openInputStream(mSettingsFile.getUri())) {
+                    properties.load(is);
+                } catch (IOException ignored) {}
+            }
+
+            properties.setProperty(key, value);
+
+            try (OutputStream os = mContext.getContentResolver().openOutputStream(mSettingsFile.getUri())) {
+                properties.store(os, "Updated");
+                logInfo("Setting saved: " + key + " = " + value);
+                return true;
+            }
         } catch (IOException e) {
-            XposedBridge.log(TAG + ": Copy failed: " + e.getClass().getSimpleName());
-            XposedBridge.log(TAG + ": Error details: " + e.getMessage());
-            XposedBridge.log(TAG + ": Stack trace: " + Log.getStackTraceString(e));
+            logError("Failed to save setting: " + key, e);
             throw e;
+        } catch (SecurityException e) {
+            logError("SecurityException when saving setting: " + e.getMessage(), e);
+            throw new IOException("Permission denied", e);
         }
     }
 
-    private void createDefaultSettingsFile(File file) throws IOException {
-        final String TAG = "LimeDocPrefs-Default";
+    public void loadSettings(LimeOptions options) throws IOException {
+        try {
+            ensureSettingsFile();
+
+            if (mSettingsFile == null || !mSettingsFile.exists()) {
+                logWarning("Settings file not available for loading");
+                return;
+            }
+
+            try (InputStream is = mContext.getContentResolver().openInputStream(mSettingsFile.getUri())) {
+                Properties properties = new Properties();
+                properties.load(is);
+
+                for (LimeOptions.Option option : options.options) {
+                    String value = properties.getProperty(option.name);
+                    if (value != null) {
+                        option.checked = Boolean.parseBoolean(value);
+                    }
+                }
+                logInfo("Settings loaded successfully");
+            }
+        } catch (IOException e) {
+            logError("Failed to load settings", e);
+            throw e;
+        } catch (SecurityException e) {
+            logError("SecurityException when loading settings: " + e.getMessage(), e);
+            throw new IOException("Permission denied", e);
+        }
+    }
+
+    public String getSetting(String key, String defaultValue) {
+        try {
+            ensureSettingsFile();
+
+            if (mSettingsFile == null || !mSettingsFile.exists()) {
+                logDebug("Settings file not available for getSetting: " + key);
+                return defaultValue;
+            }
+
+            try (InputStream is = mContext.getContentResolver().openInputStream(mSettingsFile.getUri())) {
+                Properties properties = new Properties();
+                properties.load(is);
+                return properties.getProperty(key, defaultValue);
+            }
+        } catch (Exception e) {
+            logError("Failed to get setting: " + key, e);
+            return defaultValue;
+        }
+    }
+
+    private void ensureSettingsFile() throws IOException {
+        if (mSettingsFile != null && mSettingsFile.exists()) {
+            return;
+        }
 
         try {
-            XposedBridge.log(TAG + ": Creating default settings file: " + file.getAbsolutePath());
+            logDebug("Ensuring settings file exists");
 
-            if (!file.getParentFile().exists() && !file.getParentFile().mkdirs()) {
-                throw new IOException("Failed to create directory structure");
+            DocumentFile dir = DocumentFile.fromTreeUri(mContext, mTreeUri);
+            if (dir == null) {
+                throw new IOException("Failed to resolve directory from URI");
             }
 
-            try (FileOutputStream fos = new FileOutputStream(file);
-                 OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
-
-                Properties props = new Properties();
-                for (LimeOptions.Option option : limeOptions.options) {
-                    props.setProperty(option.name, String.valueOf(option.checked));
-                    XposedBridge.log(TAG + ": Setting default value - "
-                            + option.name + ": " + option.checked);
-                }
-
-                props.store(osw, "Default Settings");
-                XposedBridge.log(TAG + ": Successfully stored default settings");
+            if (!dir.exists()) {
+                throw new IOException("Directory does not exist: " + mTreeUri);
             }
 
-            XposedBridge.log(TAG + ": File created successfully - Size: "
-                    + file.length() + " bytes");
+            logDebug("Creating settings file: " + SETTINGS_FILE_NAME);
+            mSettingsFile = dir.createFile(MIME_TYPE, SETTINGS_FILE_NAME);
 
-        } catch (IOException e) {
-            XposedBridge.log(TAG + ": Failed to create default file: " + e.getMessage());
-            XposedBridge.log(TAG + ": Stack trace: " + Log.getStackTraceString(e));
-            throw e;
-        }
-    }
-
-    public void saveSettings(LimeOptions limeOptions) throws IOException {
-        DocumentFile dir = DocumentFile.fromTreeUri(context, treeUri);
-        if (dir == null || !dir.exists()) {
-            throw new IOException("Directory not accessible");
-        }
-
-        DocumentFile file = dir.findFile(SETTINGS_FILE);
-        if (file == null) {
-            file = dir.createFile("text/plain", SETTINGS_FILE);
-        }
-
-        if (file == null) {
-            throw new IOException("File creation failed");
-        }
-
-        Properties properties = new Properties();
-        for (LimeOptions.Option option : limeOptions.options) {
-            properties.setProperty(option.name, String.valueOf(option.checked));
-        }
-
-        try (OutputStream os = context.getContentResolver().openOutputStream(file.getUri())) {
-            properties.store(os, "Lime Backup Settings");
-        }
-    }
-
-    public void loadSettings(LimeOptions limeOptions) throws IOException {
-        DocumentFile dir = DocumentFile.fromTreeUri(context, treeUri);
-        if (dir == null || !dir.exists()) {
-            throw new IOException("Directory not accessible");
-        }
-
-        DocumentFile file = dir.findFile(SETTINGS_FILE);
-        if (file == null) {
-            createDefaultSettings(dir);
-            file = dir.findFile(SETTINGS_FILE);
-            if (file == null) {
-                throw new IOException("Settings file not found");
+            if (mSettingsFile == null) {
+                throw new IOException("createFile returned null");
             }
-        }
 
-        try (InputStream is = context.getContentResolver().openInputStream(file.getUri())) {
+            if (!mSettingsFile.exists()) {
+                throw new IOException("Settings file does not exist after creation");
+            }
+
+            // 新規作成時は空の設定で初期化
             Properties properties = new Properties();
-            properties.load(is);
-
-            for (LimeOptions.Option option : limeOptions.options) {
-                String value = properties.getProperty(option.name, String.valueOf(option.checked));
-                option.checked = Boolean.parseBoolean(value);
+            try (OutputStream os = mContext.getContentResolver().openOutputStream(mSettingsFile.getUri())) {
+                properties.store(os, "Initial Settings");
+                logInfo("Settings file created successfully: " + mSettingsFile.getUri());
             }
+        } catch (SecurityException e) {
+            logError("SecurityException in ensureSettingsFile: " + e.getMessage(), e);
+            throw new IOException("Permission denied", e);
         }
     }
 
-    private void createDefaultSettings(DocumentFile dir) throws IOException {
-        DocumentFile file = dir.createFile("text/plain", SETTINGS_FILE);
+    // 追加の診断メソッド
+    private String getDisplayNameFromUri(Uri uri) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            String displayName = DocumentsContract.getTreeDocumentId(uri);
+            if (displayName != null) {
+                return displayName.substring(displayName.lastIndexOf(':') + 1);
+            }
+        }
+        return "LimeSettings";
+    }
+
+    private void logUriDetails(String context) {
+        logDebug(context + " - URI: " + mTreeUri);
+        logDebug("URI Scheme: " + mTreeUri.getScheme());
+        logDebug("URI Authority: " + mTreeUri.getAuthority());
+        logDebug("URI Path: " + mTreeUri.getPath());
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            logDebug("Tree Document ID: " + DocumentsContract.getTreeDocumentId(mTreeUri));
+        }
+    }
+
+    private void logDocumentFileDetails(String prefix, DocumentFile file) {
         if (file == null) {
-            throw new IOException("Default settings creation failed");
+            logDebug(prefix + ": null");
+            return;
         }
 
-        Properties properties = new Properties();
-        for (LimeOptions.Option option : limeOptions.options) {
-            properties.setProperty(option.name, String.valueOf(option.checked));
-        }
+        logDebug(prefix + " URI: " + file.getUri());
+        logDebug(prefix + " Name: " + file.getName());
+        logDebug(prefix + " Type: " + file.getType());
+        logDebug(prefix + " Length: " + file.length());
+        logDebug(prefix + " Last Modified: " + file.lastModified());
+        logDebug(prefix + " Can Read: " + file.canRead());
+        logDebug(prefix + " Can Write: " + file.canWrite());
+    }
 
-        try (OutputStream os = context.getContentResolver().openOutputStream(file.getUri())) {
-            properties.store(os, "Default Settings");
+    // ロギングヘルパー
+    private void logDebug(String message) {
+        Log.d(TAG, message);
+    }
+
+    private void logInfo(String message) {
+        Log.i(TAG, message);
+    }
+
+    private void logWarning(String message) {
+        Log.w(TAG, message);
+    }
+
+    private void logError(String message) {
+        Log.e(TAG, message);
+    }
+
+    private void logError(String message, Throwable t) {
+        Log.e(TAG, message, t);
+    }
+
+    public boolean isAccessible() {
+        try {
+            DocumentFile dir = DocumentFile.fromTreeUri(mContext, mTreeUri);
+            if (dir == null) {
+                logDebug("isAccessible: DocumentFile.fromTreeUri returned null");
+                return false;
+            }
+
+            logDocumentFileDetails("Accessibility Check", dir);
+            return dir.exists();
+        } catch (SecurityException e) {
+            logError("SecurityException in isAccessible: " + e.getMessage(), e);
+            return false;
+        } catch (Exception e) {
+            logError("Unexpected error in isAccessible: " + e.getMessage(), e);
+            return false;
         }
     }
 }

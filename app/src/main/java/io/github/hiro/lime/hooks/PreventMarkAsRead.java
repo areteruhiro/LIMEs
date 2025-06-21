@@ -13,6 +13,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
@@ -23,6 +24,7 @@ import android.widget.ImageView;
 import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
+import androidx.documentfile.provider.DocumentFile;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -31,6 +33,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.lang.reflect.Field;
 import java.util.HashMap;
@@ -54,60 +57,43 @@ public class PreventMarkAsRead implements IHook {
             XposedHelpers.findAndHookMethod(chatHistoryActivityClass, "onCreate", Bundle.class, new XC_MethodHook() {
                 Context moduleContext;
 
-
                 @Override
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-
                     if (moduleContext == null) {
                         try {
                             Context systemContext = (Context) XposedHelpers.callMethod(param.thisObject, "getApplicationContext");
                             moduleContext = systemContext.createPackageContext("io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
                         } catch (Exception e) {
-                            //XposedBridge.log("Failed to get module context: " + e.getMessage());
+                            XposedBridge.log("Lime: Failed to get module context: " + e.getMessage());
                         }
                     }
                 }
 
-
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     Context activityContext = (Context) param.thisObject;
-
-                    // Get the application context
                     Context context = activityContext.getApplicationContext();
+
                     if (moduleContext == null) {
-                        //XposedBridge.log("Module context is null. Skipping hook.");
+                        XposedBridge.log("Lime: Module context is null. Skipping hook.");
                         return;
                     }
+
                     Activity activity = (Activity) param.thisObject;
-                    addButton(activity, moduleContext,context);
+                    addButton(activity, moduleContext, context);
                 }
-                private void addButton(Activity activity, Context moduleContext,Context context) {
+
+                private void addButton(Activity activity, Context moduleContext, Context context) {
                     Map<String, String> settings = readSettingsFromExternalFile(context);
 
-                    float horizontalMarginFactor = 0.5f;
-                    int verticalMarginDp = 15;
-
-                    if (settings.containsKey("Read_buttom_Chat_horizontalMarginFactor")) {
-                        horizontalMarginFactor = Float.parseFloat(settings.get("Read_buttom_Chat_horizontalMarginFactor"));
-                    }
-                    if (settings.containsKey("Read_buttom_Chat_verticalMarginDp")) {
-                        verticalMarginDp = Integer.parseInt(settings.get("Read_buttom_Chat_verticalMarginDp"));
-                    }
+                    float horizontalMarginFactor = Float.parseFloat(settings.getOrDefault("Read_buttom_Chat_horizontalMarginFactor", "0.5"));
+                    int verticalMarginDp = Integer.parseInt(settings.getOrDefault("Read_buttom_Chat_verticalMarginDp", "15"));
+                    float chatUnreadSizeDp = Float.parseFloat(settings.getOrDefault("chat_unread_size", "30"));
 
                     ImageView imageView = new ImageView(activity);
-                    updateSwitchImage(imageView, isSendChatCheckedEnabled, moduleContext);
+                    updateSwitchImage(imageView, isSendChatCheckedEnabled, moduleContext, context);
 
-                    // chat_unread_size の値を取得
-                    float chatUnreadSizeDp = 30; // デフォルト値
-                    if (settings.containsKey("chat_unread_size")) {
-                        chatUnreadSizeDp = Float.parseFloat(settings.get("chat_unread_size"));
-                    }
-
-                    // DP値をピクセル値に変換
                     int sizeInPx = dpToPx(moduleContext, chatUnreadSizeDp);
-
-                    // FrameLayout.LayoutParams の幅と高さを動的に設定
                     FrameLayout.LayoutParams frameParams = new FrameLayout.LayoutParams(sizeInPx, sizeInPx);
 
                     int horizontalMarginPx = (int) (horizontalMarginFactor * activity.getResources().getDisplayMetrics().widthPixels);
@@ -117,20 +103,25 @@ public class PreventMarkAsRead implements IHook {
 
                     imageView.setOnClickListener(v -> {
                         isSendChatCheckedEnabled = !isSendChatCheckedEnabled;
-                        updateSwitchImage(imageView, isSendChatCheckedEnabled, moduleContext);
+                        updateSwitchImage(imageView, isSendChatCheckedEnabled, moduleContext, context);
                         send_chat_checked_state(moduleContext, isSendChatCheckedEnabled);
                     });
 
                     ViewGroup layout = activity.findViewById(android.R.id.content);
                     layout.addView(imageView);
                 }
+
                 private Map<String, String> readSettingsFromExternalFile(Context context) {
                     String fileName = "margin_settings.txt";
                     File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
                     File file = new File(dir, fileName);
                     Map<String, String> settings = new HashMap<>();
 
-                    // ファイルが存在する場合、内容を読み込む
+                    // デフォルト値を設定
+                    settings.put("Read_buttom_Chat_horizontalMarginFactor", "0.5");
+                    settings.put("Read_buttom_Chat_verticalMarginDp", "15");
+                    settings.put("chat_unread_size", "30");
+
                     if (file.exists()) {
                         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
                             String line;
@@ -141,94 +132,60 @@ public class PreventMarkAsRead implements IHook {
                                 }
                             }
                         } catch (IOException e) {
-                            e.printStackTrace();
+                            XposedBridge.log("Lime: Error reading margin settings: " + e.getMessage());
                         }
                     }
                     return settings;
                 }
 
-                private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext) {
-                    // ファイルパスを取得
-                    File dir = new File(moduleContext.getFilesDir(), "LimeBackup");
-                    File file = new File(dir, "margin_settings.txt");
+                private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext, Context context) {
+                    String imageName = isOn ? "read_switch_on.png" : "read_switch_off.png";
 
-                    float chatUnreadSizeDp = 30; // デフォルト値
+                    // URIから画像を読み込む
+                    Drawable drawable = loadImageFromUri(context, imageName);
 
-                    if (file.exists()) {
-                        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                            String line;
-                            while ((line = reader.readLine()) != null) {
-                                String[] parts = line.split("=", 2);
-                                if (parts.length == 2) {
-                                    if (parts[0].trim().equals("chat_unread_size")) {
-                                        chatUnreadSizeDp = Float.parseFloat(parts[1].trim());
+                    // URIから読み込めなかった場合はアプリ内リソースを使用
+                    if (drawable == null) {
+                        int resId = moduleContext.getResources().getIdentifier(
+                                imageName.replace(".png", ""), "drawable", "io.github.hiro.lime");
+                        if (resId != 0) {
+                            drawable = moduleContext.getResources().getDrawable(resId);
+                        }
+                    }
+
+                    if (drawable != null) {
+                        Map<String, String> settings = readSettingsFromExternalFile(context);
+                        float sizeInDp = Float.parseFloat(settings.getOrDefault("chat_unread_size", "30"));
+                        int sizeInPx = dpToPx(moduleContext, sizeInDp);
+                        drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
+                        imageView.setImageDrawable(drawable);
+                    }
+                }
+
+                private Drawable loadImageFromUri(Context context, String imageName) {
+                    String backupUri = loadBackupUri(context);
+                    if (backupUri != null) {
+                        try {
+                            Uri treeUri = Uri.parse(backupUri);
+                            DocumentFile dir = DocumentFile.fromTreeUri(context, treeUri);
+                            if (dir != null) {
+                                DocumentFile imageFile = dir.findFile(imageName);
+                                if (imageFile != null && imageFile.exists()) {
+                                    try (InputStream inputStream = context.getContentResolver().openInputStream(imageFile.getUri())) {
+                                        return Drawable.createFromStream(inputStream, null);
+                                    } catch (IOException e) {
+                                        XposedBridge.log("Lime: Error loading image from URI: " + e.getMessage());
                                     }
                                 }
                             }
-                        } catch (IOException | NumberFormatException ignored) {
-                            // エラーが発生した場合はデフォルト値を使用
+                        } catch (Exception e) {
+                            XposedBridge.log("Lime: Error accessing image URI: " + e.getMessage());
                         }
                     }
-
-                    // 画像のファイル名を決定（ON/OFF状態に応じて）
-                    String imageName = isOn ? "read_switch_on.png" : "read_switch_off.png";
-
-                    // 画像ファイルのパスを指定
-                    File imageFile = new File(dir, imageName);
-
-                    // 画像ファイルが存在しない場合、リソースからコピーして保存
-                    if (!imageFile.exists()) {
-                        // 最初のディレクトリにコピーを試みる
-                        if (!copyImageFile(moduleContext, imageName, imageFile)) {
-                            // 次のディレクトリにコピーを試みる
-                            File fallbackDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
-                            if (!fallbackDir.exists()) {
-                                fallbackDir.mkdirs();
-                            }
-                            imageFile = new File(fallbackDir, imageName);
-                            if (!copyImageFile(moduleContext, imageName, imageFile)) {
-                                // 内部ストレージにコピーを試みる
-                                File internalDir = new File(moduleContext.getFilesDir(), "backup");
-                                if (!internalDir.exists()) {
-                                    internalDir.mkdirs();
-                                }
-                                imageFile = new File(internalDir, imageName);
-                                copyImageFile(moduleContext, imageName, imageFile);
-                            }
-                        }
-                    }
-
-                    // 画像ファイルが存在する場合、ImageViewに設定
-                    if (imageFile.exists()) {
-                        Drawable drawable = Drawable.createFromPath(imageFile.getAbsolutePath());
-                        if (drawable != null) {
-                            // DP値をピクセル値に変換
-                            int sizeInPx = dpToPx(moduleContext, chatUnreadSizeDp);
-                            // 画像を指定したサイズにスケーリング
-                            drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
-                            // ImageViewにスケーリングされた画像を設定
-                            imageView.setImageDrawable(drawable);
-                        }
-                    }
+                    return null;
                 }
 
-                private boolean copyImageFile(Context moduleContext, String imageName, File destinationFile) {
-                    try (InputStream in = moduleContext.getResources().openRawResource(
-                            moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));
-                         OutputStream out = new FileOutputStream(destinationFile)) {
-                        byte[] buffer = new byte[1024];
-                        int length;
-                        while ((length = in.read(buffer)) > 0) {
-                            out.write(buffer, 0, length);
-                        }
-                        return true; // コピー成功
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        return false; // コピー失敗
-                    }
-                }
-                // DP値をピクセル値に変換するメソッド
-                private int dpToPx(@NonNull Context context, float dp) {
+                private int dpToPx(Context context, float dp) {
                     float density = context.getResources().getDisplayMetrics().density;
                     return Math.round(dp * density);
                 }
@@ -239,16 +196,14 @@ public class PreventMarkAsRead implements IHook {
                     return new BitmapDrawable(scaledBitmap);
                 }
 
-                private void send_chat_checked_state (Context context,boolean state){
+                private void send_chat_checked_state(Context context, boolean state) {
                     String filename = "send_chat_checked_state.txt";
                     try (FileOutputStream fos = context.openFileOutput(filename, Context.MODE_PRIVATE)) {
                         fos.write((state ? "1" : "0").getBytes());
-                    } catch (IOException ignored) {
-
+                    } catch (IOException e) {
+                        XposedBridge.log("Lime: Error saving chat checked state: " + e.getMessage());
                     }
                 }
-
-
             });
             XposedHelpers.findAndHookMethod(
                     loadPackageParam.classLoader.loadClass(Constants.MARK_AS_READ_HOOK.className),
@@ -293,4 +248,22 @@ public class PreventMarkAsRead implements IHook {
                 );
             }
         }
+    private String loadBackupUri(Context context) {
+        if (context == null) {
+            XposedBridge.log("Lime: Context is null in loadBackupUri");
+            return null;
+        }
+
+        File settingsFile = new File(context.getFilesDir(), "LimeBackup/backup_uri.txt");
+        if (!settingsFile.exists()) return null;
+
+        try (FileInputStream fis = new FileInputStream(settingsFile);
+             InputStreamReader isr = new InputStreamReader(fis);
+             BufferedReader br = new BufferedReader(isr)) {
+            return br.readLine();
+        } catch (IOException e) {
+            XposedBridge.log("Lime URI Load Error: " + e.getMessage());
+            return null;
+        }
+    }
     }

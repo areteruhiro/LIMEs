@@ -56,6 +56,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.nio.channels.FileChannel;
 import java.text.SimpleDateFormat;
@@ -90,34 +91,43 @@ public class EmbedOptions implements IHook {
                 loadPackageParam.classLoader.loadClass("com.linecorp.line.settings.main.LineUserMainSettingsFragment"),
                 "onViewCreated",
                 new XC_MethodHook() {
-
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         Context contextV = getTargetAppContext(loadPackageParam);
                         Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                 "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                        String backupUri = loadBackupUri(contextV);
+                        if (backupUri == null) {
+                            XposedBridge.log("Lime: Settings URI not configured");
+                            return;
+                        }
+
+                        Uri treeUri = Uri.parse(backupUri);
+                        DocumentPreferences docPrefs = new DocumentPreferences(contextV, treeUri);
 
                         if (limeOptions.NewOption.checked) {
-
                             try {
+                                // URIからDocumentPreferencesを初期化
+
                                 PackageManager pm = contextV.getPackageManager();
                                 String versionName = ""; // 初期化
                                 try {
                                     versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
                                 } catch (PackageManager.NameNotFoundException e) {
-                                    e.printStackTrace();
+                                    XposedBridge.log("Lime: Package info error: " + e.getMessage());
                                 }
 
-                                CustomPreferences customPreferences = new CustomPreferences(contextV);
                                 Set<String> checkedOptions = new HashSet<>();
 
                                 for (LimeOptions.Option option : limeOptions.options) {
                                     if (!checkedOptions.contains(option.name)) {
-                                        option.checked = Boolean.parseBoolean(customPreferences.getSetting(option.name, String.valueOf(option.checked)));
+                                        // DocumentPreferencesから設定を読み込む
+                                        option.checked = Boolean.parseBoolean(
+                                                docPrefs.getSetting(option.name, String.valueOf(option.checked))
+                                        );
                                         checkedOptions.add(option.name);
                                     }
                                 }
-
                                 ViewGroup viewGroup = ((ViewGroup) param.args[0]);
                                 Context context = viewGroup.getContext();
                                 Utils.addModuleAssetPath(context);
@@ -151,9 +161,15 @@ public class EmbedOptions implements IHook {
 
                                 button.setOnClickListener(view -> {
                                     // カテゴリ一覧画面を生成
-                                    ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
+
+                                    if (backupUri == null) {
+                                        Toast.makeText(context, "Please select settings folder first", Toast.LENGTH_LONG).show();
+                                        return;
+                                    }
+                                    ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), docPrefs, moduleContext, loadPackageParam);
                                     showView(rootLayout, categoryLayout);
                                 });
+
 
                                 // ボタンを追加
                                 rootLayout.addView(button);
@@ -186,12 +202,15 @@ public class EmbedOptions implements IHook {
                                     e.printStackTrace();
                                 }
 
-                                CustomPreferences customPreferences = new CustomPreferences(contextV);
+
                                 Set<String> checkedOptions = new HashSet<>(); // 重複をチェックするためのセット
 
                                 for (LimeOptions.Option option : limeOptions.options) {
                                     if (!checkedOptions.contains(option.name)) {
-                                        option.checked = Boolean.parseBoolean(customPreferences.getSetting(option.name, String.valueOf(option.checked)));
+                                        // DocumentPreferencesから設定を読み込む
+                                        option.checked = Boolean.parseBoolean(
+                                                docPrefs.getSetting(option.name, String.valueOf(option.checked))
+                                        );
                                         checkedOptions.add(option.name);
                                     }
                                 }
@@ -318,7 +337,7 @@ public class EmbedOptions implements IHook {
                                 }
 
                                 {
-                                    final String script = new String(Base64.decode(customPreferences.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP));
+                                    final String script = new String(Base64.decode(docPrefs.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP));
                                     LinearLayout layoutModifyRequest = new LinearLayout(context);
                                     layoutModifyRequest.setLayoutParams(new LinearLayout.LayoutParams(
                                             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -477,21 +496,31 @@ public class EmbedOptions implements IHook {
                                     builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
                                         String code = editText.getText().toString();
                                         if (!code.equals(script)) {
-                                            // CustomPreferencesのインスタンスを作成
-                                            CustomPreferences customPreferences1 = null;
                                             try {
-                                                customPreferences1 = new CustomPreferences(contextV);
-                                            } catch (IOException |
-                                                     PackageManager.NameNotFoundException e) {
-                                                throw new RuntimeException(e);
-                                            }
-                                            // Base64エンコードして設定を保存
-                                            String encodedCode = Base64.encodeToString(code.getBytes(), Base64.NO_WRAP);
-                                            customPreferences1.saveSetting("encoded_js_modify_request", encodedCode);
 
-                                            Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                                            Process.killProcess(Process.myPid());
-                                            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+                                                if (backupUri == null) {
+                                                    Toast.makeText(contextV, "Settings URI not configured", Toast.LENGTH_LONG).show();
+                                                    return;
+                                                }
+                                                // Base64エンコードして設定を保存
+                                                String encodedCode = Base64.encodeToString(code.getBytes(), Base64.NO_WRAP);
+                                                docPrefs.saveSetting("encoded_js_modify_request", encodedCode);
+
+                                                // アプリを再起動
+                                                Toast.makeText(contextV.getApplicationContext(),
+                                                        contextV.getString(R.string.restarting),
+                                                        Toast.LENGTH_SHORT).show();
+                                                Process.killProcess(Process.myPid());
+                                                contextV.startActivity(new Intent()
+                                                        .setClassName(Constants.PACKAGE_NAME,
+                                                                "jp.naver.line.android.activity.SplashActivity"));
+
+                                            } catch (IOException e) {
+                                                Toast.makeText(contextV,
+                                                        "Failed to save settings: " + e.getMessage(),
+                                                        Toast.LENGTH_LONG).show();
+                                                XposedBridge.log("Save modify request error: " + e.getMessage());
+                                            }
                                         }
                                     });
 
@@ -512,7 +541,7 @@ public class EmbedOptions implements IHook {
                                 }
 
                                 {
-                                    final String script = new String(Base64.decode(customPreferences.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP));
+                                    final String script = new String(Base64.decode(docPrefs.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP));
                                     LinearLayout layoutModifyResponse = new LinearLayout(context);
                                     layoutModifyResponse.setLayoutParams(new LinearLayout.LayoutParams(
                                             LinearLayout.LayoutParams.MATCH_PARENT,
@@ -576,7 +605,11 @@ public class EmbedOptions implements IHook {
                                     builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
                                         String code = editText.getText().toString();
                                         if (!code.equals(script)) {
-                                            customPreferences.saveSetting("encoded_js_modify_response", Base64.encodeToString(code.getBytes(), Base64.NO_WRAP));
+                                            try {
+                                                docPrefs.saveSetting("encoded_js_modify_response", Base64.encodeToString(code.getBytes(), Base64.NO_WRAP));
+                                            } catch (IOException e) {
+                                                throw new RuntimeException(e);
+                                            }
                                             Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
                                             Process.killProcess(Process.myPid());
                                             context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
@@ -618,8 +651,12 @@ public class EmbedOptions implements IHook {
                                         }
 
                                         // 保存処理の結果をチェック
-                                        if (!customPreferences.saveSetting(limeOptions.options[i].name, String.valueOf(isChecked))) {
-                                            saveSuccess = false;
+                                        try {
+                                            if (!docPrefs.saveSetting(limeOptions.options[i].name, String.valueOf(isChecked))) {
+                                                saveSuccess = false;
+                                            }
+                                        } catch (IOException e) {
+                                            throw new RuntimeException(e);
                                         }
                                     }
 
@@ -824,14 +861,14 @@ public class EmbedOptions implements IHook {
         parent.addView(view);
     }
 
-    private ScrollView createCategoryListLayout(Context context, List<LimeOptions.Option> options, CustomPreferences customPreferences, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
+    private ScrollView createCategoryListLayout(Context context, List<LimeOptions.Option> options, DocumentPreferences docPrefs, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
         // ScrollView を親レイアウトとして作成
         ScrollView scrollView = new ScrollView(context);
         scrollView.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
 
-        // スクロール対象の LinearLayout（WRAP_CONTENT で高さを自動調整）
+        // スクロール対象の LinearLayout
         LinearLayout layout = new LinearLayout(context);
         layout.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -839,11 +876,9 @@ public class EmbedOptions implements IHook {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
         layout.setBackgroundColor(Color.BLACK);
-        layout.setClickable(true);
-        layout.setFocusable(true);
         scrollView.setFillViewport(true);
 
-         // バージョン情報を表示
+        // バージョン情報表示
         String LIMEs_versionName = BuildConfig.VERSION_NAME;
         TextView versionTextView = new TextView(context);
         versionTextView.setText("LIMEs" + " (" + LIMEs_versionName + ")");
@@ -855,7 +890,6 @@ public class EmbedOptions implements IHook {
 
         // カテゴリごとにオプションを分類
         Map<LimeOptions.OptionCategory, List<LimeOptions.Option>> categorizedOptions = new LinkedHashMap<>();
-
         List<LimeOptions.OptionCategory> categoryOrder = Arrays.asList(
                 LimeOptions.OptionCategory.GENERAL,
                 LimeOptions.OptionCategory.NOTIFICATIONS,
@@ -866,12 +900,12 @@ public class EmbedOptions implements IHook {
                 LimeOptions.OptionCategory.OTHER
         );
 
-        // カテゴリごとに空のリストを初期化
+        // カテゴリ初期化
         for (LimeOptions.OptionCategory category : categoryOrder) {
             categorizedOptions.put(category, new ArrayList<>());
         }
 
-        // オプションをカテゴリごとに分類
+        // オプション分類
         for (LimeOptions.Option option : options) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 categorizedOptions
@@ -880,7 +914,7 @@ public class EmbedOptions implements IHook {
             }
         }
 
-        // 各カテゴリのタイトルとクリックイベントを設定
+        // カテゴリ表示
         for (Map.Entry<LimeOptions.OptionCategory, List<LimeOptions.Option>> entry : categorizedOptions.entrySet()) {
             LimeOptions.OptionCategory category = entry.getKey();
             List<LimeOptions.Option> optionsInCategory = entry.getValue();
@@ -892,29 +926,31 @@ public class EmbedOptions implements IHook {
             categoryTitle.setTextColor(Color.WHITE);
             categoryTitle.setClickable(true);
             categoryTitle.setOnClickListener(v -> {
-                LinearLayout optionsLayout = createOptionsLayout(context, optionsInCategory, customPreferences, moduleContext, loadPackageParam);
+                LinearLayout optionsLayout = createOptionsLayout(context, optionsInCategory, docPrefs, moduleContext, loadPackageParam);
                 showView((ViewGroup) layout.getParent(), optionsLayout);
             });
 
             layout.addView(categoryTitle);
         }
 
-        // 追加ボタンを設置（例: 設定リセットなど）
-        addAdditionalButtons(context, layout, customPreferences, moduleContext);
+        // 追加ボタン
+        addAdditionalButtons(context, layout, docPrefs, moduleContext);
 
-        // 保存（再起動）ボタン
+        // 保存ボタン
         Button saveButton = new Button(context);
         saveButton.setText(moduleContext.getString(R.string.Restart));
         saveButton.setTextColor(Color.WHITE);
         saveButton.setBackgroundColor(Color.DKGRAY);
         saveButton.setOnClickListener(v -> {
-            boolean optionChanged = false;
             boolean saveSuccess = true;
 
-            for (LimeOptions.Option option : limeOptions.options) {
-                if (!customPreferences.saveSetting(option.name, String.valueOf(option.checked))) {
-                    saveSuccess = false;
+            try {
+                for (LimeOptions.Option option : limeOptions.options) {
+                    docPrefs.saveSetting(option.name, String.valueOf(option.checked));
                 }
+            } catch (IOException e) {
+                saveSuccess = false;
+                XposedBridge.log("Lime: Save failed: " + e.getMessage());
             }
 
             if (!saveSuccess) {
@@ -933,15 +969,15 @@ public class EmbedOptions implements IHook {
         hideButton.setTextColor(Color.WHITE);
         hideButton.setBackgroundColor(Color.DKGRAY);
         hideButton.setOnClickListener(v -> {
-            showView((ViewGroup) layout.getParent(), createButtonLayout(context, customPreferences, moduleContext, loadPackageParam, loadPackageParam));
+            showView((ViewGroup) layout.getParent(), createButtonLayout(context, docPrefs, moduleContext, loadPackageParam, loadPackageParam));
         });
         layout.addView(hideButton);
 
-        // LinearLayout を ScrollView に追加
         scrollView.addView(layout);
         return scrollView;
     }
-    private LinearLayout createOptionsLayout(Context context, List<LimeOptions.Option> options, CustomPreferences customPreferences, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
+
+    private LinearLayout createOptionsLayout(Context context, List<LimeOptions.Option> options, DocumentPreferences docPrefs, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
         LinearLayout layout = new LinearLayout(context);
         layout.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -985,7 +1021,11 @@ public class EmbedOptions implements IHook {
 
             switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 option.checked = isChecked;
-                customPreferences.saveSetting(option.name, String.valueOf(isChecked));
+                try {
+                    docPrefs.saveSetting(option.name, String.valueOf(isChecked));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
             });
 
             switch (option.name) {
@@ -999,12 +1039,20 @@ public class EmbedOptions implements IHook {
                                 // 子スイッチの状態を保存
                                 String childName = getOptionNameFromSwitch(child, options);
                                 if (childName != null) {
-                                    customPreferences.saveSetting(childName, "false");
+                                    try {
+                                        docPrefs.saveSetting(childName, "false");
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(e);
+                                    }
                                 }
                             }
                         }
                         // 親スイッチの状態を保存
-                        customPreferences.saveSetting("redirect_webview", String.valueOf(isChecked));
+                        try {
+                            docPrefs.saveSetting("redirect_webview", String.valueOf(isChecked));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                     });
                     break;
 
@@ -1017,11 +1065,19 @@ public class EmbedOptions implements IHook {
                                 child.setChecked(false);
                                 String childName = getOptionNameFromSwitch(child, options);
                                 if (childName != null) {
-                                    customPreferences.saveSetting(childName, "false");
+                                    try {
+                                        docPrefs.saveSetting(childName, "false");
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(e);
+                                    }
                                 }
                             }
                         }
-                        customPreferences.saveSetting("PhotoAddNotification", String.valueOf(isChecked));
+                        try {
+                            docPrefs.saveSetting("PhotoAddNotification", String.valueOf(isChecked));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                     });
                     break;
 
@@ -1034,11 +1090,19 @@ public class EmbedOptions implements IHook {
                                 child.setChecked(false);
                                 String childName = getOptionNameFromSwitch(child, options);
                                 if (childName != null) {
-                                    customPreferences.saveSetting(childName, "false");
+                                    try {
+                                        docPrefs.saveSetting(childName, "false");
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(e);
+                                    }
                                 }
                             }
                         }
-                        customPreferences.saveSetting("ReadChecker", String.valueOf(isChecked));
+                        try {
+                            docPrefs.saveSetting("ReadChecker", String.valueOf(isChecked));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                     });
                     break;
 
@@ -1051,11 +1115,19 @@ public class EmbedOptions implements IHook {
                                 child.setChecked(false);
                                 String childName = getOptionNameFromSwitch(child, options);
                                 if (childName != null) {
-                                    customPreferences.saveSetting(childName, "false");
+                                    try {
+                                        docPrefs.saveSetting(childName, "false");
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(e);
+                                    }
                                 }
                             }
                         }
-                        customPreferences.saveSetting("prevent_unsend_message", String.valueOf(isChecked));
+                        try {
+                            docPrefs.saveSetting("prevent_unsend_message", String.valueOf(isChecked));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                     });
                     break;
 
@@ -1068,11 +1140,19 @@ public class EmbedOptions implements IHook {
                                 child.setChecked(false);
                                 String childName = getOptionNameFromSwitch(child, options);
                                 if (childName != null) {
-                                    customPreferences.saveSetting(childName, "false");
+                                    try {
+                                        docPrefs.saveSetting(childName, "false");
+                                    } catch (IOException e) {
+                                        throw new RuntimeException(e);
+                                    }
                                 }
                             }
                         }
-                        customPreferences.saveSetting("DarkColor", String.valueOf(isChecked));
+                        try {
+                            docPrefs.saveSetting("DarkColor", String.valueOf(isChecked));
+                        } catch (IOException e) {
+                            throw new RuntimeException(e);
+                        }
                     });
                     break;
 
@@ -1126,7 +1206,7 @@ public class EmbedOptions implements IHook {
         backButton.setTextColor(Color.WHITE);
         backButton.setBackgroundColor(Color.DKGRAY);
         backButton.setOnClickListener(v -> {
-            ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
+            ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), docPrefs, moduleContext, loadPackageParam);
             showView((ViewGroup) layout.getParent(), categoryLayout);
         });
         layout.addView(backButton);
@@ -1155,7 +1235,7 @@ public class EmbedOptions implements IHook {
         }
         return null;
     }
-    private View createButtonLayout(Context context, CustomPreferences customPreferences, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam, XC_LoadPackage.LoadPackageParam viewGroup) {
+    private View createButtonLayout(Context context, DocumentPreferences docPrefs, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam, XC_LoadPackage.LoadPackageParam viewGroup) {
         PackageManager pm = context.getPackageManager();
         String versionName = "";
         try {
@@ -1194,7 +1274,7 @@ public class EmbedOptions implements IHook {
 
         button.setOnClickListener(view -> {
 
-            ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), customPreferences, moduleContext, loadPackageParam);
+            ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), docPrefs, moduleContext, loadPackageParam);
             showView(rootLayout, categoryLayout);
         });
 
@@ -1204,43 +1284,38 @@ public class EmbedOptions implements IHook {
         return rootLayout;
     }
 
-    private void addAdditionalButtons(Context context, LinearLayout layout, CustomPreferences customPreferences, Context moduleContext) {
-
-
-
+    private void addAdditionalButtons(Context context, LinearLayout layout, DocumentPreferences docPrefs, Context moduleContext) {
+        // 復元ボタン
         Button restoreButton = new Button(context);
         restoreButton.setText(moduleContext.getResources().getString(R.string.Restore));
-        restoreButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showFilePickerChatHistory(context, moduleContext);
-            }
-        });
+        restoreButton.setOnClickListener(v -> showFilePickerChatHistory(context, moduleContext));
         layout.addView(restoreButton);
 
+        // チャットリスト復元ボタン
         Button restoreChatListButton = new Button(context);
         restoreChatListButton.setText(moduleContext.getResources().getString(R.string.restoreChatListButton));
         restoreChatListButton.setOnClickListener(v -> showFilePickerChatlist(context, moduleContext));
         layout.addView(restoreChatListButton);
 
-
+        // バックアップボタン
         Button backupButton = new Button(context);
         backupButton.setText(moduleContext.getResources().getString(R.string.Back_Up));
         backupButton.setOnClickListener(v -> backupChatHistory(context, moduleContext));
         layout.addView(backupButton);
 
+        // トーク画像バックアップボタン
         Button backupfolderButton = new Button(context);
         backupfolderButton.setText(moduleContext.getResources().getString(R.string.Talk_Picture_Back_up));
         backupfolderButton.setOnClickListener(v -> backupChatsFolder(context, moduleContext));
         layout.addView(backupfolderButton);
 
-
+        // 画像復元ボタン
         Button restorefolderButton = new Button(context);
         restorefolderButton.setText(moduleContext.getResources().getString(R.string.Picure_Restore));
         restorefolderButton.setOnClickListener(v -> restoreChatsFolder(context, moduleContext));
         layout.addView(restorefolderButton);
 
-
+        // グループミュートボタン（条件付き）
         if (limeOptions.MuteGroup.checked) {
             Button muteGroupsButton = new Button(context);
             muteGroupsButton.setText(moduleContext.getResources().getString(R.string.Mute_Group));
@@ -1248,13 +1323,13 @@ public class EmbedOptions implements IHook {
             layout.addView(muteGroupsButton);
         }
 
-
+        // 未読維持設定ボタン
         Button keepUnreadButton = new Button(context);
         keepUnreadButton.setText(moduleContext.getResources().getString(R.string.edit_margin_settings));
         keepUnreadButton.setOnClickListener(v -> KeepUnread_Button(context, moduleContext));
         layout.addView(keepUnreadButton);
 
-
+        // 取消メッセージボタン（条件付き）
         if (limeOptions.preventUnsendMessage.checked) {
             Button canceledMessageButton = new Button(context);
             canceledMessageButton.setText(moduleContext.getResources().getString(R.string.canceled_message));
@@ -1262,6 +1337,7 @@ public class EmbedOptions implements IHook {
             layout.addView(canceledMessageButton);
         }
 
+        // 通知キャンセルボタン（条件付き）
         if (limeOptions.CansellNotification.checked) {
             Button cansellNotificationButton = new Button(context);
             cansellNotificationButton.setText(moduleContext.getResources().getString(R.string.CansellNotification));
@@ -1269,7 +1345,7 @@ public class EmbedOptions implements IHook {
             layout.addView(cansellNotificationButton);
         }
 
-
+        // ブロックチェックボタン（条件付き）
         if (limeOptions.BlockCheck.checked) {
             Button blockCheckButton = new Button(context);
             blockCheckButton.setText(moduleContext.getResources().getString(R.string.BlockCheck));
@@ -1277,7 +1353,7 @@ public class EmbedOptions implements IHook {
             layout.addView(blockCheckButton);
         }
 
-
+        // 取消メッセージ非表示ボタン（条件付き）
         if (limeOptions.preventUnsendMessage.checked) {
             Button hideCanceledMessageButton = new Button(context);
             hideCanceledMessageButton.setText(moduleContext.getResources().getString(R.string.hide_canceled_message));
@@ -1297,7 +1373,7 @@ public class EmbedOptions implements IHook {
             layout.addView(hideCanceledMessageButton);
         }
 
-
+        // ピン留めリストボタン（条件付き）
         if (limeOptions.PinList.checked) {
             Button pinListButton = new Button(context);
             pinListButton.setText(moduleContext.getResources().getString(R.string.PinList));
@@ -1305,17 +1381,95 @@ public class EmbedOptions implements IHook {
             layout.addView(pinListButton);
         }
 
+        // リクエスト修正ボタン（DocumentPreferencesを使用）
         Button modifyRequestButton = new Button(context);
         modifyRequestButton.setText(R.string.modify_request);
-        modifyRequestButton.setOnClickListener(v -> showModifyRequestDialog(context, customPreferences, moduleContext));
+        modifyRequestButton.setOnClickListener(v -> {
+            try {
+                String encodedJs = docPrefs.getSetting("encoded_js_modify_request", "");
+                showModifyDialog(
+                        context,
+                        moduleContext.getString(R.string.modify_request),
+                        encodedJs,
+                        (content) -> {
+                            try {
+                                docPrefs.saveSetting("encoded_js_modify_request",
+                                        Base64.encodeToString(content.getBytes(), Base64.NO_WRAP));
+                            } catch (IOException e) {
+                                Toast.makeText(context, "Failed to save request modification", Toast.LENGTH_SHORT).show();
+                                XposedBridge.log("Save modify request error: " + e.getMessage());
+                            }
+                        },
+                        moduleContext
+                );
+            } catch (Exception e) {
+                Toast.makeText(context, "Error loading request settings", Toast.LENGTH_SHORT).show();
+                XposedBridge.log("Load modify request error: " + e.getMessage());
+            }
+        });
         layout.addView(modifyRequestButton);
 
+        // レスポンス修正ボタン（DocumentPreferencesを使用）
         Button modifyResponseButton = new Button(context);
         modifyResponseButton.setText(R.string.modify_response);
-        modifyResponseButton.setOnClickListener(v -> showModifyResponseDialog(context, customPreferences, moduleContext));
+        modifyResponseButton.setOnClickListener(v -> {
+            try {
+                String encodedJs = docPrefs.getSetting("encoded_js_modify_response", "");
+                showModifyDialog(
+                        context,
+                        moduleContext.getString(R.string.modify_response),
+                        encodedJs,
+                        (content) -> {
+                            try {
+                                docPrefs.saveSetting("encoded_js_modify_response",
+                                        Base64.encodeToString(content.getBytes(), Base64.NO_WRAP));
+                            } catch (IOException e) {
+                                Toast.makeText(context, "Failed to save response modification", Toast.LENGTH_SHORT).show();
+                                XposedBridge.log("Save modify response error: " + e.getMessage());
+                            }
+                        },
+                        moduleContext
+                );
+            } catch (Exception e) {
+                Toast.makeText(context, "Error loading response settings", Toast.LENGTH_SHORT).show();
+                XposedBridge.log("Load modify response error: " + e.getMessage());
+            }
+        });
         layout.addView(modifyResponseButton);
     }
 
+    // 修正ダイアログ表示用ヘルパーメソッド
+    private void showModifyDialog(Context context, String title, String encodedContent,
+                                  ContentSaver contentSaver, Context moduleContext) {
+
+        String decodedContent = new String(Base64.decode(encodedContent, Base64.NO_WRAP));
+
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context),
+                Utils.dpToPx(20, context), Utils.dpToPx(20, context));
+
+        EditText editText = new EditText(context);
+        editText.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT));
+        editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        editText.setText(decodedContent);
+        layout.addView(editText);
+
+        new AlertDialog.Builder(context)
+                .setTitle(title)
+                .setView(layout)
+                .setPositiveButton(moduleContext.getString(R.string.positive_button), (dialog, which) -> {
+                    contentSaver.saveContent(editText.getText().toString());
+                })
+                .setNegativeButton(moduleContext.getString(R.string.negative_button), null)
+                .show();
+    }
+
+    interface ContentSaver {
+        void saveContent(String content);
+    }
 
     private void showModifyRequestDialog(Context context, CustomPreferences customPreferences, Context moduleContext) {
         final String script = new String(Base64.decode(customPreferences.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP));
@@ -3294,5 +3448,19 @@ public class EmbedOptions implements IHook {
         }
 
         return null;
+    }
+
+    private String loadBackupUri(Context context) {
+        File settingsFile = new File(context.getFilesDir(), "LimeBackup/backup_uri.txt");
+        if (!settingsFile.exists()) return null;
+
+        try (FileInputStream fis = new FileInputStream(settingsFile);
+             InputStreamReader isr = new InputStreamReader(fis);
+             BufferedReader br = new BufferedReader(isr)) {
+            return br.readLine();
+        } catch (IOException e) {
+            XposedBridge.log("Lime URI Load Error: " + e.getMessage());
+            return null;
+        }
     }
 }

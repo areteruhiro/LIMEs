@@ -106,34 +106,32 @@ public class Constants {
 
         } else if (isVersionInRange(versionName, "15.2.0", "15.2.1")) {
 
-        USER_AGENT_HOOK = new HookTarget("Mi1.c", "j");
-        WEBVIEW_CLIENT_HOOK = new HookTarget("sQ0.l", "onPageFinished");
-        MUTE_MESSAGE_HOOK = new HookTarget("Fh1.b", "I");
-        MARK_AS_READ_HOOK = new HookTarget("GP.e$d", "run");
-        Archive = new HookTarget("aC.P", "invokeSuspend");
-        REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
-        RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
-        RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
-        ChatRestore = new HookTarget("androidx.fragment.app.p", "onActivityResult");
+            USER_AGENT_HOOK = new HookTarget("Mi1.c", "j");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("sQ0.l", "onPageFinished");
+            MUTE_MESSAGE_HOOK = new HookTarget("Fh1.b", "I");
+            MARK_AS_READ_HOOK = new HookTarget("GP.e$d", "run");
+            Archive = new HookTarget("aC.P", "invokeSuspend");
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+            RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+            ChatRestore = new HookTarget("androidx.fragment.app.p", "onActivityResult");
 
-    } else if (isVersionInRange(versionName, "15.3.0", "15.4.0")) {
+        } else if (isVersionInRange(versionName, "15.3.0", "15.4.0")) {
 
-        USER_AGENT_HOOK = new HookTarget("ek1.c", "j");
-        WEBVIEW_CLIENT_HOOK = new HookTarget("CR0.m", "onPageFinished");
-        MUTE_MESSAGE_HOOK = new HookTarget("Xi1.b", "I");
-        MARK_AS_READ_HOOK = new HookTarget("aQ.c$d", "run");
-        Archive = new HookTarget("tC.S", "invokeSuspend");
-        REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
-        RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
-        RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
+            USER_AGENT_HOOK = new HookTarget("ek1.c", "j");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("CR0.m", "onPageFinished");
+            MUTE_MESSAGE_HOOK = new HookTarget("Xi1.b", "I");
+            MARK_AS_READ_HOOK = new HookTarget("aQ.c$d", "run");
+            Archive = new HookTarget("tC.S", "invokeSuspend");
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
+            RemoveVoiceRecord_Hook_a = new HookTarget("q.j", "run");
 
-        ChatRestore = new HookTarget("androidx.fragment.app.n", "onActivityResult");
-        PhotoSave = new HookTarget("Dh1.p0", "");
-        PhotoSave1 = new HookTarget("Ec1.U", "");
-        PhotoSave2 = new HookTarget("XQ.g", "");
-        PhotoSave3 = new HookTarget("lm.K$b", "");
-
-
+            ChatRestore = new HookTarget("androidx.fragment.app.n", "onActivityResult");
+            PhotoSave = new HookTarget("Dh1.p0", "");
+            PhotoSave1 = new HookTarget("Ec1.U", "");
+            PhotoSave2 = new HookTarget("XQ.g", "");
+            PhotoSave3 = new HookTarget("lm.K$b", "");
 
 
         } else if (isVersionInRange(versionName, "15.4.0", "15.4.1")) {
@@ -156,12 +154,11 @@ public class Constants {
 //jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
             PhotoSave1 = new HookTarget("rc1.C", "");
 
- //DIRECTORY_PICTURES
+            //DIRECTORY_PICTURES
             PhotoSave2 = new HookTarget("mR.g", "");
 
 //com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
             PhotoSave3 = new HookTarget("gm.J$b", "");
-
 
 
         } else if (isVersionInRange(versionName, "15.4.1", "15.5.0")) {
@@ -257,9 +254,9 @@ public class Constants {
             //reactionListModel
             ReactionList = new HookTarget("Iy.m", "");
 
-    } else if (isVersionInRange(versionName, "15.7.0", "15.8.0")) {
+        } else if (isVersionInRange(versionName, "15.7.0", "15.8.0")) {
 
-        XposedBridge.log("15.7.0 Patched ");
+            XposedBridge.log("15.7.0 Patched ");
 
             USER_AGENT_HOOK = new HookTarget("Si1.c", "j");
             WEBVIEW_CLIENT_HOOK = new HookTarget("CS0.m", "onPageFinished");
@@ -301,8 +298,17 @@ public class Constants {
             WEBVIEW_CLIENT_HOOK = new HookTarget("ZT0.l", "onPageFinished");
             MUTE_MESSAGE_HOOK = new HookTarget("uj1.b", "I");
             MARK_AS_READ_HOOK = new HookTarget("dS.e$d", "run");
-            Archive = new HookTarget("LD.S", "invokeSuspend");
+            String ChatListClassName;
+            if (versionName.equals("15.9.2")) {
+                ChatListClassName = "LD.S";
+            } else if (versionName.equals("15.9.3")) {
+                ChatListClassName = "LD.Q";
+                XposedBridge.log("15.9.3 Patched ");
+            } else {
 
+return;
+            }
+            Archive = new HookTarget(ChatListClassName, "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
 //%s failed: out of sequence response: expected %d but got %d

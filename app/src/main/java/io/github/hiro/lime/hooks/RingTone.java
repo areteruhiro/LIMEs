@@ -20,8 +20,12 @@ import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
+import androidx.documentfile.provider.DocumentFile;
+
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -40,7 +44,6 @@ public class RingTone implements IHook {
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         if (!limeOptions.callTone.checked) return;
-
         XposedHelpers.findAndHookMethod(Application.class, "onCreate", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -50,25 +53,10 @@ public class RingTone implements IHook {
                 Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                         "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
-                // dial_toneの準備
-                String resourceNameA = "dial_tone";
-                int resourceIdA = moduleContext.getResources().getIdentifier(resourceNameA, "raw", "io.github.hiro.lime");
-                File ringtoneDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-                if (!ringtoneDir.exists()) ringtoneDir.mkdirs();
-                File destFileA = new File(ringtoneDir, resourceNameA + ".wav");
+                // 着信音のURIを取得
+                Uri ringtoneUri = getRingtoneUri(moduleContext, "ringtone.wav");
+                Uri ringtoneUriA = getRingtoneUri(moduleContext, "dial_tone.wav");
 
-                if (!destFileA.exists()) {
-                    try (InputStream in = moduleContext.getResources().openRawResource(resourceIdA);
-                         OutputStream out = new FileOutputStream(destFileA)) {
-                        byte[] buffer = new byte[1024];
-                        int length;
-                        while ((length = in.read(buffer)) > 0) {
-                            out.write(buffer, 0, length);
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
                 if (!limeOptions.StopCallTone.checked) {
                     Class<?> voIPBaseFragmentClass = loadPackageParam.classLoader.loadClass("com.linecorp.voip2.common.base.VoIPBaseFragment");
                     XposedBridge.hookAllMethods(voIPBaseFragmentClass, "onCreate", new XC_MethodHook() {
@@ -91,11 +79,11 @@ public class RingTone implements IHook {
                         }
                     });
                 }
+
                 XposedBridge.hookAllMethods(
                         loadPackageParam.classLoader.loadClass(Constants.RESPONSE_HOOK.className),
                         Constants.RESPONSE_HOOK.methodName,
                         new XC_MethodHook() {
-
                             @Override
                             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                                 String paramValue = param.args[1].toString();
@@ -107,54 +95,39 @@ public class RingTone implements IHook {
                                         return;
                                     }
                                 }
-                                Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                                        "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
-
-                                String resourceName = "ringtone";
-                                int resourceId = moduleContext.getResources().getIdentifier(resourceName, "raw", "io.github.hiro.lime");
-                                File destFile = new File(ringtoneDir, resourceName + ".wav");
-
-                                if (!destFile.exists()) {
-                                    try (InputStream in = moduleContext.getResources().openRawResource(resourceId);
-                                         OutputStream out = new FileOutputStream(destFile)) {
-                                        byte[] buffer = new byte[1024];
-                                        int length;
-                                        while ((length = in.read(buffer)) > 0) {
-                                            out.write(buffer, 0, length);
-                                        }
-                                    } catch (IOException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
 
                                 if (paramValue.contains("type:NOTIFIED_RECEIVED_CALL,")) {
                                     XposedBridge.log(paramValue);
                                     if (context != null) {
                                         if (isPlaying) {
-                                            XposedBridge.log("Xposed"+ "Already playing");
+                                            XposedBridge.log("Xposed: Already playing");
                                             return;
                                         }
-                                        Uri ringtoneUri = Uri.fromFile(destFile);
-                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                                            ringtone = RingtoneManager.getRingtone(context, ringtoneUri);
-                                            if (ringtone != null) {
-                                                ringtone.setLooping(true);
-                                                ringtone.play();
-                                                isPlaying = true;
-                                                XposedBridge.log("Ringtone started playing.");
+
+                                        if (ringtoneUri != null) {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                                                ringtone = RingtoneManager.getRingtone(context, ringtoneUri);
+                                                if (ringtone != null) {
+                                                    ringtone.setLooping(true);
+                                                    ringtone.play();
+                                                    isPlaying = true;
+                                                    XposedBridge.log("Ringtone started playing.");
+                                                }
+                                            } else {
+                                                if (mediaPlayer != null && mediaPlayer.isPlaying()) {
+                                                    XposedBridge.log("Xposed: MediaPlayer is already playing. Not starting new playback.");
+                                                    return;
+                                                }
+                                                mediaPlayer = MediaPlayer.create(context, ringtoneUri);
+                                                if (mediaPlayer != null) {
+                                                    mediaPlayer.setLooping(true);
+                                                    mediaPlayer.start();
+                                                    isPlaying = true;
+                                                    XposedBridge.log("MediaPlayer started playing.");
+                                                }
                                             }
                                         } else {
-                                            if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-                                                XposedBridge.log("Xposed"+ "MediaPlayer is already playing. Not starting new playback.");
-                                                return;
-                                            }
-                                            mediaPlayer = MediaPlayer.create(context, ringtoneUri);
-                                            if (mediaPlayer != null) {
-                                                mediaPlayer.setLooping(true);
-                                                mediaPlayer.start();
-                                                isPlaying = true;
-                                                XposedBridge.log("MediaPlayer started playing.");
-                                            }
+                                            XposedBridge.log("Xposed: Ringtone file not found");
                                         }
                                     }
                                 }
@@ -174,48 +147,6 @@ public class RingTone implements IHook {
                             Context context = AndroidAppHelper.currentApplication().getApplicationContext();
 
                             if (limeOptions.ringtonevolume.checked) {
-
-//                                if (methodName.equals("getVoiceComplexityLevel")) {
-//                                    if (isPlaying) return;
-//
-//                                    File destFile = new File(ringtoneDir, "ringtone.wav");
-//                                    Uri ringtoneUri = Uri.fromFile(destFile);
-//                                    // 引数の値を取得してログに出力
-//                                    StringBuilder argsLog = new StringBuilder("Method: " + methodName + ", Arguments: ");
-//                                    for (Object arg : param.args) {
-//                                        argsLog.append(arg).append(", ");
-//                                    }
-//
-//                                    // 最後のカンマとスペースを削除
-//                                    if (argsLog.length() > 0) {
-//                                        argsLog.setLength(argsLog.length() - 2);
-//                                    }
-//
-//                                    // XposedBridge.logを使用してログ出力
-//                                    XposedBridge.log(argsLog.toString());
-//
-//                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-//                                        ringtone = RingtoneManager.getRingtone(context, ringtoneUri);
-//                                        if (ringtone != null) {
-//                                            ringtone.setLooping(true);
-//                                            ringtone.play();
-//                                            isPlaying = true;
-//                                            XposedBridge.log("Ringtone started playing from getVoiceComplexityLevel.");
-//                                            return;
-//                                        }
-//                                    }
-//                                    if (mediaPlayer != null && mediaPlayer.isPlaying()) {
-//                                        return;
-//                                    }
-//
-//                                    mediaPlayer = MediaPlayer.create(context, ringtoneUri);
-//                                    if (mediaPlayer != null) {
-//                                        mediaPlayer.setLooping(true);
-//                                        mediaPlayer.start();
-//                                        isPlaying = true;
-//                                        XposedBridge.log("MediaPlayer started playing from getVoiceComplexityLevel.");
-//                                    }
-//                                }
 
                                 if (method.getName().equals("setServerConfig") || method.getName().equals("stop")) {
                                     if (ringtone != null && isPlaying) {
@@ -256,7 +187,6 @@ public class RingTone implements IHook {
                                                         ringtone = null;
                                                         XposedBridge.log("Ringtone stopped before starting new one.");
                                                     }
-                                                    Uri ringtoneUriA = Uri.fromFile(destFileA);
                                                     ringtone = RingtoneManager.getRingtone(appContext, ringtoneUriA);
 
                                                     if (ringtone != null) {
@@ -276,8 +206,7 @@ public class RingTone implements IHook {
                                                         mediaPlayer.release();
                                                         mediaPlayer = null;
                                                     }
-
-                                                    Uri ringtoneUriA = Uri.fromFile(destFileA);
+                                                    
                                                     mediaPlayer = MediaPlayer.create(appContext, ringtoneUriA);
                                                     if (mediaPlayer != null) {
                                                         mediaPlayer.setLooping(true);
@@ -301,7 +230,7 @@ public class RingTone implements IHook {
                                                 ringtone = null;
                                                 XposedBridge.log("Ringtone stopped before starting new one.");
                                             }
-                                            Uri ringtoneUriA = Uri.fromFile(destFileA);
+                                         
                                             ringtone = RingtoneManager.getRingtone(appContext, ringtoneUriA);
 
                                             if (ringtone != null) {
@@ -320,7 +249,7 @@ public class RingTone implements IHook {
                                                 mediaPlayer.release();
                                                 mediaPlayer = null;
                                             }
-                                            Uri ringtoneUriA = Uri.fromFile(destFileA);
+                                            
                                             mediaPlayer = MediaPlayer.create(appContext, ringtoneUriA);
                                             if (mediaPlayer != null) {
                                                 mediaPlayer.setLooping(true);
@@ -357,10 +286,6 @@ public class RingTone implements IHook {
                                             return;
                                         }
                                     }
-                                    File destFile = new File(ringtoneDir, "ringtone.wav");
-                                    Uri ringtoneUri = Uri.fromFile(destFile);
-
-
                                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                                         ringtone = RingtoneManager.getRingtone(context, ringtoneUri);
                                         if (ringtone != null) {
@@ -423,7 +348,7 @@ public class RingTone implements IHook {
                                                     mediaPlayer = null;
                                                 }
 
-                                                Uri ringtoneUriA = Uri.fromFile(destFileA);
+                                                
                                                 AudioManager am = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
 
                                                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -472,7 +397,7 @@ public class RingTone implements IHook {
                                             mediaPlayer = null;
                                         }
 
-                                        Uri ringtoneUriA = Uri.fromFile(destFileA);
+                                        
                                         AudioManager am = (AudioManager) appContext.getSystemService(Context.AUDIO_SERVICE);
 
                                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -577,4 +502,42 @@ public class RingTone implements IHook {
     }
 
 
+    private Uri getRingtoneUri(Context moduleContext, String fileName) {
+        String backupUri = loadBackupUri(moduleContext);
+        if (backupUri != null) {
+            try {
+                Uri treeUri = Uri.parse(backupUri);
+                DocumentFile dir = DocumentFile.fromTreeUri(moduleContext, treeUri);
+                if (dir != null) {
+                    DocumentFile ringtoneFile = dir.findFile(fileName);
+                    if (ringtoneFile != null && ringtoneFile.exists()) {
+                        return ringtoneFile.getUri();
+                    }
+                }
+            } catch (Exception e) {
+                XposedBridge.log("Lime: Error accessing ringtone URI: " + e.getMessage());
+            }
+        }
+
+        // URIから見つからなかった場合はリソースから直接読み込む
+        String resourceName = fileName.replace(".wav", "");
+        int resourceId = moduleContext.getResources().getIdentifier(resourceName, "raw", "io.github.hiro.lime");
+        if (resourceId != 0) {
+            return Uri.parse("android.resource://io.github.hiro.lime/raw/" + resourceName);
+        }
+
+        return null;
+    }
+
+    private String loadBackupUri(Context context) {
+        File settingsFile = new File(context.getFilesDir(), "LimeBackup/backup_uri.txt");
+        if (!settingsFile.exists()) return null;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(settingsFile))) {
+            return br.readLine();
+        } catch (IOException e) {
+            XposedBridge.log("Lime: Error reading backup URI: " + e.getMessage());
+            return null;
+        }
+    }
 }

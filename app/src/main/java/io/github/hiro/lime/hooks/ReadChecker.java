@@ -19,6 +19,7 @@ import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -33,6 +34,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.documentfile.provider.DocumentFile;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -196,52 +198,36 @@ public class ReadChecker implements IHook {
     }
 
 
-    private void addButton(Activity activity, Context context,Context moduleContext) {
+    private void addButton(Activity activity, Context context, Context moduleContext) {
+        // 設定ファイルの読み込み（内部ストレージから）
+        Map<String, String> settings = readSettingsFromFile(context);
 
-        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
-        File dir2 = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
-        File file = new File(dir, "margin_settings.txt");
-
-        float readCheckerHorizontalMarginFactor = 0.5f;
-        int readCheckerVerticalMarginDp = 100;
-        float readCheckerSizeDp = 60;
-        if (file.exists()) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split("=", 2);
-                    if (parts.length == 2) {
-                        if (parts[0].trim().equals("Read_checker_horizontalMarginFactor")) {
-                            readCheckerHorizontalMarginFactor = Float.parseFloat(parts[1].trim());
-                        } else if (parts[0].trim().equals("Read_checker_verticalMarginDp")) {
-                            readCheckerVerticalMarginDp = Integer.parseInt(parts[1].trim());
-                        } else if (parts[0].trim().equals("chat_read_check_size")) {
-                            readCheckerSizeDp = Float.parseFloat(parts[1].trim());
-                        }
-                    }
-                }
-            } catch (IOException | NumberFormatException ignored) {
-            }
-        }
+        float readCheckerHorizontalMarginFactor = Float.parseFloat(
+                settings.getOrDefault("Read_checker_horizontalMarginFactor", "0.5"));
+        int readCheckerVerticalMarginDp = Integer.parseInt(
+                settings.getOrDefault("Read_checker_verticalMarginDp", "100"));
+        float readCheckerSizeDp = Float.parseFloat(
+                settings.getOrDefault("chat_read_check_size", "60"));
 
         ImageView imageButton = new ImageView(activity);
+
+        // 画像をURIから読み込む
         String imageName = "read_checker.png";
-        File imageFile = new File(dir2, imageName);
+        Drawable drawable = loadImageFromUri(context, imageName);
 
-        if (!imageFile.exists()) {
-            if (!copyImageFile(moduleContext, imageName, imageFile)) {
-                copyImageFile(moduleContext, imageName, imageFile);
+        // URIから読み込めなかった場合はアプリ内リソースを使用
+        if (drawable == null) {
+            int resId = moduleContext.getResources().getIdentifier(
+                    imageName.replace(".png", ""), "drawable", "io.github.hiro.lime");
+            if (resId != 0) {
+                drawable = moduleContext.getResources().getDrawable(resId);
             }
-
         }
 
-        if (imageFile.exists()) {
-            Drawable drawable = Drawable.createFromPath(imageFile.getAbsolutePath());
-            if (drawable != null) {
-                int sizeInPx = dpToPx(moduleContext, readCheckerSizeDp);
-                drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
-                imageButton.setImageDrawable(drawable);
-            }
+        if (drawable != null) {
+            int sizeInPx = dpToPx(moduleContext, readCheckerSizeDp);
+            drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
+            imageButton.setImageDrawable(drawable);
         }
 
         FrameLayout.LayoutParams frameParams = new FrameLayout.LayoutParams(
@@ -249,12 +235,13 @@ public class ReadChecker implements IHook {
                 FrameLayout.LayoutParams.WRAP_CONTENT
         );
 
-        int horizontalMarginPx = (int) (readCheckerHorizontalMarginFactor * activity.getResources().getDisplayMetrics().widthPixels);
-        int verticalMarginPx = (int) (readCheckerVerticalMarginDp * activity.getResources().getDisplayMetrics().density);
+        int horizontalMarginPx = (int) (readCheckerHorizontalMarginFactor *
+                activity.getResources().getDisplayMetrics().widthPixels);
+        int verticalMarginPx = (int) (readCheckerVerticalMarginDp *
+                activity.getResources().getDisplayMetrics().density);
         frameParams.setMargins(horizontalMarginPx, verticalMarginPx, 0, 0);
 
         imageButton.setLayoutParams(frameParams);
-
         imageButton.setOnClickListener(v -> {
             if (currentGroupId != null) {
                 showDataForGroupId(activity, currentGroupId, moduleContext);
@@ -266,18 +253,23 @@ public class ReadChecker implements IHook {
             deleteButton.setText(moduleContext.getResources().getString(R.string.Delete));
             deleteButton.setBackgroundColor(Color.RED);
             deleteButton.setTextColor(Color.WHITE);
+
             FrameLayout.LayoutParams deleteButtonParams = new FrameLayout.LayoutParams(
                     FrameLayout.LayoutParams.WRAP_CONTENT,
                     FrameLayout.LayoutParams.WRAP_CONTENT
             );
-            deleteButtonParams.setMargins(horizontalMarginPx + dpToPx(moduleContext, readCheckerSizeDp) + 20, verticalMarginPx, 0, 0);
+            deleteButtonParams.setMargins(
+                    horizontalMarginPx + dpToPx(moduleContext, readCheckerSizeDp) + 20,
+                    verticalMarginPx, 0, 0);
+
             deleteButton.setLayoutParams(deleteButtonParams);
             deleteButton.setOnClickListener(v -> {
                 if (currentGroupId != null) {
                     new AlertDialog.Builder(activity)
                             .setTitle(moduleContext.getResources().getString(R.string.check))
                             .setMessage(moduleContext.getResources().getString(R.string.really_delete))
-                            .setPositiveButton(moduleContext.getResources().getString(R.string.yes), (confirmDialog, confirmWhich) -> deleteGroupData(currentGroupId, activity, moduleContext))
+                            .setPositiveButton(moduleContext.getResources().getString(R.string.yes),
+                                    (confirmDialog, confirmWhich) -> deleteGroupData(currentGroupId, activity, moduleContext))
                             .setNegativeButton(moduleContext.getResources().getString(R.string.no), null)
                             .show();
                 }
@@ -291,21 +283,70 @@ public class ReadChecker implements IHook {
         layout.addView(imageButton);
     }
 
-    private boolean copyImageFile(Context moduleContext, String imageName, File destinationFile) {
-        try (InputStream in = moduleContext.getResources().openRawResource(
-                moduleContext.getResources().getIdentifier(imageName.replace(".png", ""), "drawable", "io.github.hiro.lime"));
-             OutputStream out = new FileOutputStream(destinationFile)) {
-            byte[] buffer = new byte[1024];
-            int length;
-            while ((length = in.read(buffer)) > 0) {
-                out.write(buffer, 0, length);
+
+    private Map<String, String> readSettingsFromFile(Context context) {
+        String fileName = "margin_settings.txt";
+        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
+        File file = new File(dir, fileName);
+        Map<String, String> settings = new HashMap<>();
+
+        // デフォルト値を設定
+        settings.put("Read_checker_horizontalMarginFactor", "0.5");
+        settings.put("Read_checker_verticalMarginDp", "100");
+        settings.put("chat_read_check_size", "60");
+
+        if (file.exists()) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split("=", 2);
+                    if (parts.length == 2) {
+                        settings.put(parts[0].trim(), parts[1].trim());
+                    }
+                }
+            } catch (IOException e) {
+                XposedBridge.log("Lime: Error reading settings file: " + e.getMessage());
             }
-            return true;
+        }
+        return settings;
+    }
+
+    private Drawable loadImageFromUri(Context context, String imageName) {
+        String backupUri = loadBackupUri(context);
+        if (backupUri != null) {
+            try {
+                Uri treeUri = Uri.parse(backupUri);
+                DocumentFile dir = DocumentFile.fromTreeUri(context, treeUri);
+                if (dir != null) {
+                    DocumentFile imageFile = dir.findFile(imageName);
+                    if (imageFile != null && imageFile.exists()) {
+                        try (InputStream inputStream = context.getContentResolver().openInputStream(imageFile.getUri())) {
+                            return Drawable.createFromStream(inputStream, null);
+                        } catch (IOException e) {
+                            XposedBridge.log("Lime: Error loading image from URI: " + e.getMessage());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                XposedBridge.log("Lime: Error accessing image URI: " + e.getMessage());
+            }
+        }
+        return null;
+    }
+
+    private String loadBackupUri(Context context) {
+        File settingsFile = new File(context.getFilesDir(), "LimeBackup/backup_uri.txt");
+        if (!settingsFile.exists()) return null;
+
+        try (BufferedReader br = new BufferedReader(new FileReader(settingsFile))) {
+            return br.readLine();
         } catch (IOException e) {
-            e.printStackTrace();
-            return false;
+            XposedBridge.log("Lime: Error reading backup URI: " + e.getMessage());
+            return null;
         }
     }
+
+
 
     private int dpToPx(@NonNull Context context, float dp) {
         float density = context.getResources().getDisplayMetrics().density;
