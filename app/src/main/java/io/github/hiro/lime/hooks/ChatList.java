@@ -347,7 +347,7 @@ public class ChatList implements IHook {
         long newTime = UNIX_MAX - number;
 
         long originalTime = getOriginalLastCreatedTime(db, chatId);
-
+        XposedBridge.log("Update");
         if (originalTime == -1 || originalTime == newTime) {
             return;
         }
@@ -373,7 +373,7 @@ public class ChatList implements IHook {
     }
 
     private void restoreMissingEntries(Context appContext,SQLiteDatabase db) {
-        // XposedBridge.log("復元処理開始");
+        //
 
         Map<String, String> chatList = loadChatList(appContext);
         Map<String, String> changeList = loadChangeList(appContext);

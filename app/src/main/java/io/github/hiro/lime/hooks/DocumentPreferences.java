@@ -11,9 +11,13 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 import androidx.documentfile.provider.DocumentFile;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Date;
 import java.util.Properties;
 
 import io.github.hiro.lime.LimeOptions;
@@ -22,20 +26,45 @@ public class DocumentPreferences {
     private static final String TAG = "DocumentPreferences";
     private static final String SETTINGS_FILE_NAME = "settings.properties";
     private static final String MIME_TYPE = "application/x-java-properties";
+    private static final String SETTINGS_DIR = "LimeBackup/Setting";
 
     private final Context mContext;
     private final Uri mTreeUri;
     private DocumentFile mSettingsFile;
+    private File mInternalSettingsFile;
 
     public DocumentPreferences(@NonNull Context context, @NonNull Uri treeUri) {
         this.mContext = context;
         this.mTreeUri = treeUri;
-        initialize();
+
+        initializeInternalStorage();
+        initializeUriStorage();
     }
 
-    private void initialize() {
+    private void initializeInternalStorage() {
         try {
-            logUriDetails("Initializing DocumentPreferences with URI");
+            File internalDir = new File(mContext.getFilesDir(), SETTINGS_DIR);
+            if (!internalDir.exists() && !internalDir.mkdirs()) {
+                logError("Failed to create internal directory");
+                return;
+            }
+
+            mInternalSettingsFile = new File(internalDir, SETTINGS_FILE_NAME);
+            if (!mInternalSettingsFile.exists()) {
+                logDebug("Internal settings file not found, will create when needed");
+            } else {
+                logInfo("Internal settings file found: " + mInternalSettingsFile.getAbsolutePath());
+            }
+        } catch (SecurityException e) {
+            logError("SecurityException in initializeInternalStorage: " + e.getMessage(), e);
+        } catch (Exception e) {
+            logError("Unexpected error in initializeInternalStorage: " + e.getMessage(), e);
+        }
+    }
+
+    private void initializeUriStorage() {
+        try {
+            logUriDetails("Initializing URI storage");
 
             try {
                 mContext.getContentResolver().takePersistableUriPermission(
@@ -45,7 +74,6 @@ public class DocumentPreferences {
                 );
             } catch (SecurityException e) {
                 logError("SecurityException when taking permissions: " + e.getMessage(), e);
-                // 権限が不足している場合はここでリターン
                 return;
             }
 
@@ -57,11 +85,8 @@ public class DocumentPreferences {
                 return;
             }
 
-            // ディレクトリの存在チェック
             if (!dir.exists()) {
                 logWarning("Directory does not exist, attempting to create: " + mTreeUri);
-
-                // 改良されたディレクトリ作成方法
                 Uri createdDirUri = createDirectorySafely(dir);
                 if (createdDirUri == null) {
                     logError("Directory creation failed");
@@ -73,21 +98,19 @@ public class DocumentPreferences {
                     logError("New directory does not exist after creation");
                     return;
                 }
-
                 logInfo("Directory created successfully: " + dir.getUri());
             }
 
-            // 設定ファイルのチェック
             mSettingsFile = dir.findFile(SETTINGS_FILE_NAME);
             if (mSettingsFile == null) {
-                logDebug("Settings file not found, will create when needed");
+                logDebug("URI settings file not found, will create when needed");
             } else {
-                logInfo("Settings file found: " + mSettingsFile.getUri());
+                logInfo("URI settings file found: " + mSettingsFile.getUri());
             }
         } catch (SecurityException e) {
-            logError("SecurityException in initialize: " + e.getMessage(), e);
+            logError("SecurityException in initializeUriStorage: " + e.getMessage(), e);
         } catch (Exception e) {
-            logError("Unexpected error in initialize: " + e.getMessage(), e);
+            logError("Unexpected error in initializeUriStorage: " + e.getMessage(), e);
         }
     }
 
@@ -97,7 +120,6 @@ public class DocumentPreferences {
             String displayName = getDisplayNameFromUri(mTreeUri);
             logDebug("Creating directory with name: " + displayName);
 
-            // DocumentsContract APIを使用してディレクトリを作成
             Uri createdUri = DocumentsContract.createDocument(
                     mContext.getContentResolver(),
                     parentDir.getUri(),
@@ -117,90 +139,183 @@ public class DocumentPreferences {
             return null;
         }
     }
+
     public boolean saveSetting(String key, String value) throws IOException {
+        // まず内部ストレージに保存
+        boolean internalSuccess = saveToInternalStorage(key, value);
+
+        // URIストレージに保存
+        boolean uriSuccess = saveToUriStorage(key, value);
+
+        return internalSuccess && uriSuccess;
+    }
+
+    private boolean saveToInternalStorage(String key, String value) {
+        if (mInternalSettingsFile == null) {
+            logError("Internal storage not initialized");
+            return false;
+        }
+
         try {
-            ensureSettingsFile();
+            Properties properties = new Properties();
+            if (mInternalSettingsFile.exists()) {
+                try (InputStream is = new FileInputStream(mInternalSettingsFile)) {
+                    properties.load(is);
+                }
+            }
+
+            properties.setProperty(key, value);
+
+            try (OutputStream os = new FileOutputStream(mInternalSettingsFile)) {
+                properties.store(os, "Updated: " + new Date());
+                logInfo("Setting saved to internal storage: " + key + " = " + value);
+                return true;
+            }
+        } catch (IOException e) {
+            logError("Failed to save setting to internal storage: " + key, e);
+            return false;
+        }
+    }
+
+    private boolean saveToUriStorage(String key, String value) throws IOException {
+        try {
+            ensureUriSettingsFile();
 
             Properties properties = new Properties();
             if (mSettingsFile != null && mSettingsFile.exists()) {
                 try (InputStream is = mContext.getContentResolver().openInputStream(mSettingsFile.getUri())) {
                     properties.load(is);
-                } catch (IOException ignored) {}
+                }
             }
 
             properties.setProperty(key, value);
 
-            try (OutputStream os = mContext.getContentResolver().openOutputStream(mSettingsFile.getUri())) {
-                properties.store(os, "Updated");
-                logInfo("Setting saved: " + key + " = " + value);
-                return true;
+            if (mSettingsFile != null) {
+                try (OutputStream os = mContext.getContentResolver().openOutputStream(mSettingsFile.getUri())) {
+                    properties.store(os, "Updated");
+                    logInfo("Setting saved to URI storage: " + key + " = " + value);
+                    return true;
+                }
             }
+            return false;
         } catch (IOException e) {
-            logError("Failed to save setting: " + key, e);
+            logError("Failed to save setting to URI storage: " + key, e);
             throw e;
         } catch (SecurityException e) {
-            logError("SecurityException when saving setting: " + e.getMessage(), e);
+            logError("SecurityException when saving to URI storage: " + e.getMessage(), e);
             throw new IOException("Permission denied", e);
         }
     }
 
     public void loadSettings(LimeOptions options) throws IOException {
+        // まず内部ストレージから読み込み
+        loadFromInternalStorage(options);
+
+        // URIストレージから読み込み (内部ストレージの設定を上書き)
+        loadFromUriStorage(options);
+    }
+
+    private void loadFromInternalStorage(LimeOptions options) {
+        if (mInternalSettingsFile == null || !mInternalSettingsFile.exists()) {
+            logDebug("Internal settings file not available for loading");
+            return;
+        }
+
+        try (InputStream is = new FileInputStream(mInternalSettingsFile)) {
+            Properties properties = new Properties();
+            properties.load(is);
+            applyPropertiesToOptions(properties, options);
+            logInfo("Settings loaded from internal storage");
+        } catch (IOException e) {
+            logError("Failed to load settings from internal storage", e);
+        }
+    }
+
+    private void loadFromUriStorage(LimeOptions options) throws IOException {
         try {
-            ensureSettingsFile();
+            ensureUriSettingsFile();
 
             if (mSettingsFile == null || !mSettingsFile.exists()) {
-                logWarning("Settings file not available for loading");
+                logDebug("URI settings file not available for loading");
                 return;
             }
 
             try (InputStream is = mContext.getContentResolver().openInputStream(mSettingsFile.getUri())) {
                 Properties properties = new Properties();
                 properties.load(is);
-
-                for (LimeOptions.Option option : options.options) {
-                    String value = properties.getProperty(option.name);
-                    if (value != null) {
-                        option.checked = Boolean.parseBoolean(value);
-                    }
-                }
-                logInfo("Settings loaded successfully");
+                applyPropertiesToOptions(properties, options);
+                logInfo("Settings loaded from URI storage");
             }
         } catch (IOException e) {
-            logError("Failed to load settings", e);
+            logError("Failed to load settings from URI storage", e);
             throw e;
         } catch (SecurityException e) {
-            logError("SecurityException when loading settings: " + e.getMessage(), e);
+            logError("SecurityException when loading from URI storage: " + e.getMessage(), e);
             throw new IOException("Permission denied", e);
         }
     }
 
-    public String getSetting(String key, String defaultValue) {
-        try {
-            ensureSettingsFile();
+    private void applyPropertiesToOptions(Properties properties, LimeOptions options) {
+        for (LimeOptions.Option option : options.options) {
+            String value = properties.getProperty(option.name);
+            if (value != null) {
+                option.checked = Boolean.parseBoolean(value);
+            }
+        }
+    }
 
+    public String getSetting(String key, String defaultValue) {
+        String value = getFromInternalStorage(key);
+        if (value != null) {
+            return value;
+        }
+        value = getFromUriStorage(key);
+        if (value != null) {
+            return value;
+        }
+
+        return defaultValue;
+    }
+
+    private String getFromInternalStorage(String key) {
+        if (mInternalSettingsFile == null || !mInternalSettingsFile.exists()) {
+            return null;
+        }
+
+        try (InputStream is = new FileInputStream(mInternalSettingsFile)) {
+            Properties properties = new Properties();
+            properties.load(is);
+            return properties.getProperty(key);
+        } catch (IOException e) {
+            logError("Failed to get setting from internal storage: " + key, e);
+            return null;
+        }
+    }
+
+    private String getFromUriStorage(String key) {
+        try {
             if (mSettingsFile == null || !mSettingsFile.exists()) {
-                logDebug("Settings file not available for getSetting: " + key);
-                return defaultValue;
+                return null;
             }
 
             try (InputStream is = mContext.getContentResolver().openInputStream(mSettingsFile.getUri())) {
                 Properties properties = new Properties();
                 properties.load(is);
-                return properties.getProperty(key, defaultValue);
+                return properties.getProperty(key);
             }
         } catch (Exception e) {
-            logError("Failed to get setting: " + key, e);
-            return defaultValue;
+            logError("Failed to get setting from URI storage: " + key, e);
+            return null;
         }
     }
 
-    private void ensureSettingsFile() throws IOException {
+    private void ensureUriSettingsFile() throws IOException {
         if (mSettingsFile != null && mSettingsFile.exists()) {
             return;
         }
 
         try {
-            logDebug("Ensuring settings file exists");
+            logDebug("Ensuring URI settings file exists");
 
             DocumentFile dir = DocumentFile.fromTreeUri(mContext, mTreeUri);
             if (dir == null) {
@@ -222,19 +337,18 @@ public class DocumentPreferences {
                 throw new IOException("Settings file does not exist after creation");
             }
 
-            // 新規作成時は空の設定で初期化
             Properties properties = new Properties();
             try (OutputStream os = mContext.getContentResolver().openOutputStream(mSettingsFile.getUri())) {
                 properties.store(os, "Initial Settings");
-                logInfo("Settings file created successfully: " + mSettingsFile.getUri());
+                logInfo("URI settings file created successfully: " + mSettingsFile.getUri());
             }
         } catch (SecurityException e) {
-            logError("SecurityException in ensureSettingsFile: " + e.getMessage(), e);
+            logError("SecurityException in ensureUriSettingsFile: " + e.getMessage(), e);
             throw new IOException("Permission denied", e);
         }
     }
 
-    // 追加の診断メソッド
+    // ロギングとヘルパーメソッド
     private String getDisplayNameFromUri(Uri uri) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             String displayName = DocumentsContract.getTreeDocumentId(uri);
@@ -256,22 +370,6 @@ public class DocumentPreferences {
         }
     }
 
-    private void logDocumentFileDetails(String prefix, DocumentFile file) {
-        if (file == null) {
-            logDebug(prefix + ": null");
-            return;
-        }
-
-        logDebug(prefix + " URI: " + file.getUri());
-        logDebug(prefix + " Name: " + file.getName());
-        logDebug(prefix + " Type: " + file.getType());
-        logDebug(prefix + " Length: " + file.length());
-        logDebug(prefix + " Last Modified: " + file.lastModified());
-        logDebug(prefix + " Can Read: " + file.canRead());
-        logDebug(prefix + " Can Write: " + file.canWrite());
-    }
-
-    // ロギングヘルパー
     private void logDebug(String message) {
         Log.d(TAG, message);
     }
@@ -293,21 +391,17 @@ public class DocumentPreferences {
     }
 
     public boolean isAccessible() {
+        // 内部ストレージまたはURIストレージが利用可能か
+        boolean internalAccessible = mInternalSettingsFile != null && mInternalSettingsFile.exists();
+        boolean uriAccessible = false;
+
         try {
             DocumentFile dir = DocumentFile.fromTreeUri(mContext, mTreeUri);
-            if (dir == null) {
-                logDebug("isAccessible: DocumentFile.fromTreeUri returned null");
-                return false;
-            }
-
-            logDocumentFileDetails("Accessibility Check", dir);
-            return dir.exists();
-        } catch (SecurityException e) {
-            logError("SecurityException in isAccessible: " + e.getMessage(), e);
-            return false;
+            uriAccessible = dir != null && dir.exists();
         } catch (Exception e) {
-            logError("Unexpected error in isAccessible: " + e.getMessage(), e);
-            return false;
+            logError("Error checking URI accessibility", e);
         }
+
+        return internalAccessible || uriAccessible;
     }
 }

@@ -50,7 +50,8 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     private static boolean isContextInitialized = false;
     public static String modulePath;
     public static LimeOptions limeOptions = new LimeOptions();
-
+    public static CustomPreferences customPreferences;
+    private static Context context; // Static context to be shared
     private static Context mContext; // staticに変更して共有
     static final IHook[] hooks = {
             new InstallModule(),
@@ -738,129 +739,137 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
         }
         return null;
     }
+    private Context getTargetAppContextForResources(XC_InitPackageResources.InitPackageResourcesParam resparam) {
+        try {
+            ClassLoader classLoader = resparam.res.getClass().getClassLoader();
 
+            Class<?> activityThreadClass = XposedHelpers.findClass("android.app.ActivityThread", classLoader);
+            Object activityThread = XposedHelpers.callStaticMethod(activityThreadClass, "currentActivityThread");
+
+            Context systemContext = (Context) XposedHelpers.callMethod(activityThread, "getSystemContext");
+
+            return systemContext.createPackageContext(
+                    Constants.PACKAGE_NAME,
+                    Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY
+            );
+
+        } catch (Throwable t) {
+            // XposedBridge.log("Lime (Resources): Context creation failed: " + t);
+            return null;
+        }
+    }
     @Override
     public void handleInitPackageResources(@NonNull XC_InitPackageResources.InitPackageResourcesParam resparam) throws Throwable {
         if (!resparam.packageName.equals(Constants.PACKAGE_NAME)) return;
-
+        if (customPreferences == null) {
+            try {
+                context = getTargetAppContextForResources(resparam);
+                customPreferences = new CustomPreferences(context);
+                for (LimeOptions.Option option : limeOptions.options) {
+                    String value = customPreferences.getSetting(option.name, null);
+                    if (value == null) {
+                        throw new SettingsLoadException("Setting " + option.name + " not found");
+                    }
+                    option.checked = Boolean.parseBoolean(value);
+                }
+            } catch (Exception e) {
+                // XposedBridge.log("Lime: Failed to load settings in handleInitPackageResources: " + e);
+            }
+        }
         XModuleResources xModuleResources = XModuleResources.createInstance(modulePath, resparam.res);
-        XposedBridge.log("Lime: [RES] XModuleResources created: " + (xModuleResources != null));
 
-        // 設定に依存するリソースフックをXC_LayoutInflated内で処理
-        // 実際にレイアウトがインフレートされるタイミングで設定を読み込む
-
-        // アイコンラベルの削除
-        resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "app_main_bottom_navigation_bar_button", new XC_LayoutInflated() {
-            @Override
-            public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
-                ensureSettingsLoaded(liparam.view.getContext());
-                if (limeOptions.removeIconLabels.checked) {
+        if (limeOptions.removeIconLabels.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "main_bnb_button_height", xModuleResources.fwd(R.dimen.main_bnb_button_height));
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "main_bnb_button_width", xModuleResources.fwd(R.dimen.main_bnb_button_width));
+            resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "app_main_bottom_navigation_bar_button", new XC_LayoutInflated() {
+                @Override
+                public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
                     liparam.view.setTranslationY(xModuleResources.getDimensionPixelSize(R.dimen.gnav_icon_offset));
                 }
-            }
-        });
-
-        // 検索バーの削除
-        resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "main_tab_search_bar", new XC_LayoutInflated() {
-            @Override
-            public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
-                ensureSettingsLoaded(liparam.view.getContext());
-                if (limeOptions.removeSearchBar.checked) {
+            });
+        }
+        if (limeOptions.removeSearchBar.checked) {
+            resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "main_tab_search_bar", new XC_LayoutInflated() {
+                @Override
+                public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
                     liparam.view.setVisibility(View.GONE);
                 }
-            }
-        });
-
-        // 通知の削除
-        resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "home_list_row_friend_profile_update_carousel", new XC_LayoutInflated() {
-            @Override
-            public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
-                ensureSettingsLoaded(liparam.view.getContext());
-                if (limeOptions.RemoveNotification.checked) {
+            });
+        }
+        if (limeOptions.RemoveNotification.checked) {
+            resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "home_list_row_friend_profile_update_carousel", new XC_LayoutInflated() {
+                @Override
+                public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
                     liparam.view.setVisibility(View.GONE);
                 }
-            }
-        });
+            });
 
-        resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "home_list_row_friend_profile_update_carousel_item", new XC_LayoutInflated() {
-            @Override
-            public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
-                ensureSettingsLoaded(liparam.view.getContext());
-                if (limeOptions.RemoveNotification.checked) {
+            resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "home_list_row_friend_profile_update_carousel_item", new XC_LayoutInflated() {
+                @Override
+                public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
                     liparam.view.setVisibility(View.GONE);
                 }
-            }
-        });
-
-        // ホワイトからダークへの変更
-        resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "main_tab_search_bar", new XC_LayoutInflated() {
-            @Override
-            public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
-                ensureSettingsLoaded(liparam.view.getContext());
-                if (limeOptions.WhiteToDark.checked) {
+            });
+        }
+        if (limeOptions.WhiteToDark.checked) {
+            resparam.res.hookLayout(Constants.PACKAGE_NAME, "layout", "main_tab_search_bar", new XC_LayoutInflated() {
+                @Override
+                public void handleLayoutInflated(XC_LayoutInflated.LayoutInflatedParam liparam) throws Throwable {
                     ViewGroup rootView = (ViewGroup) liparam.view;
                     setAllViewsToBlack(rootView);
                 }
-            }
 
-            private void setAllViewsToBlack(View view) {
-                if (view instanceof ViewGroup) {
-                    ViewGroup viewGroup = (ViewGroup) view;
-                    for (int i = 0; i < viewGroup.getChildCount(); i++) {
-                        setAllViewsToBlack(viewGroup.getChildAt(i));
+                private void setAllViewsToBlack(View view) {
+                    if (view instanceof ViewGroup) {
+                        ViewGroup viewGroup = (ViewGroup) view;
+                        for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                            setAllViewsToBlack(viewGroup.getChildAt(i));
+                        }
+                    }
+                    view.setBackgroundColor(Color.BLACK);
+                    if (view instanceof TextView) {
+                        ((TextView) view).setTextColor(Color.BLACK);
                     }
                 }
-                view.setBackgroundColor(Color.BLACK);
-                if (view instanceof TextView) {
-                    ((TextView) view).setTextColor(Color.BLACK);
-                }
-            }
-        });
+            });
+        }
+        if (limeOptions.removeNaviAlbum.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_albums", xModuleResources.fwd(R.drawable.empty_drawable));
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "badge_dot_green", xModuleResources.fwd(R.drawable.empty_drawable));
 
-        try {
-            if (limeOptions.removeNaviAlbum.checked) {
-                resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_albums", xModuleResources.fwd(R.drawable.empty_drawable));
-                resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "badge_dot_green", xModuleResources.fwd(R.drawable.empty_drawable));
-                XposedBridge.log("Lime: [RES] Navi album resources replaced");
-            }
-        } catch (Throwable t) {
-            XposedBridge.log("Lime: [RES] Error replacing navi album resources: " + t.getMessage());
         }
 
         if (limeOptions.removeNewsOrCall.checked) {
+
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_news_new", xModuleResources.fwd(R.drawable.empty_drawable));
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_news_new_dark", xModuleResources.fwd(R.drawable.empty_drawable));
         }
+        if (limeOptions.removeWallet.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_wallet_new", xModuleResources.fwd(R.drawable.empty_drawable));
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_wallet_new_dark", xModuleResources.fwd(R.drawable.empty_drawable));
+        }
+        if (limeOptions.removeVoom.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_voom_new", xModuleResources.fwd(R.drawable.empty_drawable));
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_voom_new_dark", xModuleResources.fwd(R.drawable.empty_drawable));
+        }
 
-                if (limeOptions.removeWallet.checked) {
-                    resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_wallet_new", xModuleResources.fwd(R.drawable.empty_drawable));
-                    resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_wallet_new_dark", xModuleResources.fwd(R.drawable.empty_drawable));
-                }
 
-                if (limeOptions.removeVoom.checked) {
-                    resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_voom_new", xModuleResources.fwd(R.drawable.empty_drawable));
-                    resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_bottom_voom_new_dark", xModuleResources.fwd(R.drawable.empty_drawable));
-                }
 
-                if (limeOptions.removeNaviOpenchat.checked) {
-                    resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_openchat", xModuleResources.fwd(R.drawable.empty_drawable));
-                }
+        if (limeOptions.removeNaviOpenchat.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_openchat", xModuleResources.fwd(R.drawable.empty_drawable));
+        }
+        resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "freecall_bottom_photobooth", xModuleResources.fwd(R.drawable.empty_drawable));
+        if (limeOptions.RemoveVoiceRecord.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_normal", xModuleResources.fwd(R.drawable.empty_drawable));
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_pressed", xModuleResources.fwd(R.drawable.empty_drawable));
 
-                if (limeOptions.RemoveVoiceRecord.checked) {
-                    resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_normal", xModuleResources.fwd(R.drawable.empty_drawable));
-                    resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "chat_ui_input_ic_voice_pressed", xModuleResources.fwd(R.drawable.empty_drawable));
-                }
+        }
 
-                if (limeOptions.removeServiceLabels.checked) {
-                    resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "home_tab_v3_service_icon_size", xModuleResources.fwd(R.dimen.home_tab_v3_service_icon_size));
-                }
-    }
-    private synchronized void ensureSettingsLoaded(Context context) {
-        if (!isSettingsLoaded) {
-            limeOptions = new LimeOptions();
-            loadSettings(context);
-            isSettingsLoaded = true;
-            logCurrentSettings();
+        resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "chat_ui_photobooth_floating_btn_height", xModuleResources.fwd(R.dimen.main_bnb_button_width));
+        resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "chat_ui_photobooth_top_margin", xModuleResources.fwd(R.dimen.main_bnb_button_width));
+
+        if (limeOptions.removeServiceLabels.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "dimen", "home_tab_v3_service_icon_size", xModuleResources.fwd(R.dimen.home_tab_v3_service_icon_size));
         }
     }
 }

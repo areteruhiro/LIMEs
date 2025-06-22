@@ -2,12 +2,10 @@ package io.github.hiro.lime.hooks;
 
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.os.Environment;
 import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.Date;
@@ -19,8 +17,7 @@ public class CustomPreferences {
     private static final String SETTINGS_DIR = "LimeBackup/Setting";
     private static final String SETTINGS_FILE = "settings.properties";
 
-    private final File settingsFileInternal; // Only used in Xposed context
-    private final File settingsFileExternal;
+    private final File settingsFileInternal;
     private final boolean isXposedContext;
 
     public CustomPreferences(Context context) throws PackageManager.NameNotFoundException, IOException {
@@ -36,110 +33,47 @@ public class CustomPreferences {
                 ).show();
                 throw new IOException("Failed to create internal directory");
             }
-            settingsFileInternal = new File(internalDir, SETTINGS_FILE);
-            File externalBaseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            if (externalBaseDir == null) {
-                throw new IOException("External storage not available");
-            }
-            File externalDir = new File(externalBaseDir, SETTINGS_DIR);
-            if (!externalDir.exists() && !externalDir.mkdirs()) {
-                throw new IOException("Failed to create external directory");
-            }
-            settingsFileExternal = new File(externalDir, SETTINGS_FILE);
 
-            // ファイルの同期
-            if (!settingsFileInternal.exists() && settingsFileExternal.exists()) {
-                copyFile(settingsFileExternal, settingsFileInternal);
-            } else if (!settingsFileExternal.exists() && settingsFileInternal.exists()) {
-                copyFile(settingsFileInternal, settingsFileExternal);
+            settingsFileInternal = new File(internalDir, SETTINGS_FILE);
+
+            // 設定ファイルが存在しない場合は新規作成
+            if (!settingsFileInternal.exists()) {
+                try (FileOutputStream fos = new FileOutputStream(settingsFileInternal)) {
+                    new Properties().store(fos, "Initial Settings");
+                }
             }
         } else {
             this.isXposedContext = false;
             this.settingsFileInternal = null;
-            File externalBaseDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-            File externalDir = new File(externalBaseDir, SETTINGS_DIR);
-            settingsFileExternal = new File(externalDir, SETTINGS_FILE);
-
-            if (!settingsFileExternal.exists()) {
-                throw new FileNotFoundException("External settings file not found");
-            }
-        }
-
-        syncFiles();
-    }
-
-
-    private void syncFiles() {
-        if (!isXposedContext || settingsFileInternal == null) return;
-
-        boolean internalExists = settingsFileInternal.exists();
-        boolean externalExists = settingsFileExternal.exists();
-
-        try {
-            if (externalExists) {
-                if (internalExists) {
-                    if (filesDiffer(settingsFileInternal, settingsFileExternal)) {
-                        copyFile(settingsFileExternal, settingsFileInternal);
-                    }
-                } else {
-                    copyFile(settingsFileExternal, settingsFileInternal);
-                }
-            } else if (internalExists) {
-                copyFile(settingsFileInternal, settingsFileExternal);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private boolean filesDiffer(File file1, File file2) throws IOException {
-        if (file1.length() != file2.length()) return true;
-
-        try (FileInputStream fis1 = new FileInputStream(file1);
-             FileInputStream fis2 = new FileInputStream(file2)) {
-            int byte1, byte2;
-            do {
-                byte1 = fis1.read();
-                byte2 = fis2.read();
-                if (byte1 != byte2) return true;
-            } while (byte1 != -1);
-        }
-        return false;
-    }
-
-    private void copyFile(File source, File dest) throws IOException {
-        try (FileInputStream in = new FileInputStream(source);
-             FileOutputStream out = new FileOutputStream(dest)) {
-            byte[] buffer = new byte[1024];
-            int length;
-            while ((length = in.read(buffer)) > 0) {
-                out.write(buffer, 0, length);
-            }
+            throw new IOException("Non-Xposed context is not supported in internal-only mode");
         }
     }
 
     public boolean saveSetting(String key, String value) {
-        if (isXposedContext && settingsFileInternal != null) {
-            boolean successInternal = saveToFile(settingsFileInternal, key, value, false);
-            boolean successExternal = saveToFile(settingsFileExternal, key, value, true);
-            return successInternal && successExternal;
-        } else {
-            return saveToFile(settingsFileExternal, key, value, false);
+        if (!isXposedContext || settingsFileInternal == null) {
+            return false;
         }
+
+        return saveToFile(settingsFileInternal, key, value, true);
     }
 
     private boolean saveToFile(File file, String key, String value, boolean allowRetry) {
         Properties properties = new Properties();
+
+        // 既存の設定を読み込み
         if (file.exists()) {
             try (FileInputStream fis = new FileInputStream(file)) {
                 properties.load(fis);
             } catch (IOException ignored) {}
         }
 
+        // 新しい設定を追加/更新
         properties.setProperty(key, value);
 
+        // 設定を保存
         int maxAttempts = allowRetry ? 2 : 1;
         boolean success = false;
+
         for (int attempt = 0; attempt < maxAttempts; attempt++) {
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 properties.store(fos, "Updated: " + new Date());
@@ -169,18 +103,21 @@ public class CustomPreferences {
     }
 
     public String getSetting(String key, String defaultValue) {
-        File targetFile = isXposedContext && settingsFileInternal != null ? settingsFileInternal : settingsFileExternal;
-        if (!targetFile.exists()) {
+        if (!isXposedContext || settingsFileInternal == null || !settingsFileInternal.exists()) {
             return defaultValue;
         }
 
         Properties properties = new Properties();
-        try (FileInputStream fis = new FileInputStream(targetFile)) {
+        try (FileInputStream fis = new FileInputStream(settingsFileInternal)) {
             properties.load(fis);
             return properties.getProperty(key, defaultValue);
         } catch (IOException e) {
             e.printStackTrace();
             return defaultValue;
         }
+    }
+
+    public boolean isInitialized() {
+        return isXposedContext && settingsFileInternal != null && settingsFileInternal.exists();
     }
 }
