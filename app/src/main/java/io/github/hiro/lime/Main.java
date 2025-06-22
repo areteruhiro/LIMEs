@@ -94,7 +94,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new ReactionList(),
             new WhiteToDark(),
             new DisableSilentMessage(),
-            new NotificationReaction()
+            new NotificationReaction(),
     };
 
     private boolean isSettingsLoaded = false; // 設定ロード状態を追跡
@@ -118,7 +118,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
 
     private void logCurrentSettings() {
         for (LimeOptions.Option option : limeOptions.options) {
-            XposedBridge.log("Lime: [ACTIVE_SETTING] " + option.name + " = " + option.checked);
+
         }
     }
 
@@ -388,7 +388,6 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                     throw new SettingsLoadException("Setting " + option.name + " not found");
                 }
                 option.checked = Boolean.parseBoolean(value);
-                XposedBridge.log(value);
             }
         } catch (Exception e) {
             throw new SettingsLoadException("Failed to load settings", e);

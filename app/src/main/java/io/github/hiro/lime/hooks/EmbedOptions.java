@@ -88,7 +88,7 @@ public class EmbedOptions implements IHook {
 
 
         XposedBridge.hookAllMethods(
-                loadPackageParam.classLoader.loadClass("com.linecorp.line.settings.main.LineUserMainSettingsFragment"),
+                loadPackageParam.classLoader.loadClass("com.linecorp.line.settings.lab.LineUserLabSettingsFragment"),
                 "onViewCreated",
                 new XC_MethodHook() {
                     @Override
@@ -103,14 +103,13 @@ public class EmbedOptions implements IHook {
                         }
 
                         Uri treeUri = Uri.parse(backupUri);
-                        DocumentPreferences docPrefs = new DocumentPreferences(contextV, treeUri);
+
 
                         if (limeOptions.NewOption.checked) {
-                            try {
-                                // URIからDocumentPreferencesを初期化
 
+                            try {
                                 PackageManager pm = contextV.getPackageManager();
-                                String versionName = ""; // 初期化
+                                String versionName = "";
                                 try {
                                     versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
                                 } catch (PackageManager.NameNotFoundException e) {
@@ -118,10 +117,9 @@ public class EmbedOptions implements IHook {
                                 }
 
                                 Set<String> checkedOptions = new HashSet<>();
-
+                                DocumentPreferences docPrefs = new DocumentPreferences(contextV, treeUri);
                                 for (LimeOptions.Option option : limeOptions.options) {
                                     if (!checkedOptions.contains(option.name)) {
-                                        // DocumentPreferencesから設定を読み込む
                                         option.checked = Boolean.parseBoolean(
                                                 docPrefs.getSetting(option.name, String.valueOf(option.checked))
                                         );
@@ -169,16 +167,9 @@ public class EmbedOptions implements IHook {
                                     ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), docPrefs, moduleContext, loadPackageParam);
                                     showView(rootLayout, categoryLayout);
                                 });
-
-
-                                // ボタンを追加
                                 rootLayout.addView(button);
-
-                                // ルートレイアウトを表示
                                 viewGroup.addView(rootLayout);
-
                             } catch (Exception e) {
-                                // エラー処理
                                 new Handler(Looper.getMainLooper()).post(() -> {
                                     if (moduleContext != null) {
                                         Toast.makeText(
@@ -193,9 +184,10 @@ public class EmbedOptions implements IHook {
 
 
                         } else {
+                            DocumentPreferences docPrefs = new DocumentPreferences(contextV, treeUri);
                             try {
                                 PackageManager pm = contextV.getPackageManager();
-                                String versionName = ""; // 初期化
+                                String versionName = "";
                                 try {
                                     versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
                                 } catch (PackageManager.NameNotFoundException e) {
@@ -203,7 +195,7 @@ public class EmbedOptions implements IHook {
                                 }
 
 
-                                Set<String> checkedOptions = new HashSet<>(); // 重複をチェックするためのセット
+                                Set<String> checkedOptions = new HashSet<>();
 
                                 for (LimeOptions.Option option : limeOptions.options) {
                                     if (!checkedOptions.contains(option.name)) {
