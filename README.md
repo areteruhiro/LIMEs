@@ -20,9 +20,7 @@ https://t.me/LsPosedLIMEs
  
 
 # 確認済みのバグやエラー
-・設定が保存されない場合 <br>
-
-詳しくは
+・設定が保存されない <br>
 https://t.me/LsPosedLIMEs/2425/2450
 
 ## トーク画像のリストアについて
