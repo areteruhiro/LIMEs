@@ -141,10 +141,17 @@ public class PreventMarkAsRead implements IHook {
                 private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext, Context context) {
                     String imageName = isOn ? "read_switch_on.png" : "read_switch_off.png";
 
-                    // URIから画像を読み込む
+                    // 1. URIから画像を読み込む
                     Drawable drawable = loadImageFromUri(context, imageName);
 
-                    // URIから読み込めなかった場合はアプリ内リソースを使用
+                    // 2. 画像が存在しない場合はコピーを試みる
+                    if (drawable == null) {
+                        copyImageToUri(context, moduleContext, imageName);
+                        // 再度読み込みを試みる
+                        drawable = loadImageFromUri(context, imageName);
+                    }
+
+                    // 3. それでも失敗した場合はモジュールリソースを使用
                     if (drawable == null) {
                         int resId = moduleContext.getResources().getIdentifier(
                                 imageName.replace(".png", ""), "drawable", "io.github.hiro.lime");
@@ -159,6 +166,38 @@ public class PreventMarkAsRead implements IHook {
                         int sizeInPx = dpToPx(moduleContext, sizeInDp);
                         drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
                         imageView.setImageDrawable(drawable);
+                    }
+                }
+
+                private void copyImageToUri(Context context, Context moduleContext, String imageName) {
+                    String backupUri = loadBackupUri(context);
+                    if (backupUri == null) return;
+
+                    try {
+                        Uri treeUri = Uri.parse(backupUri);
+                        DocumentFile dir = DocumentFile.fromTreeUri(context, treeUri);
+                        if (dir == null) return;
+
+                        // 既にファイルが存在するか確認
+                        if (dir.findFile(imageName) != null) return;
+
+                        // モジュールリソースから読み込み
+                        int resId = moduleContext.getResources().getIdentifier(
+                                imageName.replace(".png", ""), "drawable", "io.github.hiro.lime");
+                        if (resId == 0) return;
+
+                        try (InputStream in = moduleContext.getResources().openRawResource(resId);
+                             OutputStream out = context.getContentResolver().openOutputStream(
+                                     dir.createFile("image/png", imageName).getUri())) {
+
+                            byte[] buffer = new byte[1024];
+                            int length;
+                            while ((length = in.read(buffer)) > 0) {
+                                out.write(buffer, 0, length);
+                            }
+                        }
+                    } catch (Exception e) {
+                        XposedBridge.log("Lime: Error copying image to URI: " + e.getMessage());
                     }
                 }
 

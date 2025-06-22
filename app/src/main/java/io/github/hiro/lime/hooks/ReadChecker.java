@@ -199,7 +199,7 @@ public class ReadChecker implements IHook {
 
 
     private void addButton(Activity activity, Context context, Context moduleContext) {
-        // 設定ファイルの読み込み（内部ストレージから）
+
         Map<String, String> settings = readSettingsFromFile(context);
 
         float readCheckerHorizontalMarginFactor = Float.parseFloat(
@@ -211,11 +211,14 @@ public class ReadChecker implements IHook {
 
         ImageView imageButton = new ImageView(activity);
 
-        // 画像をURIから読み込む
         String imageName = "read_checker.png";
         Drawable drawable = loadImageFromUri(context, imageName);
 
-        // URIから読み込めなかった場合はアプリ内リソースを使用
+        if (drawable == null) {
+            copyImageToUri(context, moduleContext, imageName);
+            drawable = loadImageFromUri(context, imageName);
+        }
+
         if (drawable == null) {
             int resId = moduleContext.getResources().getIdentifier(
                     imageName.replace(".png", ""), "drawable", "io.github.hiro.lime");
@@ -283,14 +286,40 @@ public class ReadChecker implements IHook {
         layout.addView(imageButton);
     }
 
+    private void copyImageToUri(Context context, Context moduleContext, String imageName) {
+        String backupUri = loadBackupUri(context);
+        if (backupUri == null) return;
+
+        try {
+            Uri treeUri = Uri.parse(backupUri);
+            DocumentFile dir = DocumentFile.fromTreeUri(context, treeUri);
+            if (dir == null) return;
+            if (dir.findFile(imageName) != null) return;
+            int resId = moduleContext.getResources().getIdentifier(
+                    imageName.replace(".png", ""), "drawable", "io.github.hiro.lime");
+            if (resId == 0) return;
+
+            try (InputStream in = moduleContext.getResources().openRawResource(resId);
+                 OutputStream out = context.getContentResolver().openOutputStream(
+                         dir.createFile("image/png", imageName).getUri())) {
+
+                byte[] buffer = new byte[1024];
+                int length;
+                while ((length = in.read(buffer)) > 0) {
+                    out.write(buffer, 0, length);
+                }
+            }
+        } catch (Exception e) {
+            XposedBridge.log("Lime: Error copying image to URI: " + e.getMessage());
+        }
+    }
+
 
     private Map<String, String> readSettingsFromFile(Context context) {
         String fileName = "margin_settings.txt";
         File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
         File file = new File(dir, fileName);
         Map<String, String> settings = new HashMap<>();
-
-        // デフォルト値を設定
         settings.put("Read_checker_horizontalMarginFactor", "0.5");
         settings.put("Read_checker_verticalMarginDp", "100");
         settings.put("chat_read_check_size", "60");
@@ -853,7 +882,6 @@ public class ReadChecker implements IHook {
 
             if (mediaError) {
                 mediaDescription = "null";
-                createErrorFile(context, serverId, media);
             }
 
             String finalContent = determineFinalContent(content, mediaDescription);
@@ -958,23 +986,7 @@ public class ReadChecker implements IHook {
             this.timeFormatted = timeFormatted;
         }
     }
-    private void createErrorFile(Context context, String serverId, String mediaValue) {
-        File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        File limeBackupDir = new File(downloadsDir, "LimeBackup");
-        if (!limeBackupDir.exists()) {
-            limeBackupDir.mkdirs();
-        }
-        File errorFile = new File(limeBackupDir, "no_get.txt");
-        try (FileWriter fw = new FileWriter(errorFile, true);
-             BufferedWriter bw = new BufferedWriter(fw);
-             PrintWriter pw = new PrintWriter(bw)) {
-            String timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(new Date());
-            String errorMsg = String.format(Locale.getDefault(), "[%s] ServerID: %s, Media Value: %s", timestamp, serverId, mediaValue);
-            pw.println(errorMsg);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+
 
     private String queryDatabaseWithRetry(SQLiteDatabase db, String query, String... params) {
         final int RETRY_DELAY_MS = 100;

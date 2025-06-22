@@ -33,6 +33,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
 
 import de.robv.android.xposed.IXposedHookInitPackageResources;
 import de.robv.android.xposed.IXposedHookLoadPackage;
@@ -228,53 +230,56 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         View rootView = (View) param.getResult();
                         Context context = rootView.getContext();
-                        PackageManager pm = context.getPackageManager();
-                        String versionName = pm.getPackageInfo(lpparam.packageName, 0).versionName;
-                        String fragmentClass;
-                        if (isVersionInRange(versionName, "14.19.1", "14.20.0")) {
-                            fragmentClass = "androidx.fragment.app.r";
-                        } else if (isVersionInRange(versionName, "14.2.0", "15.2.0")) {
-                            fragmentClass = "androidx.fragment.app.o";
-                        } else if (isVersionInRange(versionName, "15.2.0", "15.3.0")) {
-                            fragmentClass = "androidx.fragment.app.p";
-                        } else if (isVersionInRange(versionName, "15.3.0", "15.4.0")) {
-                            fragmentClass = "androidx.fragment.app.n";
-                        } else if (isVersionInRange(versionName, "15.4.0", "15.4.1")) {
-                            fragmentClass = "androidx.fragment.app.p";
-                        } else if (isVersionInRange(versionName, "15.5.0", "15.6.0")) {
-                            fragmentClass = "androidx.fragment.app.n";
-                        } else if (isVersionInRange(versionName, "15.6.0", "15.6.9")) {
-                            fragmentClass = "androidx.fragment.app.n";
-                        } else if (isVersionInRange(versionName, "15.7.0", "15.8.0")) {
-                            fragmentClass = "androidx.fragment.app.n";
-                        } else if (isVersionInRange(versionName, "15.9.0", "15.9.3")) {
-                            fragmentClass = "androidx.fragment.app.t";
-                        } else if (isVersionInRange(versionName, "15.9.3", "15.9.4")) {
-                            fragmentClass = "androidx.fragment.app.r";
-                        } else {
-                            XposedBridge.log("Unsupported version: " + versionName);
-                            return;
+
+                        String baseName = "androidx.fragment.app."; //
+                        List<String> validClasses = new ArrayList<>();
+
+                        for (char c = 'a'; c <= 'z'; c++) {
+                            String className = baseName + c;
+                            try {
+
+                                Class<?> clazz = Class.forName(className, false, lpparam.classLoader);
+
+                                try {
+                                    clazz.getDeclaredMethod("onActivityResult", int.class, int.class, Intent.class);
+                                    validClasses.add(className);
+                                    XposedBridge.log("Found valid fragment class: " + className);
+                                } catch (NoSuchMethodException ignored) {
+
+                                }
+                            } catch (ClassNotFoundException ignored) {
+                            }
                         }
 
-                        XposedHelpers.findAndHookMethod(
-                                fragmentClass,
-                                lpparam.classLoader,
-                                "onActivityResult",
-                                int.class, int.class, Intent.class,
-                                new XC_MethodHook() {
-                                    @Override
-                                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                                        int requestCode = (int) param.args[0];
-                                        int resultCode = (int) param.args[1];
-                                        Intent data = (Intent) param.args[2];
+                        if (validClasses.isEmpty()) {
+                            XposedBridge.log("No valid fragment class found with onActivityResult method");
+                            return;
+                        }
+                        for (String fragmentClass : validClasses) {
+                            try {
+                                XposedHelpers.findAndHookMethod(
+                                        fragmentClass,
+                                        lpparam.classLoader,
+                                        "onActivityResult",
+                                        int.class, int.class, Intent.class,
+                                        new XC_MethodHook() {
+                                            @Override
+                                            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                                                int requestCode = (int) param.args[0];
+                                                int resultCode = (int) param.args[1];
+                                                Intent data = (Intent) param.args[2];
 
-                                        if (requestCode == 12345 && resultCode == Activity.RESULT_OK && data != null) {
-                                            handleUriResult(param.thisObject, data);
+                                                if (requestCode == 12345 && resultCode == Activity.RESULT_OK && data != null) {
+                                                    handleUriResult(param.thisObject, data);
+                                                }
+                                            }
                                         }
-                                    }
-                                }
-                        );
-
+                                );
+                                XposedBridge.log("Successfully hooked onActivityResult in: " + fragmentClass);
+                            } catch (Throwable t) {
+                                XposedBridge.log("Failed to hook onActivityResult in " + fragmentClass + ": " + t.getMessage());
+                            }
+                        }
                         new Handler(Looper.getMainLooper()).post(() -> {
                             Button openFolderButton = createConfigButton(context, param);
                             if (rootView instanceof ViewGroup) {

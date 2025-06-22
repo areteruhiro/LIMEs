@@ -19,7 +19,11 @@ on:
         type: boolean
         required: true
         default: false
-
+      prerelease:
+       description: 'Pre-release'
+      type: boolean
+      required: false
+      default: true
 jobs:
   build:
     name: Build
@@ -127,8 +131,10 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         if: github.event.inputs.release == 'true'
+
         with:
           tag_name: ${{ env.version }}
+          prerelease: ${{ github.event.inputs.prerelease }}
           files: |
             ${{ env.repo }}-${{ env.version }}.apk
             Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk

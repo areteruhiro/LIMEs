@@ -165,10 +165,13 @@ public class KeepUnread implements IHook {
                     private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext, Context context) {
                         String imageName = isOn ? "keep_switch_on.png" : "keep_switch_off.png";
 
-                        // URIから画像を読み込む
                         Drawable drawable = loadImageFromUri(context, imageName);
 
-                        // URIから読み込めなかった場合はアプリ内リソースを使用
+                        if (drawable == null) {
+                            copyImageToUri(context, moduleContext, imageName);
+
+                            drawable = loadImageFromUri(context, imageName);
+                        }
                         if (drawable == null) {
                             int resId = moduleContext.getResources().getIdentifier(
                                     imageName.replace(".png", ""), "drawable", "io.github.hiro.lime");
@@ -183,6 +186,38 @@ public class KeepUnread implements IHook {
                             int sizeInPx = dpToPx(context, sizeInDp);
                             drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
                             imageView.setImageDrawable(drawable);
+                        }
+                    }
+
+                    private void copyImageToUri(Context context, Context moduleContext, String imageName) {
+                        String backupUri = loadBackupUri(context);
+                        if (backupUri == null) return;
+
+                        try {
+                            Uri treeUri = Uri.parse(backupUri);
+                            DocumentFile dir = DocumentFile.fromTreeUri(context, treeUri);
+                            if (dir == null) return;
+
+                            // 既にファイルが存在するか確認
+                            if (dir.findFile(imageName) != null) return;
+
+                            // モジュールリソースから読み込み
+                            int resId = moduleContext.getResources().getIdentifier(
+                                    imageName.replace(".png", ""), "drawable", "io.github.hiro.lime");
+                            if (resId == 0) return;
+
+                            try (InputStream in = moduleContext.getResources().openRawResource(resId);
+                                 OutputStream out = context.getContentResolver().openOutputStream(
+                                         dir.createFile("image/png", imageName).getUri())) {
+
+                                byte[] buffer = new byte[1024];
+                                int length;
+                                while ((length = in.read(buffer)) > 0) {
+                                    out.write(buffer, 0, length);
+                                }
+                            }
+                        } catch (Exception e) {
+                            XposedBridge.log("Lime: Error copying image to URI: " + e.getMessage());
                         }
                     }
 
@@ -243,6 +278,21 @@ public class KeepUnread implements IHook {
                     }
                 }
         );
+
+
+        XposedHelpers.findAndHookMethod(
+                loadPackageParam.classLoader.loadClass(Constants.MARK_AS_READ_HOOK.className),
+                Constants.MARK_AS_READ_HOOK.methodName,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        if (keepUnread) {
+                            param.setResult(null);
+                        }
+
+                    }
+                }
+        );
     }
 
     private String loadBackupUri(Context context) {
@@ -263,13 +313,6 @@ public class KeepUnread implements IHook {
             return null;
         }
     }
-    private void saveStateToFile(Context context, boolean state) {
-        String filename = "keep_unread_state.txt";
-        try (FileOutputStream fos = context.openFileOutput(filename, Context.MODE_PRIVATE)
-        ) {
-            fos.write((state ? "1" : "0").getBytes());
-        } catch (IOException ignored) {
-        }
-    }
+
 }
 

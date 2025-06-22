@@ -46,6 +46,8 @@ import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.documentfile.provider.DocumentFile;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.Closeable;
@@ -730,115 +732,148 @@ public class EmbedOptions implements IHook {
                     }
                     });
 
-        XposedHelpers.findAndHookMethod(
-                loadPackageParam.classLoader.loadClass(Constants.ChatRestore.className),
-                "onActivityResult",
-                int.class, int.class, Intent.class,
-                new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                                "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
-                        int requestCode = (int) param.args[0];
-                        int resultCode = (int) param.args[1];
-                        Intent data = (Intent) param.args[2];
+// ベースクラス名を定義
+        String baseName = "androidx.fragment.app.";
+        List<String> validClasses = new ArrayList<>();
 
-                        if (requestCode == PICK_FILE_REQUEST_CODE
-                                && resultCode == Activity.RESULT_OK
-                                && data != null) {
+// a-zの全文字をループしてクラス存在チェック
+        for (char c = 'a'; c <= 'z'; c++) {
+            String className = baseName + c;
+            try {
+                // クラスの存在確認
+                Class<?> clazz = loadPackageParam.classLoader.loadClass(className);
 
-                            Context context = (Context) param.thisObject;
-                            Uri uri = data.getData();
+                // onActivityResultメソッドの存在確認
+                try {
+                    clazz.getDeclaredMethod("onActivityResult", int.class, int.class, Intent.class);
+                    validClasses.add(className);
+                    XposedBridge.log("Found valid fragment class: " + className);
+                } catch (NoSuchMethodException ignored) {
+                    // メソッドがない場合はスキップ
+                }
+            } catch (ClassNotFoundException ignored) {
+                // クラスがない場合はスキップ
+            }
+        }
 
-                            new Thread(() -> {
-                                File tempFile = null;
-                                try {
-                                    tempFile = File.createTempFile("restore", ".db", context.getCacheDir());
+        if (validClasses.isEmpty()) {
+            XposedBridge.log("No valid fragment class found with onActivityResult method");
+        } else {
+            // 全ての有効なクラスに対してフックを試みる
+            for (String fragmentClass : validClasses) {
+                try {
+                    XposedHelpers.findAndHookMethod(
+                            fragmentClass,
+                            loadPackageParam.classLoader,
+                            "onActivityResult",
+                            int.class, int.class, Intent.class,
+                            new XC_MethodHook() {
+                                @Override
+                                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                                    Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                                            "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                                    int requestCode = (int) param.args[0];
+                                    int resultCode = (int) param.args[1];
+                                    Intent data = (Intent) param.args[2];
 
-                                    // ファイル権限を設定
-                                    tempFile.setReadable(true, false);
+                                    if (requestCode == PICK_FILE_REQUEST_CODE
+                                            && resultCode == Activity.RESULT_OK
+                                            && data != null) {
 
-                                    try (InputStream is = context.getContentResolver().openInputStream(uri);
-                                         OutputStream os = new FileOutputStream(tempFile)) {
+                                        Context context = (Context) param.thisObject;
+                                        Uri uri = data.getData();
 
-                                        byte[] buffer = new byte[8192];  // バッファサイズを大きくして効率化
-                                        int length;
-                                        while ((length = is.read(buffer)) > 0) {
-                                            os.write(buffer, 0, length);
-                                        }
-                                        os.flush();
+                                        new Thread(() -> {
+                                            File tempFile = null;
+                                            try {
+                                                tempFile = File.createTempFile("restore", ".db", context.getCacheDir());
+                                                tempFile.setReadable(true, false);
 
-                                        // ファイルが正常にコピーされたか確認
-                                        if (tempFile.length() == 0) {
-                                            throw new IOException("Copied file is empty");
-                                        }
+                                                try (InputStream is = context.getContentResolver().openInputStream(uri);
+                                                     OutputStream os = new FileOutputStream(tempFile)) {
 
-                                        File finalTempFile = tempFile;
-                                        new Handler(Looper.getMainLooper()).post(() -> {
-                                            restoreChatHistory(context, moduleContext, finalTempFile);
-                                        });
+                                                    byte[] buffer = new byte[8192];
+                                                    int length;
+                                                    while ((length = is.read(buffer)) > 0) {
+                                                        os.write(buffer, 0, length);
+                                                    }
+                                                    os.flush();
+
+                                                    if (tempFile.length() == 0) {
+                                                        throw new IOException("Copied file is empty");
+                                                    }
+
+                                                    File finalTempFile = tempFile;
+                                                    new Handler(Looper.getMainLooper()).post(() -> {
+                                                        restoreChatHistory(context, moduleContext, finalTempFile);
+                                                    });
+                                                }
+                                            } catch (Exception e) {
+                                                Log.e("FileCopy", "Error copying file", e);
+                                                new Handler(Looper.getMainLooper()).post(() ->
+                                                        Toast.makeText(context,
+                                                                moduleContext.getString(R.string.file_copy_error) + ": " + e.getMessage(),
+                                                                Toast.LENGTH_LONG).show());
+
+                                                if (tempFile != null && tempFile.exists()) {
+                                                    tempFile.delete();
+                                                }
+                                            }
+                                        }).start();
                                     }
-                                } catch (Exception e) {
-                                    Log.e("FileCopy", "Error copying file", e);
-                                    new Handler(Looper.getMainLooper()).post(() ->
-                                            Toast.makeText(context,
-                                                    moduleContext.getString(R.string.file_copy_error) + ": " + e.getMessage(),
-                                                    Toast.LENGTH_LONG).show());
+                                    if (requestCode == PICK_FILE_REQUEST_CODE2
+                                            && resultCode == Activity.RESULT_OK
+                                            && data != null) {
 
-                                    if (tempFile != null && tempFile.exists()) {
-                                        tempFile.delete();
+                                        Context context = (Context) param.thisObject;
+                                        Uri uri = data.getData();
+
+                                        new Thread(() -> {
+                                            File tempFile = null;
+                                            try {
+                                                tempFile = File.createTempFile("restore", ".db", context.getCacheDir());
+                                                tempFile.setReadable(true, false);
+
+                                                try (InputStream is = context.getContentResolver().openInputStream(uri);
+                                                     OutputStream os = new FileOutputStream(tempFile)) {
+
+                                                    byte[] buffer = new byte[8192];
+                                                    int length;
+                                                    while ((length = is.read(buffer)) > 0) {
+                                                        os.write(buffer, 0, length);
+                                                    }
+                                                    os.flush();
+                                                    if (tempFile.length() == 0) {
+                                                        throw new IOException("Copied file is empty");
+                                                    }
+
+                                                    File finalTempFile = tempFile;
+                                                    new Handler(Looper.getMainLooper()).post(() -> {
+                                                        restoreChatList(context, moduleContext, finalTempFile);
+                                                    });
+                                                }
+                                            } catch (Exception e) {
+                                                Log.e("FileCopy", "Error copying file", e);
+                                                new Handler(Looper.getMainLooper()).post(() ->
+                                                        Toast.makeText(context,
+                                                                moduleContext.getString(R.string.file_copy_error) + ": " + e.getMessage(),
+                                                                Toast.LENGTH_LONG).show());
+
+                                                if (tempFile != null && tempFile.exists()) {
+                                                    tempFile.delete();
+                                                }
+                                            }
+                                        }).start();
                                     }
                                 }
-                            }).start();
-                        }
-                        if (requestCode == PICK_FILE_REQUEST_CODE2
-                                && resultCode == Activity.RESULT_OK
-                                && data != null) {
-
-                            Context context = (Context) param.thisObject;
-                            Uri uri = data.getData();
-
-                            new Thread(() -> {
-                                File tempFile = null;
-                                try {
-                                    tempFile = File.createTempFile("restore", ".db", context.getCacheDir());
-
-                                    tempFile.setReadable(true, false);
-
-                                    try (InputStream is = context.getContentResolver().openInputStream(uri);
-                                         OutputStream os = new FileOutputStream(tempFile)) {
-
-                                        byte[] buffer = new byte[8192];
-                                        int length;
-                                        while ((length = is.read(buffer)) > 0) {
-                                            os.write(buffer, 0, length);
-                                        }
-                                        os.flush();
-                                        if (tempFile.length() == 0) {
-                                            throw new IOException("Copied file is empty");
-                                        }
-
-                                        File finalTempFile = tempFile;
-                                        new Handler(Looper.getMainLooper()).post(() -> {
-                                            restoreChatList(context, moduleContext, finalTempFile);
-                                        });
-                                    }
-                                } catch (Exception e) {
-                                    Log.e("FileCopy", "Error copying file", e);
-                                    new Handler(Looper.getMainLooper()).post(() ->
-                                            Toast.makeText(context,
-                                                    moduleContext.getString(R.string.file_copy_error) + ": " + e.getMessage(),
-                                                    Toast.LENGTH_LONG).show());
-
-                                    if (tempFile != null && tempFile.exists()) {
-                                        tempFile.delete();
-                                    }
-                                }
-                            }).start();
-                        }
-
-                    }
-                });
+                            }
+                    );
+                    XposedBridge.log("Successfully hooked onActivityResult in: " + fragmentClass);
+                } catch (Throwable t) {
+                    XposedBridge.log("Failed to hook onActivityResult in " + fragmentClass + ": " + t.getMessage());
+                }
+            }
+        }
     }
 
 
@@ -1625,7 +1660,7 @@ public class EmbedOptions implements IHook {
     }
 
     public void CansellNotification(Context context, Context moduleContext) {
-        File dir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/Setting");
+        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
 
         if (!dir.exists()) {
 
@@ -2179,13 +2214,16 @@ public class EmbedOptions implements IHook {
     }
 
 
-    private void backupChatHistory(Context appContext,Context moduleContext) {
-
+    private void backupChatHistory(Context appContext, Context moduleContext) {
         File originalDbFile = appContext.getDatabasePath("naver_line");
-        File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+
+        // 1. 内部ストレージへのバックアップ（従来通り）
+        File backupDir = new File(appContext.getFilesDir(), "LimeBackup");
         if (!backupDir.exists()) {
             if (!backupDir.mkdirs()) {
-                return;}}
+                return;
+            }
+        }
 
         String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
         String backupFileNameWithTimestamp = "naver_line_backup_" + timeStamp + ".db";
@@ -2194,6 +2232,7 @@ public class EmbedOptions implements IHook {
         File backupFileFixed = new File(backupDir, backupFileNameFixed);
 
         try (FileChannel source = new FileInputStream(originalDbFile).getChannel()) {
+            // 内部ストレージにバックアップ（従来の処理）
             try (FileChannel destinationWithTimestamp = new FileOutputStream(backupFileWithTimestamp).getChannel()) {
                 destinationWithTimestamp.transferFrom(source, 0, source.size());
             }
@@ -2201,9 +2240,46 @@ public class EmbedOptions implements IHook {
             try (FileChannel destinationFixed = new FileOutputStream(backupFileFixed).getChannel()) {
                 destinationFixed.transferFrom(source, 0, source.size());
             }
-            Toast.makeText(appContext,moduleContext.getResources().getString(R.string.Talk_Back_up_Success), Toast.LENGTH_SHORT).show();
-        } catch (IOException ignored) {
-            Toast.makeText(appContext,moduleContext.getResources().getString(R.string.Talk_Back_up_Error), Toast.LENGTH_SHORT).show();
+
+            // 2. URIが設定されていれば、そちらにもバックアップ（新規追加）
+            String backupUri = loadBackupUri(appContext);
+            if (backupUri != null) {
+                Uri treeUri = Uri.parse(backupUri);
+                DocumentFile dir = DocumentFile.fromTreeUri(appContext, treeUri);
+                if (dir != null) {
+                    // タイムスタンプ付きファイルをURIにコピー
+                    copyFileToUri(appContext, backupFileWithTimestamp, dir, backupFileNameWithTimestamp);
+                    // 固定名ファイルをURIにコピー
+                    copyFileToUri(appContext, backupFileFixed, dir, backupFileNameFixed);
+                }
+            }
+
+            Toast.makeText(appContext, moduleContext.getResources().getString(R.string.Talk_Back_up_Success), Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            Toast.makeText(appContext, moduleContext.getResources().getString(R.string.Talk_Back_up_Error), Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void copyFileToUri(Context context, File sourceFile, DocumentFile destinationDir, String destinationFileName) {
+        try {
+            DocumentFile existingFile = destinationDir.findFile(destinationFileName);
+            if (existingFile != null) {
+                existingFile.delete();
+            }
+
+            DocumentFile newFile = destinationDir.createFile("application/x-sqlite3", destinationFileName);
+            if (newFile == null) return;
+
+            try (InputStream in = new FileInputStream(sourceFile);
+                 OutputStream out = context.getContentResolver().openOutputStream(newFile.getUri())) {
+                byte[] buffer = new byte[1024];
+                int length;
+                while ((length = in.read(buffer)) > 0) {
+                    out.write(buffer, 0, length);
+                }
+            }
+        } catch (IOException e) {
+            XposedBridge.log("Lime: Error copying DB to URI: " + e.getMessage());
         }
     }
 
@@ -2340,7 +2416,7 @@ public class EmbedOptions implements IHook {
     private Map<String, String> loadExistingSettings(Context context) {
         Map<String, String> settingsMap = new HashMap<>();
         File settingFile = new File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                context.getFilesDir(),
                 "LimeBackup/Setting/ChatList.txt"
         );
 
@@ -2362,7 +2438,7 @@ public class EmbedOptions implements IHook {
 
     private void saveUserData(Context context, List<UserEntry> entries,Context moduleContext) {
         File outputDir = new File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                context.getFilesDir(),
                 "LimeBackup/Setting"
         );
 
@@ -2706,7 +2782,7 @@ public class EmbedOptions implements IHook {
         private final File storageFile;
 
         public HiddenProfileManager(Context context) {
-            File downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+            File downloadsDir = context.getFilesDir();
             File limeDir = new File(downloadsDir, "LimeBackup/Setting");
 
             if (!limeDir.exists() && !limeDir.mkdirs()) {
@@ -3307,7 +3383,7 @@ public class EmbedOptions implements IHook {
 
     private void backupChatsFolder(Context context,Context moduleContext) {
         File originalChatsDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/files/chats");
-        File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup");
+        File backupDir = new File(context.getFilesDir(), "LimeBackup");
 
         if (!backupDir.exists() && !backupDir.mkdirs()) {
             backupDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/backup");
@@ -3364,7 +3440,7 @@ public class EmbedOptions implements IHook {
 
 
     private void restoreChatsFolder(Context context, Context moduleContext) {
-        File backupDir = new File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), "LimeBackup/chats_backup");
+        File backupDir = new File(context.getFilesDir(), "LimeBackup/chats_backup");
         File originalChatsDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/files/chats");
         if (!backupDir.exists()) {
             File alternativeBackupDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/backup/chats_backup");

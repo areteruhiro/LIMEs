@@ -510,6 +510,12 @@ public class RingTone implements IHook {
                 DocumentFile dir = DocumentFile.fromTreeUri(moduleContext, treeUri);
                 if (dir != null) {
                     DocumentFile ringtoneFile = dir.findFile(fileName);
+
+                    if (ringtoneFile == null || !ringtoneFile.exists()) {
+                        copyRingtoneToUri(moduleContext, dir, fileName);
+                        ringtoneFile = dir.findFile(fileName);
+                    }
+
                     if (ringtoneFile != null && ringtoneFile.exists()) {
                         return ringtoneFile.getUri();
                     }
@@ -520,12 +526,38 @@ public class RingTone implements IHook {
         }
 
         // URIから見つからなかった場合はリソースから直接読み込む
+        return getRingtoneResourceUri(moduleContext, fileName);
+    }
+
+    private void copyRingtoneToUri(Context moduleContext, DocumentFile dir, String fileName) {
+        try {
+            String resourceName = fileName.replace(".wav", "");
+            int resourceId = moduleContext.getResources().getIdentifier(
+                    resourceName, "raw", "io.github.hiro.lime");
+            if (resourceId == 0) return;
+
+            try (InputStream in = moduleContext.getResources().openRawResource(resourceId);
+                 OutputStream out = moduleContext.getContentResolver().openOutputStream(
+                         dir.createFile("audio/wav", fileName).getUri())) {
+
+                byte[] buffer = new byte[1024];
+                int length;
+                while ((length = in.read(buffer)) > 0) {
+                    out.write(buffer, 0, length);
+                }
+            }
+        } catch (Exception e) {
+            XposedBridge.log("Lime: Error copying ringtone to URI: " + e.getMessage());
+        }
+    }
+
+    private Uri getRingtoneResourceUri(Context moduleContext, String fileName) {
         String resourceName = fileName.replace(".wav", "");
-        int resourceId = moduleContext.getResources().getIdentifier(resourceName, "raw", "io.github.hiro.lime");
+        int resourceId = moduleContext.getResources().getIdentifier(
+                resourceName, "raw", "io.github.hiro.lime");
         if (resourceId != 0) {
             return Uri.parse("android.resource://io.github.hiro.lime/raw/" + resourceName);
         }
-
         return null;
     }
 

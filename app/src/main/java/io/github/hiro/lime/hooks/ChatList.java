@@ -166,7 +166,7 @@ public class ChatList implements IHook {
                     List<Pair<String, Integer>> chatData = PinChatReadFile(appContext);
                     for (Pair<String, Integer> entry : chatData) {
                         if (!entry.first.isEmpty() && entry.second > 0) {
-                            PinListUpdate(db,db2, entry.first, entry.second,moduleContext);
+                            PinListUpdate(db,db2, entry.first, entry.second,moduleContext,appContext);
                         }
 
                     }
@@ -201,10 +201,10 @@ public class ChatList implements IHook {
     }
 
 
-    private List<Pair<String, Integer>> PinChatReadFile(Context context) {
+    private List<Pair<String, Integer>> PinChatReadFile(Context appContext) {
         List<Pair<String, Integer>> chatData = new ArrayList<>();
         File dir = new File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                appContext.getFilesDir() ,
                 "LimeBackup/Setting"
         );
         File file = new File(dir, "ChatList.txt");
@@ -342,7 +342,7 @@ public class ChatList implements IHook {
         } else {
         }
     }
-    private void PinListUpdate(SQLiteDatabase db, SQLiteDatabase db2, String chatId, int number, Context moduleContext) {
+    private void PinListUpdate(SQLiteDatabase db, SQLiteDatabase db2, String chatId, int number, Context moduleContext,Context appContext) {
         final long UNIX_MAX = 2147483646999L;
         long newTime = UNIX_MAX - number;
 
@@ -352,7 +352,7 @@ public class ChatList implements IHook {
             return;
         }
 
-        saveChangeToFile(chatId, originalTime);
+        saveChangeToFile(chatId, originalTime,appContext);
 
         db.beginTransaction();
         try {
@@ -422,7 +422,7 @@ public class ChatList implements IHook {
     private Map<String, String> loadChangeList(Context appContext) {
         Map<String, String> changeMap = new HashMap<>();
         File file = new File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                appContext.getFilesDir(),
                 "LimeBackup/Setting/ChangeList.txt"
         );
 
@@ -444,7 +444,7 @@ public class ChatList implements IHook {
     private Map<String, String> loadChatList(Context appContext) {
         Map<String, String> chatMap = new HashMap<>();
         File file = new File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                appContext.getFilesDir(),
                 "LimeBackup/Setting/ChatList.txt"
         );
 
@@ -475,9 +475,9 @@ public class ChatList implements IHook {
         return -1; // エラー時は-1を返す
     }
 
-    private void saveChangeToFile(String chatId, long originalTime) { // numberパラメータ削除
+    private void saveChangeToFile(String chatId, long originalTime,Context appContext) { // numberパラメータ削除
         File dir = new File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                appContext.getFilesDir(),
                 "LimeBackup/Setting"
         );
 
