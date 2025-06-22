@@ -20,9 +20,7 @@ https://t.me/LsPosedLIMEs
  
 
 # 確認済みのバグやエラー
-・設定が保存されない場合 <br>
-
-詳しくは
+・設定が保存されない <br>
 https://t.me/LsPosedLIMEs/2425/2450
 
 ## トーク画像のリストアについて
@@ -75,7 +73,7 @@ We are very grateful to the following people for making this possible:
 継続した開発時間の確保のため寄付のほどお願いいたします<br>
 Please donate to ensure continued development time.
 
-* [Pay Pay 2025/6/22まで](https://qr.paypay.ne.jp/p2p01_Nu4n5bpmOgITC4gY)<br>
+* [Pay Pay](https://qr.paypay.ne.jp/p2p01_oDVfRTzTKrCLCXmn)<br>
 
 *PayPay ID
 hiro_1114
