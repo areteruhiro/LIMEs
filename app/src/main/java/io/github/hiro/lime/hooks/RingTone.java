@@ -53,7 +53,6 @@ public class RingTone implements IHook {
                 Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                         "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
-                // 着信音のURIを取得
                 Uri ringtoneUri = getRingtoneUri(moduleContext, "ringtone.wav");
                 Uri ringtoneUriA = getRingtoneUri(moduleContext, "dial_tone.wav");
 

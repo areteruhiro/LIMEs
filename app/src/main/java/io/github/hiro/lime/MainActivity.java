@@ -18,6 +18,7 @@ import android.provider.Settings;
 import android.text.InputType;
 import android.text.method.ScrollingMovementMethod;
 import android.util.Base64;
+import android.util.Log;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.EditText;
@@ -33,6 +34,11 @@ import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.documentfile.provider.DocumentFile;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -137,17 +143,41 @@ public class MainActivity extends Activity {
         startActivity(intent);
     }
 
+    private String getSettingsUriFilename() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            int profileId = android.os.Process.myUserHandle().hashCode();
+            return "settings_uri_" + profileId + ".dat";
+        }
+        return "settings_uri.dat";
+    }
+
     private Uri loadSettingsUri() {
-        SharedPreferences prefs = getSharedPreferences("LimePrefs", Context.MODE_PRIVATE);
-        String uriString = prefs.getString("settings_uri", null);
-        return uriString != null ? Uri.parse(uriString) : null;
+        String filename = getSettingsUriFilename();
+        File file = new File(getFilesDir(), filename);
+
+        if (!file.exists()) {
+            return null;
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            return Uri.parse(reader.readLine());
+        } catch (IOException e) {
+            Log.e("SettingsURI", "Error reading URI file", e);
+            return null;
+        }
     }
 
     private void saveSettingsUri(Uri uri) {
-        SharedPreferences prefs = getSharedPreferences("LimePrefs", Context.MODE_PRIVATE);
-        prefs.edit().putString("settings_uri", uri.toString()).apply();
-    }
+        String filename = getSettingsUriFilename();
+        File file = new File(getFilesDir(), filename);
 
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+            writer.write(uri.toString());
+        } catch (IOException e) {
+            Log.e("SettingsURI", "Error saving URI file", e);
+            // フォールバック処理をここに追加
+        }
+    }
     private void launchSettingsUriPicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
         intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION |
@@ -156,7 +186,7 @@ public class MainActivity extends Activity {
 
         // 初期ディレクトリを設定
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            Uri initialUri = Uri.parse("content://com.android.externalstorage.documents/document/primary:Download/LimeBackup/Setting");
+            Uri initialUri = Uri.parse("");
             intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, initialUri);
         }
 

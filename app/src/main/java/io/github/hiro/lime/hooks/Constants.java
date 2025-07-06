@@ -313,7 +313,7 @@ return;
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
 //%s failed: out of sequence response: expected %d but got %d
 
-            RemoveVoiceRecord_Hook_a = new HookTarget("h.j", "run");
+            RemoveVoiceRecord_Hook_a = new HookTarget("g.k", "run");
 
 //jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
             //getAllChatIds

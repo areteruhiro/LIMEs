@@ -119,9 +119,12 @@ public class NotificationReaction implements IHook {
                     @Override
                     protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                         String paramValue = param.args[1].toString();
-                     //   XposedBridge.log(paramValue);
                         if (paramValue.contains("type:NOTIFIED_SEND_REACTION,")) {
+                            Class<?> GetHook = XposedHelpers.findClass("com.linecorp.line.fullsync.c", loadPackageParam.classLoader);
 
+                            XposedBridge.hookAllMethods(GetHook, "invokeSuspend", new XC_MethodHook() {
+                                @Override
+                                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                                     String[] operations = paramValue.split("Operation\\(");
                                     for (String operation : operations) {
                                         if (operation.trim().isEmpty()) continue;
@@ -162,78 +165,63 @@ public class NotificationReaction implements IHook {
                                         }
 
                                         if ("NOTIFIED_SEND_REACTION".equals(type)) {
+                                            String content = queryDatabase(db3,
+                                                    "SELECT content FROM chat_history WHERE server_id=?",
+                                                    serverId);
 
-                                            Class<?> GetHook = XposedHelpers.findClass("com.linecorp.line.fullsync.c", loadPackageParam.classLoader);
-
-                                            String finalCreatedTime = createdTime;
-                                            String finalServerId = serverId;
-                                            String finalParam = param3;
-                                            String finalChatMid = chatMid;
-                                            XposedBridge.hookAllMethods(GetHook, "invokeSuspend", new XC_MethodHook() {
-                                                @Override
-                                                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                                            String media = queryDatabase(db3, "SELECT parameter FROM chat_history WHERE server_id=?", serverId);
+                                            media = media != null ? media : "null";
 
 
-                                                    String content = queryDatabase(db3,
-                                                            "SELECT content FROM chat_history WHERE server_id=?",
-                                                            finalServerId);
+                                            String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
+                                            SendUser = SendUser != null ? SendUser : "null";
 
-                                                    String media = queryDatabase(db3, "SELECT parameter FROM chat_history WHERE server_id=?", finalServerId);
-                                                    media = media != null ? media : "null";
+                                            String name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", param3);
+                                            name = name != null ? name : "null";
 
+                                            Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
+                                                    "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                                            String talkName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", chatMid);
+                                            if (Objects.equals(talkName, "null")) {
+                                                talkName = queryDatabase(db3, "SELECT name FROM groups WHERE id=?", chatMid);
+                                            }
 
-                                                    String SendUser = queryDatabase(db3, "SELECT from_mid FROM chat_history WHERE server_id=?", finalServerId);
-                                                    SendUser = SendUser != null ? SendUser : "null";
-
-                                                    String name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", finalParam);
-                                                    name = name != null ? name : "null";
-
-                                                    Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                                                            "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
-                                                    XposedBridge.log(finalChatMid);
-                                                    String talkName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", finalChatMid);
-                                                    if (Objects.equals(talkName, "null")) {
-                                                        talkName = queryDatabase(db3, "SELECT name FROM groups WHERE id=?", finalChatMid);
-                                                    }
-
-                                                    XposedBridge.log(talkName);
-                                                    String mediaDescription = "";
-                                                    if (media != null) {
-                                                        if (media.contains("IMAGE")) {
-                                                            mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                                                        } else if (media.contains("video")) {
-                                                            mediaDescription = moduleContext.getResources().getString(R.string.video);
-                                                        } else if (media.contains("STKPKGID")) {
-                                                            mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                                                        } else if (media.contains("FILE")) {
-                                                            mediaDescription = moduleContext.getResources().getString(R.string.file);
-                                                        } else if (media.contains("LOCATION")) {
-                                                            mediaDescription = moduleContext.getResources().getString(R.string.location);
-                                                        }
-                                                    } else {
-                                                        mediaDescription = "null";
-                                                    }
-                                                    String finalContent = determineFinalContent(content, mediaDescription);
-                                                    //                                XposedBridge.log(content);
-
-                                                    String notificationKey = finalServerId + "|" + finalParam + "|" + finalContent + "|" + talkName;
-
-                                                    if (!sentNotifications.contains(notificationKey)) {
-                                                        sentNotifications.add(notificationKey);
-
-                                                        generateCustomNotification(
-                                                                context,
-                                                                name,
-                                                                finalContent,
-                                                                talkName,
-                                                                finalCreatedTime
-                                                        );
-                                                    }
+                                            String mediaDescription = "";
+                                            if (media != null) {
+                                                if (media.contains("IMAGE")) {
+                                                    mediaDescription = moduleContext.getResources().getString(R.string.picture);
+                                                } else if (media.contains("video")) {
+                                                    mediaDescription = moduleContext.getResources().getString(R.string.video);
+                                                } else if (media.contains("STKPKGID")) {
+                                                    mediaDescription = moduleContext.getResources().getString(R.string.sticker);
+                                                } else if (media.contains("FILE")) {
+                                                    mediaDescription = moduleContext.getResources().getString(R.string.file);
+                                                } else if (media.contains("LOCATION")) {
+                                                    mediaDescription = moduleContext.getResources().getString(R.string.location);
                                                 }
-                                            });
+                                            } else {
+                                                mediaDescription = "null";
+                                            }
+                                            String finalContent = determineFinalContent(content, mediaDescription);
+
+
+                                            String notificationKey = serverId;
+
+                                            if (!sentNotifications.contains(notificationKey)) {
+                                                sentNotifications.add(notificationKey);
+                                                generateCustomNotification(
+                                                        context,
+                                                        name,
+                                                        finalContent,
+                                                        talkName,
+                                                        createdTime
+                                                );
+                                            }
                                         }
                                     }
 
+                                }
+                            });
 
 
                         }
@@ -242,16 +230,37 @@ public class NotificationReaction implements IHook {
     }
     private void generateCustomNotification(Context context, String name, String content, String talkName, String createdTime) {
         try {
-            NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+            Context appContext = AndroidAppHelper.currentApplication();
+            if (appContext == null) {
+                XposedBridge.log("Error: Unable to get application context");
+                return;
+            }
+
+            NotificationManager nm = (NotificationManager) appContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm == null) {
+                XposedBridge.log("Error: Unable to get NotificationManager");
+                return;
+            }
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                NotificationChannel channel = new NotificationChannel(
-                        "xposed_channel",
-                        "Xposed Notifications",
-                        NotificationManager.IMPORTANCE_DEFAULT
-                );
-                nm.createNotificationChannel(channel);
+                NotificationChannel existingChannel = nm.getNotificationChannel("xposed_channel");
+                if (existingChannel == null) {
+                    NotificationChannel channel = new NotificationChannel(
+                            "xposed_channel",
+                            "Xposed Notifications",
+                            NotificationManager.IMPORTANCE_HIGH
+                    );
+                    channel.setDescription("Reaction notifications");
+                    channel.enableLights(true);
+                    channel.setLightColor(Color.BLUE);
+                    channel.enableVibration(true);
+                    channel.setVibrationPattern(new long[]{0, 100, 200, 300});
+                    channel.setLockscreenVisibility(NotificationCompat.VISIBILITY_PUBLIC);
+                    nm.createNotificationChannel(channel);
+                    XposedBridge.log("Notification channel created");
+                }
             }
+
             String formattedTime = "Unknown Time";
             try {
                 long timeMillis = Long.parseLong(createdTime);
@@ -260,18 +269,33 @@ public class NotificationReaction implements IHook {
             } catch (NumberFormatException e) {
                 XposedBridge.log("Failed to parse createdTime: " + createdTime);
             }
-            String notificationTitle = talkName + " (" + formattedTime + ")";
 
-            NotificationCompat.Builder builder = new NotificationCompat.Builder(context, "xposed_channel")
+            String notificationTitle = talkName + " (" + formattedTime + ")";
+            String notificationText = name + " reacted to " + content;
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(appContext, "xposed_channel")
                     .setSmallIcon(android.R.drawable.ic_dialog_info)
                     .setContentTitle(notificationTitle)
-                    .setContentText(name + " reacted to " + content)
-                    .setAutoCancel(true);
+                    .setContentText(notificationText)
+                    .setAutoCancel(true)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                    .setWhen(System.currentTimeMillis())
+                    .setShowWhen(true)
+                    .setColor(Color.BLUE)
+                    .setDefaults(NotificationCompat.DEFAULT_ALL);
 
-            nm.notify((int) System.currentTimeMillis(), builder.build());
+            int notificationId = (int) (System.currentTimeMillis() % Integer.MAX_VALUE);
+            try {
+                nm.notify(notificationId, builder.build());
+            } catch (SecurityException e) {
+                XposedBridge.log("Notification permission error: " + e.getMessage());
+            } catch (Exception e) {
+                XposedBridge.log("Notification failed: " + e.getMessage());
+            }
 
         } catch (Exception e) {
             XposedBridge.log("Notification error: " + e.getMessage());
+            e.printStackTrace();
         }
     }
     private String determineFinalContent(String content, String mediaDescription) {

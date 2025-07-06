@@ -10,6 +10,7 @@ import android.app.AndroidAppHelper;
 import android.app.ProgressDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -60,7 +61,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1341,6 +1344,11 @@ public class EmbedOptions implements IHook {
         restorefolderButton.setText(moduleContext.getResources().getString(R.string.Picure_Restore));
         restorefolderButton.setOnClickListener(v -> restoreChatsFolder(context, moduleContext));
         layout.addView(restorefolderButton);
+
+        Button GetMidIdButton = new Button(context);
+        GetMidIdButton.setText(moduleContext.getResources().getString(R.string.GetMidIdButton));
+        GetMidIdButton.setOnClickListener(v -> GetMidId(context, moduleContext));
+        layout.addView(GetMidIdButton);
 
         // グループミュートボタン（条件付き）
         if (limeOptions.MuteGroup.checked) {
@@ -3518,6 +3526,79 @@ public class EmbedOptions implements IHook {
         return null;
     }
 
+
+    private void GetMidId(Context context, Context moduleContext) {
+        SQLiteDatabase profileDb = context.openOrCreateDatabase("contact", Context.MODE_PRIVATE, null);
+        String backupUri = loadBackupUri(context);
+        if (backupUri == null) {
+            XposedBridge.log("Lime Backup: No backup URI found");
+            return;
+        }
+
+        try {
+            Uri treeUri = Uri.parse(backupUri);
+            DocumentFile pickedDir = DocumentFile.fromTreeUri(context, treeUri);
+
+            if (pickedDir == null || !pickedDir.exists()) {
+                XposedBridge.log("Lime Backup: Directory does not exist or access denied");
+                return;
+            }
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US);
+            String fileName = "contacts_" + sdf.format(new Date()) + ".csv";
+
+            DocumentFile file = pickedDir.createFile("text/csv", fileName);
+            if (file == null) {
+                XposedBridge.log("Lime Backup: Failed to create file");
+                return;
+            }
+
+            OutputStream outputStream = context.getContentResolver().openOutputStream(file.getUri());
+            if (outputStream == null) {
+                XposedBridge.log("Lime Backup: Failed to open output stream");
+                return;
+            }
+
+            OutputStreamWriter writer = new OutputStreamWriter(outputStream, StandardCharsets.UTF_8);
+
+            writer.write("mid,profile_name\n");
+            writer.flush();
+
+            Cursor cursor = null;
+            try {
+                cursor = profileDb.rawQuery("SELECT mid, profile_name FROM contact", null);
+                if (cursor != null && cursor.moveToFirst()) {
+                    do {
+                        String mid = cursor.getString(0);
+                        String profileName = cursor.getString(1);
+
+                        // CSV行を構築（値にカンマや改行が含まれる場合はダブルクォートで囲む）
+                        String line = "\"" + (mid != null ? mid.replace("\"", "\"\"") : "") + "\"," +
+                                "\"" + (profileName != null ? profileName.replace("\"", "\"\"") : "") + "\"\n";
+
+                        // 1行ずつ書き込み
+                        writer.write(line);
+                        writer.flush();
+
+                    } while (cursor.moveToNext());
+                }
+                XposedBridge.log("Lime Backup: CSV exported successfully to " + file.getUri());
+            } catch (Exception e) {
+                XposedBridge.log("Lime Database Error: " + e.getMessage());
+            } finally {
+                if (cursor != null) {
+                    cursor.close();
+                }
+                writer.close();
+                outputStream.close();
+                profileDb.close();
+                Toast.makeText(context, "Save Mid ID", Toast.LENGTH_LONG).show();
+
+            }
+        } catch (IOException e) {
+            XposedBridge.log("Lime CSV Export Error: " + e.getMessage());
+            Toast.makeText(context, "Error", Toast.LENGTH_LONG).show();
+        }
+    }
     private String loadBackupUri(Context context) {
         File settingsFile = new File(context.getFilesDir(), "LimeBackup/backup_uri.txt");
         if (!settingsFile.exists()) return null;

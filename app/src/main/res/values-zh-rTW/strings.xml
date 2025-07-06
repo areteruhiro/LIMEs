@@ -239,5 +239,12 @@
     <string name="SilentCheck">SilentCheck</string>
     <string name="NotificationReaction">NotificationReaction</string>
     <string name="StopCallTone">MakeStopCallToneButton</string>
+    <string name="Talk_Picture_Back_up_Error_Create_Dir">Error</string>
+    <string name="Talk_Picture_Back_up_Error_No_Access">Error</string>
+    <string name="Talk_Picture_Back_up_Error_No_URI">Error</string>
+    <string name="Talk_Auto_Back_up_Error_Create_File">Error</string>
+    <string name="Talk_Auto_Back_up_Error_No_Access">Error</string>
+    <string name="Talk_Auto_Back_up_Error_No_URI">Error</string>
+    <string name="GetMidIdButton">GetMidId</string>
 
 </resources>

@@ -9,3 +9,11 @@ v1.25.25a
 1.28.4
 androidx.fragment.app.の複数バージョン対応
 ファイルを作成させるように,内部ディレクトリ化<br>
+1.28.5
+GetMidId　取得機能
+バックアップIntentの場所をuriの場所に変更
+デュアルアプリでlimesを開けないバグを修正
+RemoveVoiceRecordを 15.9.xに対応
+Reaction　Notificationのバグを修正?
+
+<br>
