@@ -1,3 +1,7 @@
+
+
+
+
 name: Build
 
 on:
@@ -15,11 +19,6 @@ on:
         type: boolean
         required: true
         default: false
-      prerelease:
-        description: 'Pre-release'
-        type: boolean
-        required: false
-        default: true
 
 jobs:
   build:
@@ -79,7 +78,6 @@ jobs:
           curl -L -o LINE-15-5-4-armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm-v7a.apk
           curl -L -o LINE-15-9-3-armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.9.3/15.9.3_armeabi-v7a.apk
           curl -L -o LINE-15.9.3-arm64-v8a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.9.3/line-15-9-3arm64-v8a.apk
-
       - name: Download LSPatch
         if: github.event.inputs.release == 'true'
         run: |
@@ -97,22 +95,30 @@ jobs:
           else
             ./gradlew assembleDebug --no-daemon --stacktrace
           fi
-
       - name: LSPatch
+
         if: github.event.inputs.release == 'true'
         run: |
           for file in LINE-15.5.4-arm64-v8a.armeabi-v7a.apk LINE-15-5-4-armeabi-v7a.apk LINE-15-9-3-armeabi-v7a.apk LINE-15.9.3-arm64-v8a.apk ; do
+          
             echo "Patching $file..."
             java -jar lspatch.jar "$file" -m "${{ env.repo }}-${{ env.version }}.apk" -l 2 -v
+
+            # Determine the expected output file name
             output_file="${file%.apk}-430-lspatched.apk"
+
+            # List the current directory to see what files are present
             echo "Current directory contents after patching:"
             ls -l
+
+            # Move the patched file using the correct naming convention
             mv "$output_file" "Patched_${{ env.version }}_$file" || echo "Patched file not found for $file"
           done
+          
 
       - name: Upload module (Debug)
         uses: actions/upload-artifact@v4
-        if: github.event.inputs.release != 'true'
+        if: github.event.inputs.release != 'true' 
         with:
           name: ${{ env.repo }}-${{ env.versionName }}@${{ env.commit }}
           path: app/build/outputs/apk/debug/app-debug.apk
@@ -123,7 +129,6 @@ jobs:
         if: github.event.inputs.release == 'true'
         with:
           tag_name: ${{ env.version }}
-          prerelease: ${{ github.event.inputs.prerelease }}
           files: |
             ${{ env.repo }}-${{ env.version }}.apk
             Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk
