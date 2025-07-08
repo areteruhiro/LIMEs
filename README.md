@@ -5,6 +5,7 @@ GitHubは更新を頻繁にしません、テレグラムで最新の情報を�
 # Support Server
 https://t.me/LsPosedLIMEs
 
+https://discord.gg/5WWxUkMsNJ
  # 導入方法
  
  [ROOT](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20root.md) 
