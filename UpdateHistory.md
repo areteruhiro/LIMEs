@@ -18,7 +18,8 @@ Reaction　Notificationのバグを修正?
 <br>
 1.28.6
 ReactionListの修正
-LYP recommend削除
 チャットリスト内でのAI削除機能
 en修正
 <br>
+15.11.0 ２対応
+1.28.6で見つかったバグの修正

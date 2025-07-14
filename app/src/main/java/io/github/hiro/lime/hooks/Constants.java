@@ -313,7 +313,7 @@ public class Constants {
             RESPONSE_HOOK = new HookTarget("org.apache.thrift.l", "a");
 //%s failed: out of sequence response: expected %d but got %d
 
-            RemoveVoiceRecord_Hook_a = new HookTarget("g.k", "run");
+            RemoveVoiceRecord_Hook_a = new HookTarget("g.l", "run");
 
 //jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
             //getAllChatIds
@@ -357,6 +357,43 @@ public class Constants {
                 XposedBridge.log("15.9.0 Patched ");
             }
             ChatRestore = new HookTarget(chatRestoreClassName, "onActivityResult");
+        } else if (isVersionInRange(versionName, "15.11.0", "15.12.0")) {
+
+            XposedBridge.log("15.11.0 Patched ");
+
+            USER_AGENT_HOOK = new HookTarget("pp1.c", "j");
+            WEBVIEW_CLIENT_HOOK = new HookTarget("VY0.m", "onPageFinished");
+
+
+            MUTE_MESSAGE_HOOK = new HookTarget("io1.b", "I");
+            MARK_AS_READ_HOOK = new HookTarget("xS.d$d", "run");
+            Archive = new HookTarget("YD.Q", "invokeSuspend");
+
+            REQUEST_HOOK = new HookTarget("org.apache.thrift.m", "b");
+            RESPONSE_HOOK = new HookTarget("org.apache.thrift.m", "a");
+
+            RemoveVoiceRecord_Hook_a = new HookTarget("g.l", "run");
+
+            ChatRestore = new HookTarget("androidx.fragment.app.n", "onActivityResult");
+//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
+            //getAllChatIds
+            PhotoSave = new HookTarget("Om1.s0", "");
+
+//jp.naver.gallery.viewer.SaveSingleMediaToDeviceViewModel
+            //VideoPlaybackSyncEvent(localMessageId
+            PhotoSave1 = new HookTarget("bi1.G", "");
+
+            //DIRECTORY_PICTURES
+            PhotoSave2 = new HookTarget("uT.g", "");
+
+//com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
+            //createAlbum
+            PhotoSave3 = new HookTarget("", "");
+
+            //reactionListModel
+            ReactionList = new HookTarget("Vz.k", "");
+//skipMemoryCache
+            Video = new HookTarget("jS.D", "");
         }
 
     }
