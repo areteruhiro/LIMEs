@@ -55,6 +55,9 @@ public class LimeOptions {
         public Option removeSearchBar = new Option("removeSearchBar", R.string.removeSearchBar, false, OptionCategory.GENERAL);
         public Option removeNaviAlbum = new Option("removeNaviAlbum", R.string.removeNaviAlbum, false, OptionCategory.GENERAL);
         public Option removeNaviOpenchat = new Option("removeNaviOpenchat", R.string.removeNaviOpenchat, false, OptionCategory.GENERAL);
+        public Option removeNaviAichat = new Option("removeNaviAichat", R.string.removeNaviAichat, false, OptionCategory.GENERAL);
+        public Option removeHeaderButton = new Option("removeHeaderButton", R.string.removeHeaderButton, false, OptionCategory.GENERAL);
+
 
         public Option redirectWebView = new Option("redirect_webview", R.string.switch_redirect_webview, true, OptionCategory.GENERAL);
          public Option openInBrowser = new Option("open_in_browser", R.string.switch_open_in_browser, false, OptionCategory.GENERAL);
@@ -143,6 +146,9 @@ public class LimeOptions {
                 RemoveNotification,
                 removeNaviOpenchat,
                 removeNaviAlbum,
+                removeNaviAichat,
+                removeNaviAichat,
+                removeHeaderButton,
                 removeSearchBar,
                 removeReplyMute,
                 redirectWebView,

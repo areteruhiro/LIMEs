@@ -15,5 +15,10 @@ GetMidId　取得機能
 デュアルアプリでlimesを開けないバグを修正
 RemoveVoiceRecordを 15.9.xに対応
 Reaction　Notificationのバグを修正?
-
+<br>
+1.28.6
+ReactionListの修正
+LYP recommend削除
+チャットリスト内でのAI削除機能
+en修正
 <br>

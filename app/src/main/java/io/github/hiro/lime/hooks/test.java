@@ -1,19 +1,34 @@
 package io.github.hiro.lime.hooks;
 
+import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
+
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.res.Resources;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
+import android.view.ViewStub;
+import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.constraintlayout.widget.ConstraintSet;
+import androidx.fragment.app.Fragment;
+import androidx.recyclerview.widget.RecyclerView;
 
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XC_MethodReplacement;
 import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.XposedHelpers;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
@@ -21,49 +36,176 @@ import dalvik.system.DexFile;
 import io.github.hiro.lime.LimeOptions;
 
 import java.io.File;
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public class test implements IHook {
     private boolean isButtonAdded = false; // ボタンが追加されたかどうかを追跡するフラグ
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
         String packageName = loadPackageParam.packageName;
+        XposedHelpers.findAndHookMethod(
+                View.class,
+                "onAttachedToWindow",
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        View view = (View) param.thisObject;
+                        String className = view.getClass().getName();
+                        if (!"jp.naver.line.android.common.view.header.HeaderButton".equals(className)) return;
 
-        XposedBridge.log("Hooking package: " + packageName);
-//   hookOnViewAdded(loadPackageParam.classLoader);
-  hookAllClassesInPackage(loadPackageParam.classLoader, loadPackageParam);
+                        XposedBridge.log("[HeaderButton] Attached: " + className);
+                        if (view instanceof ViewGroup) {
+                            analyzeHeaderButtonChildren((ViewGroup) view);
+                        }
+                    }
+
+                    private void analyzeHeaderButtonChildren(ViewGroup headerButton) {
+                        for (int i = 0; i < headerButton.getChildCount(); i++) {
+                            View child = headerButton.getChildAt(i);
+                            int id = child.getId();
+                            String idName = "(no id)";
+                            try {
+                                if (id != View.NO_ID) {
+                                    idName = child.getContext().getResources().getResourceName(id);
+                                }
+                            } catch (Resources.NotFoundException ignored) {}
+
+                            XposedBridge.log("[HeaderButton] Child: id=" + idName + ", class=" + child.getClass().getName());
+
+                            if (child instanceof ImageView) {
+                                Drawable drawable = ((ImageView) child).getDrawable();
+                                if (drawable != null) {
+                                    XposedBridge.log("[HeaderButton] → Drawable class: " + drawable.getClass().getName());
+                                }
+
+                                try {
+                                    Field mResourceField = ImageView.class.getDeclaredField("mResource");
+                                    mResourceField.setAccessible(true);
+                                    int resId = mResourceField.getInt(child);
+                                    if (resId != 0) {
+                                        String resName = child.getContext().getResources().getResourceName(resId);
+                                        XposedBridge.log("[HeaderButton] → Image Resource: " + resName);
+                                    }
+                                } catch (Throwable ignored) {}
+                            }
+
+                            if (child instanceof TextView) {
+                                CharSequence text = ((TextView) child).getText();
+                                XposedBridge.log("[HeaderButton] → Text: " + text);
+                            }
+
+                            // ネストされたViewも探索
+                            if (child instanceof ViewGroup) {
+                                analyzeHeaderButtonChildren((ViewGroup) child);
+                            }
+                        }
+                    }
+
+                }
+        );
+
+
+        XposedHelpers.findAndHookMethod(
+                View.class,
+                "performClick",
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        View view = (View) param.thisObject;
+                        int id = view.getId();
+                        String resourceName = "(no id)";
+                        try {
+                            if (id != View.NO_ID) {
+                                resourceName = view.getContext().getResources().getResourceName(id);
+                            }
+                        } catch (Resources.NotFoundException e) {
+                            resourceName = "(unknown id " + id + ")";
+                        }
+
+                        String viewClass = view.getClass().getName();
+                        String parentClass = view.getParent() != null ? view.getParent().getClass().getName() : "null";
+
+                        XposedBridge.log("[Click::performClick] View clicked:");
+                        XposedBridge.log("  - Resource ID: " + id + ", Name: " + resourceName);
+                        XposedBridge.log("  - View Class: " + viewClass);
+                        XposedBridge.log("  - Parent Class: " + parentClass);
+                    }
+                }
+        );
+
+
+        XposedHelpers.findAndHookMethod(
+                View.class,
+                "setOnClickListener",
+                View.OnClickListener.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) {
+                        View.OnClickListener originalListener = (View.OnClickListener) param.args[0];
+
+                        if (originalListener == null) return;
+                        View.OnClickListener wrappedListener = new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                try {
+                                    Context context = v.getContext();
+                                    int id = v.getId();
+                                    String resourceName = "(no id)";
+                                    if (id != View.NO_ID) {
+                                        try {
+                                            resourceName = context.getResources().getResourceName(id);
+                                        } catch (Resources.NotFoundException e) {
+                                            resourceName = "(unknown id " + id + ")";
+                                        }
+                                    }
+
+                                    String viewClass = v.getClass().getName();
+                                    String parentClass = (v.getParent() != null) ? v.getParent().getClass().getName() : "null";
+
+                                    XposedBridge.log("[Click] View clicked:");
+                                    XposedBridge.log("  - Resource ID: " + id + ", Name: " + resourceName);
+                                    XposedBridge.log("  - View Class: " + viewClass);
+                                    XposedBridge.log("  - Parent Class: " + parentClass);
+
+                                } catch (Throwable t) {
+                                    XposedBridge.log("Error logging click info: " + Log.getStackTraceString(t));
+                                }
+                                originalListener.onClick(v);
+                            }
+                        };
+                        param.args[0] = wrappedListener;
+                    }
+                }
+        );
+
 
 //        XposedHelpers.findAndHookMethod(
-//                "android.content.res.Resources",
-//                loadPackageParam.classLoader,
-//                "getString",
-//                int.class,
+//                Activity.class,
+//                "onResume",
 //                new XC_MethodHook() {
 //                    @Override
-//                    protected void afterHookedMethod(MethodHookParam param) {
-//                        int resourceId = (int) param.args[0];
-//                        Resources resources = (Resources) param.thisObject;
+//                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+//                        final Activity activity = (Activity) param.thisObject;
 //
-//                        try {
-//                            String resourceName = resources.getResourceName(resourceId);
-//
-//                            // reactionsheetを含むリソースのみ処理
-//                            if (resourceName.contains("reactionsheet")) {
-//                                String resourceString = (String) param.getResult();
-//                                String entryName = resourceName.substring(resourceName.lastIndexOf('/') + 1);
-////
-////                                XposedBridge.log("[ReactionSheet] ID: " + resourceId
-////                                        + ", Entry: " + entryName
-////                                        + ", Value: " + resourceString);
-//
-//                            }
-//                        } catch (Resources.NotFoundException e) {
-//                            XposedBridge.log("Resource not found: " + resourceId);
-//                        }
+//                        // 画面描画が安定するのを待ってから再帰走査
+//                        activity.getWindow().getDecorView().postDelayed(() -> {
+//                            View rootView = activity.getWindow().getDecorView().getRootView();
+//                            XposedBridge.log("[ViewScan] Dumping view tree for: " + activity.getClass().getName());
+//                            scanViewHierarchy(rootView);  // ここでView再帰スキャン
+//                        }, 1500);  // 1.5秒後（必要なら調整）
 //                    }
 //                }
 //        );
+
+
 
 //        hookFragmentOnCreateView(loadPackageParam.classLoader);
         //hookChatHistoryActivity(loadPackageParam.classLoader); // ChatHistoryActivityのフック
@@ -132,13 +274,11 @@ public class test implements IHook {
         }
     }
 
-    // スタックトレースをログ出力するヘルパーメソッド
     private void logStackTrace(String methodName) {
         StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
         StringBuilder sb = new StringBuilder();
         sb.append("Stack trace for MP.h.").append(methodName).append(":\n");
 
-        // 上位10フレームまで出力（不要なXposedフレームを除外）
         for (int i = 3; i < Math.min(stackTrace.length, 10); i++) {
             StackTraceElement element = stackTrace[i];
             sb.append("  at ")
@@ -166,8 +306,6 @@ public class test implements IHook {
             Enumeration<String> classNames = dexFile.entries();
             while (classNames.hasMoreElements()) {
                 String className = classNames.nextElement();
-
-                // 指定されたパッケージで始まるクラスのみをフック
                 //  if (className.startsWith("com.linecorp.line") || className.startsWith("jp.naver.line.android")) {
                 try {
                     Class<?> clazz = Class.forName(className, false, classLoader);
@@ -236,8 +374,6 @@ public class test implements IHook {
                     } else {
                         XposedBridge.log("messageContainer not found");
                     }
-
-                    // 新しいビューの追加を監視
                     rootView.setOnHierarchyChangeListener(new ViewGroup.OnHierarchyChangeListener() {
                         @Override
                         public void onChildViewAdded(View parent, View child) {
@@ -266,16 +402,12 @@ public class test implements IHook {
             Class<?> constraintLayoutClass = Class.forName("androidx.constraintlayout.widget.ConstraintLayout", false, classLoader);
             Method onViewAddedMethod = constraintLayoutClass.getDeclaredMethod("onViewAdded", View.class);
 
-            XposedBridge.hookMethod(onViewAddedMethod, new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    View addedView = (View) param.args[0];
-                    XposedBridge.log(addedView.toString());
-                }
-
-                private boolean isButtonAdded = false; // ボタンが追加されたかどうかを追跡するフラグ
-
-                @Override
+            findAndHookMethod(
+                    View.class,
+                    "onAttachedToWindow",
+                    new XC_MethodHook() {
+                        View view;
+                        @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     View addedView = (View) param.args[0];
                     XposedBridge.log("Called: " + constraintLayoutClass.getName() + ".onViewAdded");
@@ -287,13 +419,30 @@ public class test implements IHook {
                     ViewGroup parent = (ViewGroup) param.thisObject;
 
                     // 追加されたビューのリソース名を取得
-                    String resourceName = parent.getContext().getResources().getResourceEntryName(addedViewId);
-                    XposedBridge.log("Called: "+resourceName);
+                    String resourceName;
+                    try {
+                        resourceName = parent.getContext().getResources().getResourceEntryName(addedViewId);
+                    } catch (Resources.NotFoundException e) {
+                        resourceName = "Resource name not found (ID: " + addedViewId + ")";
+                    }
 
+                    XposedBridge.log("Called: " + resourceName);
 
-
+                    // スタックトレースをログに出力
+                    StringBuilder stackTrace = new StringBuilder("\nStack Trace:\n");
+                    for (StackTraceElement element : Thread.currentThread().getStackTrace()) {
+                        stackTrace.append("  at ")
+                                .append(element.getClassName())
+                                .append(".")
+                                .append(element.getMethodName())
+                                .append("(")
+                                .append(element.getFileName())
+                                .append(":")
+                                .append(element.getLineNumber())
+                                .append(")\n");
+                    }
+                    XposedBridge.log(stackTrace.toString());
                 }
-
 
                 private void createAndAddButton(ConstraintLayout parent, View referenceView) {
                     // ボタンを作成
@@ -577,4 +726,236 @@ public class test implements IHook {
 
         return methodName.contains("inflate") || methodName.contains("new") || methodName.contains("create");
     }
+    private void traverseAllViews(ViewGroup parent) {
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            View child = parent.getChildAt(i);
+
+            // ViewStub の処理
+            if (child instanceof ViewStub) {
+                ViewStub stub = (ViewStub) child;
+                int layoutRes = stub.getLayoutResource();
+
+                if (layoutRes == 0) {
+                    Log.w("Xposed", "ViewStub skipped (no layoutResource): " + stub);
+                    continue;
+                }
+
+                try {
+                    View inflated = stub.inflate();
+                    Log.i("Xposed", "ViewStub inflated: " + inflated);
+                    if (inflated instanceof ViewGroup) {
+                        traverseAllViews((ViewGroup) inflated);
+                    }
+                    continue;
+                } catch (Exception e) {
+                    Log.e("Xposed", "ViewStub inflate failed: " + e.getMessage(), e);
+                    continue;
+                }
+            }
+
+            // View のログ出力
+            String idName = "NO_ID";
+            try {
+                int id = child.getId();
+                if (id != View.NO_ID) {
+                    idName = child.getResources().getResourceEntryName(id);
+                }
+            } catch (Exception ignored) {}
+
+            Log.i("Xposed", "View: " + child.getClass().getName() + " (ID: " + idName + ")");
+
+            // 子が ViewGroup の場合は再帰
+            if (child instanceof ViewGroup) {
+                traverseAllViews((ViewGroup) child);
+            }
+        }
+    }
+
+    private void dumpViewHierarchy(View root) {
+        dumpViewHierarchyRecursive(root, 0);
+    }
+
+    private void dumpViewHierarchyRecursive(View view, int depth) {
+        StringBuilder indent = new StringBuilder();
+        for (int i = 0; i < depth; i++) indent.append("  ");  // インデント生成
+
+        int id = view.getId();
+        String idName = "(no id)";
+        try {
+            if (id != View.NO_ID) {
+                idName = view.getContext().getResources().getResourceName(id);
+            }
+        } catch (Resources.NotFoundException ignored) {}
+
+        String viewClass = view.getClass().getName();
+        String text = null;
+        if (view instanceof TextView) {
+            text = ((TextView) view).getText().toString();
+        }
+
+        XposedBridge.log(indent + "View: " + viewClass + ", ID: " + idName + (text != null ? ", Text: \"" + text + "\"" : ""));
+
+        if (view instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) view;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                dumpViewHierarchyRecursive(vg.getChildAt(i), depth + 1);
+            }
+        }
+    }
+    private static class MyFactory2 implements LayoutInflater.Factory2 {
+        private final LayoutInflater.Factory2 original;
+
+        MyFactory2(LayoutInflater.Factory2 original) {
+            this.original = original;
+        }
+
+        @Override
+        public View onCreateView(View parent, String name, Context context, AttributeSet attrs) {
+            View view = null;
+            try {
+                if (original != null) {
+                    view = original.onCreateView(parent, name, context, attrs);
+                }
+            } catch (Exception e) {
+                XposedBridge.log("MyFactory2: error from original factory: " + e);
+            }
+
+            if (view != null) {
+                try {
+                    int id = view.getId();
+                    String idName = "(no id)";
+                    if (id != View.NO_ID) {
+                        idName = context.getResources().getResourceName(id);
+                    }
+
+                    // ログ出力（全Viewをログしたい場合）
+                    String text = null;
+                    if (view instanceof TextView) {
+                        text = ((TextView) view).getText().toString();
+                    }
+
+                    XposedBridge.log("[MyFactory2] View created: class=" + view.getClass().getName()
+                            + ", id=" + idName + (text != null ? ", text=\"" + text + "\"" : ""));
+
+                    // 非表示にしたいView ID一覧
+                    Set<String> idsToHide = new HashSet<>(Arrays.asList(
+                            "jp.naver.line.android:id/home_bigbanner_ad_video_play_btn",
+                            "jp.naver.line.android:id/home_bigbanner_ad_video_replay",
+                            "jp.naver.line.android:id/home_bigbanner_ad_video_see_detail"
+                    ));
+
+                    // 条件一致した場合、親を非表示に
+                    if (idsToHide.contains(idName)) {
+                        View target = view;
+                        for (int i = 0; i < 3; i++) {  // 最大3階層上まで探索
+                            if (target.getParent() instanceof View) {
+                                target = (View) target.getParent();
+                            } else {
+                                break;
+                            }
+                        }
+
+                        XposedBridge.log("[MyFactory2] => Hiding parent of matched view: class=" + target.getClass().getName());
+
+                        ViewGroup.LayoutParams params = target.getLayoutParams();
+                        if (params != null) {
+                            params.height = 0;
+                            target.setLayoutParams(params);
+                        }
+                        target.setVisibility(View.GONE);
+                    }
+
+                    // テキスト内容での非表示条件
+                    if (text != null && (text.contains("呼出音") || text.contains("ゆるかわ"))) {
+                        ViewGroup.LayoutParams params = view.getLayoutParams();
+                        if (params != null) {
+                            params.height = 0;
+                            view.setLayoutParams(params);
+                        }
+                        view.setVisibility(View.GONE);
+                        XposedBridge.log("[MyFactory2] => Hiding view with text match: " + text);
+                    }
+
+                } catch (Throwable t) {
+                    XposedBridge.log("MyFactory2: Exception during processing: " + t);
+                }
+            }
+
+            return view;
+        }
+
+        @Override
+        public View onCreateView(String name, Context context, AttributeSet attrs) {
+            return onCreateView(null, name, context, attrs);
+        }
+
+    }
+
+    private void scanViewHierarchy(View view) {
+        try {
+            int id = view.getId();
+            String idName = "(no id)";
+            if (id != View.NO_ID) {
+                idName = view.getContext().getResources().getResourceName(id);
+            }
+
+            String text = null;
+            if (view instanceof TextView) {
+                text = ((TextView) view).getText().toString();
+            }
+
+            XposedBridge.log("[ViewScan] Class=" + view.getClass().getName()
+                    + ", id=" + idName + (text != null ? ", text=\"" + text + "\"" : ""));
+
+            // IDによる判定
+            Set<String> idsToHide = new HashSet<>(Arrays.asList(
+                    "jp.naver.line.android:id/home_bigbanner_ad_video_play_btn",
+                    "jp.naver.line.android:id/home_bigbanner_ad_video_replay",
+                    "jp.naver.line.android:id/home_bigbanner_ad_video_see_detail",
+            "com.linecorp.line.home.ui.profile.HomeProfileWithPremiumBadgeView"
+            ));
+            if (idsToHide.contains(idName)) {
+                hideParent(view, 3);  // 最大3階層まで遡って親を非表示
+            }
+
+            // テキストによる判定
+            if (text != null && (text.contains("呼出音") || text.contains("ゆるかわ"))) {
+                hideParent(view, 3);
+            }
+
+            if (view instanceof ViewGroup) {
+                ViewGroup vg = (ViewGroup) view;
+                for (int i = 0; i < vg.getChildCount(); i++) {
+                    scanViewHierarchy(vg.getChildAt(i));
+                }
+            }
+        } catch (Throwable t) {
+            XposedBridge.log("scanViewHierarchy: " + t);
+        }
+    }
+
+    private void hideParent(View view, int maxDepth) {
+        View target = view;
+        for (int i = 0; i < maxDepth; i++) {
+            ViewParent parent = target.getParent();
+            if (parent instanceof View) {
+                target = (View) parent;
+            } else {
+                break;
+            }
+        }
+
+        try {
+            ViewGroup.LayoutParams params = target.getLayoutParams();
+            if (params != null) {
+                params.height = 0;
+                target.setLayoutParams(params);
+            }
+            target.setVisibility(View.GONE);
+            XposedBridge.log("[ViewScan] => Hiding parent view: " + target.getClass().getName());
+        } catch (Throwable e) {
+            XposedBridge.log("hideParent error: " + e);
+        }
+    }
+
 }

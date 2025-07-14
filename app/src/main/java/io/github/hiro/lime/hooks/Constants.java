@@ -306,7 +306,7 @@ public class Constants {
                 XposedBridge.log("15.9.3 Patched ");
             } else {
 
-return;
+                return;
             }
             Archive = new HookTarget(ChatListClassName, "invokeSuspend");
             REQUEST_HOOK = new HookTarget("org.apache.thrift.l", "b");
@@ -331,7 +331,18 @@ return;
             PhotoSave3 = new HookTarget("Nm.L", "");
 
             //reactionListModel
-            ReactionList = new HookTarget("Jz.l", "");
+            String ReactionListClassName;
+            if (versionName.equals("15.9.3")) {
+                ReactionListClassName = "Jz.m";
+                XposedBridge.log("15.9.3 Reaction ");
+            } else {
+
+                ReactionListClassName = "Jz.l";
+                XposedBridge.log("15.9.0 Patched ");
+            }
+            ReactionList = new HookTarget(ReactionListClassName, "");
+
+
 //skipMemoryCache
             Video = new HookTarget("PR.I", "");
             String chatRestoreClassName;

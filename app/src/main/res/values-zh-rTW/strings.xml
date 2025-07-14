@@ -246,5 +246,7 @@
     <string name="Talk_Auto_Back_up_Error_No_Access">Error</string>
     <string name="Talk_Auto_Back_up_Error_No_URI">Error</string>
     <string name="GetMidIdButton">GetMidId</string>
+    <string name="removeNaviAichat">removeNaviAichat</string>
+    <string name="removeHeaderButton">removeHeaderButton</string>
 
 </resources>

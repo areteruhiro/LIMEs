@@ -215,12 +215,8 @@
     <string name="location">Location Message</string>
     <string name="SpoofAndroidId">偽造你的 Android ID</string>
     <string name="SpoofUserAgent">虛假設備資訊</string>
-    <string name="general">Spoof Android ID</string>
-    <string name="Ad">Spoof Device Information</string>
-    <string name="notifications">General</string>
-    <string name="Theme">Ads</string>
-    <string name="call">Notifications</string>
-    <string name="chat">Theme</string>
+    <string name="general">General</string>
+    <string name="Ad">Ads</string>
     <string name="other">Other</string>
     <string name="NewOption">New Settings Screen</string>
     <string name="PhotoSave">"MediaReNameSave (DevNow) "</string>
@@ -261,4 +257,10 @@
     <string name="Talk_Auto_Back_up_Error_No_Access">Error</string>
     <string name="Talk_Auto_Back_up_Error_No_URI">Error</string>
     <string name="GetMidIdButton">GetMidId</string>
+    <string name="notifications">Notifications</string>
+    <string name="Theme">Theme</string>
+    <string name="chat">Chat</string>
+    <string name="call">Ringtone/Dial tone</string>
+    <string name="removeNaviAichat">removeNaviAichat</string>
+    <string name="removeHeaderButton">removeHeaderButton</string>
 </resources>

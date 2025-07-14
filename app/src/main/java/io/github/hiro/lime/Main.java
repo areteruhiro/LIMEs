@@ -859,7 +859,9 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
         }
 
 
-
+      if (limeOptions.removeNaviAichat.checked) {
+            resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_ai_friends", xModuleResources.fwd(R.drawable.empty_drawable));
+     }
         if (limeOptions.removeNaviOpenchat.checked) {
             resparam.res.setReplacement(Constants.PACKAGE_NAME, "drawable", "navi_top_openchat", xModuleResources.fwd(R.drawable.empty_drawable));
         }

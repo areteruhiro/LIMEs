@@ -52,7 +52,7 @@ public class ReactionList implements IHook {
         ), "getSystemContext");
 
         PackageManager pm = context.getPackageManager();
-        String versionName = ""; // 初期化
+        String versionName = "";
         try {
             versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
         } catch (PackageManager.NameNotFoundException e) {

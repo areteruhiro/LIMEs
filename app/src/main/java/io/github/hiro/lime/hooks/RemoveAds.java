@@ -62,6 +62,28 @@ public class RemoveAds implements IHook {
                     }
                 }
         );
+        XposedHelpers.findAndHookMethod(
+                View.class,
+                "onAttachedToWindow",
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        View view = (View) param.thisObject;
+                        String className = view.getClass().getName();
+
+                        if ("com.linecorp.line.home.ui.profile.HomeProfileWithPremiumBadgeView".equals(className)) {
+                            ViewGroup.LayoutParams params = view.getLayoutParams();
+                            if (params != null) {
+                                params.height = 0;
+                                view.setLayoutParams(params);
+                            }
+
+                            view.setVisibility(View.GONE);
+                            view.invalidate();
+                        }
+                    }
+                }
+        );
 
         XposedHelpers.findAndHookMethod(
                 ViewGroup.class,
