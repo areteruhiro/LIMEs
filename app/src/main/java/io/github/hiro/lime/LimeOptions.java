@@ -147,7 +147,7 @@ public class LimeOptions {
                 removeNaviOpenchat,
                 removeNaviAlbum,
                 removeNaviAichat,
-                removeHeaderButton,
+             //  removeHeaderButton,
                 removeSearchBar,
                 removeReplyMute,
                 redirectWebView,

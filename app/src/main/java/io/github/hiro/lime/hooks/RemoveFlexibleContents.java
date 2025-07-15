@@ -53,18 +53,6 @@ public class RemoveFlexibleContents implements IHook {
 //                          String resourceName = getResourceName(view.getContext(), viewId);
                           //XposedBridge.log("View ID: " + viewId + ", Resource Name: " + resourceName);
 
-                        if (limeOptions.removeHeaderButton.checked) {
-                            if ("jp.naver.line.android.common.view.header.HeaderButton".equals(className)) {
-                                ViewGroup.LayoutParams params = view.getLayoutParams();
-                                if (params != null) {
-                                    params.height = 0;
-                                    view.setLayoutParams(params);
-                                }
-
-                                view.setVisibility(View.GONE);
-                                view.invalidate();
-                            }
-                        }
 
                         if (limeOptions.removeRecommendation.checked && viewId == recommendationResId
                                 || limeOptions.removeServiceLabels.checked && viewId == serviceNameResId

@@ -350,7 +350,6 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     }
 
     private String loadBackupUri(Context context) {
-        // contextがnullでないことを確認
         if (context == null) {
             XposedBridge.log("Lime: Context is null in loadBackupUri");
             return null;

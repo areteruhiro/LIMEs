@@ -388,7 +388,7 @@ public class Constants {
 
 //com.linecorp.line.album.ui.viewmodel.AlbumViewModel$downloadPhotoDirectly$1
             //createAlbum
-            PhotoSave3 = new HookTarget("", "");
+            PhotoSave3 = new HookTarget("Vm.I", "");
 
             //reactionListModel
             ReactionList = new HookTarget("Vz.k", "");
