@@ -263,4 +263,5 @@
     <string name="call">Ringtone/Dial tone</string>
     <string name="removeNaviAichat">removeNaviAichat</string>
     <string name="removeHeaderButton">removeHeaderButton</string>
+    <string name="SendEnterChange">SendEnterChange</string>
 </resources>
