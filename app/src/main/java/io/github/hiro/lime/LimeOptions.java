@@ -106,6 +106,7 @@ public class LimeOptions {
         public Option DialTone = new Option("DialTone", R.string.DialTone, false, OptionCategory.CALL);
         public Option ringtonevolume = new Option("ringtonevolume", R.string.ringtonevolume, false, OptionCategory.CALL);
         public Option SilentCheck = new Option("SilentCheck", R.string.SilentCheck, false, OptionCategory.CALL);
+          public Option CallComing = new Option("CallComing", R.string.CallComing, false, OptionCategory.CALL);
 
 
 
@@ -120,7 +121,7 @@ public class LimeOptions {
         public Option PinList = new Option("PinList", R.string.PinList, false, OptionCategory.CHAT);
 
         public Option outputCommunication = new Option("output_communication", R.string.switch_output_communication, false, OptionCategory.OTHER);
-        public Option NewOption = new Option("NewOption", R.string.NewOption, false, OptionCategory.OTHER);
+        public Option NewOption = new Option("NewOption", R.string.NewOption, true, OptionCategory.OTHER);
         public Option AgeCheckSkip = new Option("AgeCheckSkip", R.string.AgeCheckSkip, false, OptionCategory.OTHER);
         public Option AutoUpDateCheck = new Option("AutoUpDateCheck", R.string.AutoUpDateCheck, false, OptionCategory.OTHER);
 
@@ -176,7 +177,7 @@ public class LimeOptions {
                 AutoUpDateCheck, PinList,
                 NewOption, PhotoSave,
                 ReactionCount,WhiteToDark,NotificationReaction,StopCallTone,
-                SendEnterChange
+                SendEnterChange,CallComing
         };
 
 

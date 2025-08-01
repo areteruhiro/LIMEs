@@ -254,5 +254,7 @@
     <string name="removeNaviAichat">removeNaviAichat</string>
     <string name="removeHeaderButton">removeHeaderButton</string>
     <string name="SendEnterChange">SendEnterChange</string>
+    <string name="CallComing">CallComing</string>
+    <string name="ResetButton">Reset URI</string>
 
 </resources>

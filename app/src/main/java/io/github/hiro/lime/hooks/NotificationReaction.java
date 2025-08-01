@@ -151,7 +151,8 @@ public class NotificationReaction implements IHook {
                                             } else if (part.startsWith("param3:")) {
 
                                                 param3 = part.substring("param3:".length()).trim();
-                                                param3 = param3.replaceAll("\\)\\]$", "");
+                                                // これ 1 行で文字列中の ')' をすべて削除
+                                                param3 = param3.replace(")", "");
                                             } else if (part.startsWith("param2:")) {
                                                 reactionJson = part.substring("param2:".length()).trim();
                                                 if (reactionJson.contains("chatMid")) {
@@ -178,7 +179,7 @@ public class NotificationReaction implements IHook {
 
                                             String name = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", param3);
                                             name = name != null ? name : "null";
-
+                                            XposedBridge.log(name+ param3);
                                             Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                                     "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
                                             String talkName = queryDatabase(db4, "SELECT profile_name FROM contacts WHERE mid=?", chatMid);
@@ -326,7 +327,7 @@ public class NotificationReaction implements IHook {
             String result = "null";
             if (cursor != null && cursor.moveToFirst()) {
                 result = cursor.getString(0);
-                XposedBridge.log("Query success: " + result);
+            //    XposedBridge.log("Query success: " + result);
             }
 
             db.setTransactionSuccessful();

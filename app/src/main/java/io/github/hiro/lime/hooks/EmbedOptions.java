@@ -489,6 +489,41 @@ public class EmbedOptions implements IHook {
                                         PinList_Button.setOnClickListener(v -> PinListButton(context, moduleContext));
                                         layout.addView(PinList_Button);
                                     }
+                                    Button resetButton = new Button(context);
+                                    resetButton.setLayoutParams(buttonParams);
+                                    resetButton.setText(moduleContext.getResources().getString(R.string.ResetButton));
+
+                                    resetButton.setOnClickListener(v -> {
+                                        try {
+
+                                            File settingsDir  = new File(context.getFilesDir(), "LimeBackup");
+                                            File settingsFile = new File(settingsDir, "backup_uri.txt");
+
+                                            String toastMsg;
+                                            if (settingsFile.exists()) {
+                                                boolean deleted = settingsFile.delete();
+                                                toastMsg = deleted
+                                                        ? " Reset URI"
+                                                        : "Error";
+
+                                                Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+                                                context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+                                                Process.killProcess(Process.myPid());
+                                            } else {
+                                                toastMsg = "リセット対象の URI はありません";
+                                            }
+
+                                            Toast.makeText(moduleContext, toastMsg, Toast.LENGTH_SHORT).show();
+                                            XposedBridge.log("Lime: ResetButton pressed – " + toastMsg);
+                                        } catch (Throwable t) {
+                                            XposedBridge.log(t);
+                                            Toast.makeText(moduleContext,
+                                                    "エラー: " + t.getMessage(),
+                                                    Toast.LENGTH_LONG).show();
+                                        }
+                                    });
+
+                                    layout.addView(resetButton);
 
                                     builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
                                         String code = editText.getText().toString();

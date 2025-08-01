@@ -14,6 +14,7 @@ import androidx.documentfile.provider.DocumentFile;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -39,111 +40,171 @@ public class AutomaticBackup implements IHook {
                         Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                                 "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
                         Intent intent = ((Activity) param.thisObject).getIntent();
-                        handleIntent(intent, param.thisObject,moduleContext);
+                        handleIntent(intent, param.thisObject, moduleContext);
                     }
                 });
     }
 
-    private void handleIntent(Intent intent, Object activity,Context moduleContext) {
+    private void handleIntent(Intent intent, Object activity, Context moduleContext) {
         if (intent != null) {
             String text = intent.getStringExtra(Intent.EXTRA_TEXT);
 
             if (moduleContext.getResources().getString(R.string.Talk_Back_up).equals(text)) {
-                backupChatHistory(((Activity) activity).getApplicationContext(),moduleContext);
+                backupChatHistory(((Activity) activity).getApplicationContext(), moduleContext);
             }
             if (moduleContext.getResources().getString(R.string.Talk_Picture_Back_up).equals(text)) {
-                backupChatsFolder(((Activity) activity).getApplicationContext(),moduleContext);
+                backupChatsFolder(((Activity) activity).getApplicationContext(), moduleContext);
             }
 
             if (moduleContext.getResources().getString(R.string.BackUp_Stat).equals(text)) {
-                backupChatHistory(((Activity) activity).getApplicationContext(),moduleContext);
-                backupChatsFolder(((Activity) activity).getApplicationContext(),moduleContext);
+                backupChatHistory(((Activity) activity).getApplicationContext(), moduleContext);
+                backupChatsFolder(((Activity) activity).getApplicationContext(), moduleContext);
             }
         }
     }
 
 
-    private void backupChatHistory(Context appContext, Context moduleContext) {
-        File originalDbFile = appContext.getDatabasePath("naver_line");
-        String backupUriStr = loadBackupUri(moduleContext);
+    private void backupChatHistory(Context appCtx, Context moduleCtx) {
 
-        if (backupUriStr == null) {
-            showToast(appContext, moduleContext.getResources().getString(R.string.Talk_Auto_Back_up_Error_No_URI));
+        File original = appCtx.getDatabasePath("naver_line");
+        String backupUriS = loadBackupUri(appCtx);
+
+        if (backupUriS == null) {
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Auto_Back_up_Error_No_URI));
             return;
         }
 
         try {
-            Uri backupUri = Uri.parse(backupUriStr);
-            DocumentFile backupDir = DocumentFile.fromTreeUri(appContext, backupUri);
+            Uri treeUri = Uri.parse(backupUriS);
+            DocumentFile rootDir = DocumentFile.fromTreeUri(appCtx, treeUri);
 
-            if (backupDir == null || !backupDir.exists()) {
-                showToast(appContext, moduleContext.getResources().getString(R.string.Talk_Auto_Back_up_Error_No_Access));
+            if (rootDir == null || !rootDir.exists()) {
+                showToast(appCtx, moduleCtx.getString(
+                        R.string.Talk_Auto_Back_up_Error_No_Access));
                 return;
             }
-            String backupFileName = "naver_line_backup.db";
-            DocumentFile existingFile = backupDir.findFile(backupFileName);
 
-            if (existingFile != null) {
-                existingFile.delete();
-            }
+            String fileName = "naver_line_backup.db";
+            DocumentFile exist = rootDir.findFile(fileName);
+            if (exist != null) exist.delete();
 
-            DocumentFile newFile = backupDir.createFile("application/x-sqlite3", backupFileName);
+            DocumentFile newFile = rootDir.createFile(
+                    "application/x-sqlite3", fileName);
             if (newFile == null) {
-                showToast(appContext, moduleContext.getResources().getString(R.string.Talk_Auto_Back_up_Error_Create_File));
+                showToast(appCtx, moduleCtx.getString(
+                        R.string.Talk_Auto_Back_up_Error_Create_File));
                 return;
             }
 
-            try (InputStream in = new FileInputStream(originalDbFile);
-                 OutputStream out = appContext.getContentResolver().openOutputStream(newFile.getUri())) {
-                byte[] buf = new byte[1024];
+            try (InputStream in = new FileInputStream(original);
+                 OutputStream out = appCtx.getContentResolver()
+                         .openOutputStream(newFile.getUri())) {
+
+                byte[] buf = new byte[4096];
                 int len;
-                while ((len = in.read(buf)) > 0) {
-                    out.write(buf, 0, len);
+                while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
+            }
+
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Auto_Back_up_Success));
+
+        } catch (FileNotFoundException e) {
+            XposedBridge.log("Lime-Backup DB: File not found → " + e);
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Auto_Back_up_Error_Create_File));
+        } catch (SecurityException e) {
+            XposedBridge.log("Lime-Backup DB: SAF permission error → " + e);
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Auto_Back_up_Error_No_Access));
+        } catch (IOException e) {
+            XposedBridge.log("Lime-Backup DB: I/O error → " + e);
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Auto_Back_up_Error));
+        }
+    }
+
+    private void backupChatsFolder(Context appCtx, Context moduleCtx) {
+
+        File srcChats = new File(Environment.getExternalStorageDirectory(),
+                "Android/data/jp.naver.line.android/files/chats");
+        String backupUriS = loadBackupUri(appCtx);
+
+        if (backupUriS == null) {
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Picture_Back_up_Error_No_URI));
+            return;
+        }
+
+        try {
+            Uri treeUri = Uri.parse(backupUriS);
+            DocumentFile rootDir = DocumentFile.fromTreeUri(appCtx, treeUri);
+
+            if (rootDir == null || !rootDir.exists()) {
+                showToast(appCtx, moduleCtx.getString(
+                        R.string.Talk_Picture_Back_up_Error_No_Access));
+                return;
+            }
+
+            DocumentFile chatsDir = rootDir.findFile("chats_backup");
+            if (chatsDir != null) chatsDir.delete();        // 上書き用に削除
+            chatsDir = rootDir.createDirectory("chats_backup");
+            if (chatsDir == null) {
+                showToast(appCtx, moduleCtx.getString(
+                        R.string.Talk_Picture_Back_up_Error_Create_Dir));
+                return;
+            }
+
+            copyDirectoryToDocumentFile(appCtx, srcChats, chatsDir);
+
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Picture_Back_up_Success));
+
+        } catch (SecurityException e) {
+            XposedBridge.log("Lime-Backup Chats: SAF permission error → " + e);
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Picture_Back_up_Error_No_Access));
+        } catch (IOException | NullPointerException e) {
+            // NullPointerException は SAF が null を返した時を想定
+            XposedBridge.log("Lime-Backup Chats: error → " + e);
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Picture_Back_up_Error));
+        }
+    }
+
+    /* ─────────────── ③ 再帰コピー (DocumentFile 版) ─────────────── */
+    private void copyDirectoryToDocumentFile(Context ctx,
+                                             File srcDir,
+                                             DocumentFile destDir) throws IOException {
+
+        File[] children = srcDir.listFiles();
+        if (children == null) return;
+
+        for (File child : children) {
+            if (child.isDirectory()) {
+
+                DocumentFile newDir = destDir.createDirectory(child.getName());
+                if (newDir != null) {
+                    copyDirectoryToDocumentFile(ctx, child, newDir);
+                }
+
+            } else {
+                DocumentFile newFile = destDir.createFile(
+                        getMimeType(child.getName()), child.getName());
+                if (newFile == null) continue;
+
+                try (InputStream in = new FileInputStream(child);
+                     OutputStream out = ctx.getContentResolver()
+                             .openOutputStream(newFile.getUri())) {
+
+                    byte[] buf = new byte[4096];
+                    int len;
+                    while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
                 }
             }
-
-            showToast(appContext, moduleContext.getResources().getString(R.string.Talk_Auto_Back_up_Success));
-        } catch (IOException e) {
-            showToast(appContext, moduleContext.getResources().getString(R.string.Talk_Auto_Back_up_Error));
         }
     }
 
-    private void backupChatsFolder(Context appContext, Context moduleContext) {
-        File originalChatsDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/files/chats");
-        String backupUriStr = loadBackupUri(moduleContext);
-
-        if (backupUriStr == null) {
-            showToast(appContext, moduleContext.getResources().getString(R.string.Talk_Picture_Back_up_Error_No_URI));
-            return;
-        }
-
-        try {
-            Uri backupUri = Uri.parse(backupUriStr);
-            DocumentFile backupDir = DocumentFile.fromTreeUri(appContext, backupUri);
-
-            if (backupDir == null || !backupDir.exists()) {
-                showToast(appContext, moduleContext.getResources().getString(R.string.Talk_Picture_Back_up_Error_No_Access));
-                return;
-            }
-
-            DocumentFile backupChatsDir = backupDir.findFile("chats_backup");
-            if (backupChatsDir != null && backupChatsDir.exists()) {
-                backupChatsDir.delete();
-            }
-
-            backupChatsDir = backupDir.createDirectory("chats_backup");
-            if (backupChatsDir == null) {
-                showToast(appContext, moduleContext.getResources().getString(R.string.Talk_Picture_Back_up_Error_Create_Dir));
-                return;
-            }
-
-            copyDirectoryToDocumentFile(appContext, originalChatsDir, backupChatsDir);
-
-            showToast(appContext, moduleContext.getResources().getString(R.string.Talk_Picture_Back_up_Success));
-        } catch (IOException e) {
-            showToast(appContext, moduleContext.getResources().getString(R.string.Talk_Picture_Back_up_Error));
-        }
-    }
     private String loadBackupUri(Context context) {
         File settingsFile = new File(context.getFilesDir(), "LimeBackup/backup_uri.txt");
         if (!settingsFile.exists()) return null;
@@ -156,32 +217,6 @@ public class AutomaticBackup implements IHook {
         }
     }
 
-
-    private void copyDirectoryToDocumentFile(Context context, File srcDir, DocumentFile destDir) throws IOException {
-        File[] files = srcDir.listFiles();
-        if (files == null) return;
-
-        for (File srcFile : files) {
-            if (srcFile.isDirectory()) {
-                DocumentFile newDir = destDir.createDirectory(srcFile.getName());
-                if (newDir != null) {
-                    copyDirectoryToDocumentFile(context, srcFile, newDir);
-                }
-            } else {
-                DocumentFile newFile = destDir.createFile(getMimeType(srcFile.getName()), srcFile.getName());
-                if (newFile != null) {
-                    try (InputStream in = new FileInputStream(srcFile);
-                         OutputStream out = context.getContentResolver().openOutputStream(newFile.getUri())) {
-                        byte[] buf = new byte[1024];
-                        int len;
-                        while ((len = in.read(buf)) > 0) {
-                            out.write(buf, 0, len);
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     private String getMimeType(String fileName) {
         String extension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();

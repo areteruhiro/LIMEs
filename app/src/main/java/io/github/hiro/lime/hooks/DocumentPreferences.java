@@ -144,7 +144,6 @@ public class DocumentPreferences {
         // まず内部ストレージに保存
         boolean internalSuccess = saveToInternalStorage(key, value);
 
-        // URIストレージに保存
         boolean uriSuccess = saveToUriStorage(key, value);
 
         return internalSuccess && uriSuccess;

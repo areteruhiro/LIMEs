@@ -53,8 +53,8 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
     public static String modulePath;
     public static LimeOptions limeOptions = new LimeOptions();
     public static CustomPreferences customPreferences;
-    private static Context context; // Static context to be shared
-    private static Context mContext; // staticに変更して共有
+    private static Context context;
+    private static Context mContext;
     static final IHook[] hooks = {
             new InstallModule(),
             new OutputResponse(),
@@ -98,7 +98,9 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
             new WhiteToDark(),
             new DisableSilentMessage(),
             new NotificationReaction(),
-            new SendEnterChange()
+            new SendEnterChange(),
+            new CallComing(),
+
     };
 
     private boolean isSettingsLoaded = false; // 設定ロード状態を追跡
@@ -155,6 +157,7 @@ public class Main implements IXposedHookLoadPackage, IXposedHookInitPackageResou
         for (IHook hook : hooks) {
             hook.hook(limeOptions, lpparam);
         }
+
     }
 
     private Button createConfigButton(Context context, XC_MethodHook.MethodHookParam param) {

@@ -24,6 +24,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -222,15 +224,7 @@ public class UnsentRec implements IHook {
                                         if (showToast) {
                                             Toast.makeText(context, moduleContext.getResources().getString(R.string.no_get_restart_app), Toast.LENGTH_SHORT).show();
                                         }
-                                        HorizontalScrollView horizontalScrollView = new HorizontalScrollView(context); // 横スクロール用のScrollView
-                                        ScrollView verticalScrollView = new ScrollView(context);
-                                        TextView textView = new TextView(context);
-                                        textView.setText(output.toString());
-                                        textView.setMaxLines(Integer.MAX_VALUE);
-                                        textView.setHorizontallyScrolling(true);
-                                        textView.setHorizontalScrollBarEnabled(true);
-                                        horizontalScrollView.addView(textView);
-                                        verticalScrollView.addView(horizontalScrollView);
+                                        ScrollView verticalScrollView = getScrollView(output, context);
                                         AlertDialog.Builder builder = new AlertDialog.Builder(context);
                                         builder.setTitle(moduleContext.getResources().getString(R.string.deleted_messages))
                                                 .setView(verticalScrollView)
@@ -272,6 +266,21 @@ public class UnsentRec implements IHook {
                                 }
                             }
                         }
+                    }
+
+                    @NonNull
+                    private ScrollView getScrollView(StringBuilder output, Context context) {
+                        String displayText = output.toString() .replace("↵", "\n");
+                        HorizontalScrollView horizontalScrollView = new HorizontalScrollView(context);
+                        ScrollView verticalScrollView   = new ScrollView(context);
+                        TextView textView             = new TextView(context);
+                        textView.setText(displayText);
+                        textView.setMaxLines(Integer.MAX_VALUE);
+                        textView.setHorizontallyScrolling(true);
+                        textView.setHorizontalScrollBarEnabled(true);
+                        horizontalScrollView.addView(textView);
+                        verticalScrollView.addView(horizontalScrollView);
+                        return verticalScrollView;
                     }
                 }
         );
@@ -391,138 +400,117 @@ public class UnsentRec implements IHook {
         } catch (ClassNotFoundException ignored) {
         }
     }
-    private void processMessage(String paramValue, Context moduleContext, SQLiteDatabase db1, SQLiteDatabase db2, Context context) {
+    private void processMessage(String paramValue, Context moduleContext, SQLiteDatabase db1,SQLiteDatabase db2, Context context) {
+
         String unresolvedFilePath = context.getFilesDir() + "/UnresolvedIds.txt";
 
         String[] operations = paramValue.split("Operation\\(");
         for (String operation : operations) {
             if (operation.trim().isEmpty()) continue;
-            String revision = null;
-            String createdTime = null;
-            String type = null;
-            String from = null;
-            String to = null;
-            String param12 = null;
-            String param22 = null;
-            String operationContent = null;
-            String talkId = null;
-            String serverId = null; // serverIdをここで宣言
+
+            String revision = null, createdTime = null, type = null,
+                    from = null, to = null, param12 = null, param22 = null,
+                    operationContent = null, talkId = null, serverId = null;
 
             String[] parts = operation.split(",");
             for (String part : parts) {
                 part = part.trim();
-                if (part.startsWith("param1:")) {
-                    talkId = part.substring("param1:".length()).trim();
-                } else if (part.startsWith("revision:")) {
-                    revision = part.substring("revision:".length()).trim();
-                } else if (part.startsWith("createdTime:")) {
-                    createdTime = part.substring("createdTime:".length()).trim();
-                } else if (part.startsWith("type:")) {
-                    type = part.substring("type:".length()).trim();
-                } else if (part.startsWith("from:")) {
-                    from = part.substring("from:".length()).trim();
-                } else if (part.startsWith("to:")) {
-                    to = part.substring("to:".length()).trim();
-                } else if (part.startsWith("contentMetadata:")) {
-                    param12 = part.substring("contentMetadata:".length()).trim();
-                } else if (part.startsWith("operationContent:")) {
-                    operationContent = part.substring("operationContent:".length()).trim();
-                }
+                if      (part.startsWith("param1:"))           talkId          = part.substring(7).trim();
+                else if (part.startsWith("revision:"))         revision        = part.substring(9).trim();
+                else if (part.startsWith("createdTime:"))      createdTime     = part.substring(12).trim();
+                else if (part.startsWith("type:"))             type            = part.substring(5).trim();
+                else if (part.startsWith("from:"))             from            = part.substring(5).trim();
+                else if (part.startsWith("to:"))               to              = part.substring(3).trim();
+                else if (part.startsWith("contentMetadata:"))  param12         = part.substring(16).trim();
+                else if (part.startsWith("operationContent:")) operationContent= part.substring(17).trim();
             }
 
-            // typeがNOTIFIED_DESTROY_MESSAGEの場合のみserverIdを設定
             if ("NOTIFIED_DESTROY_MESSAGE".equals(type)) {
                 for (String part : parts) {
                     part = part.trim();
                     if (part.startsWith("param2:")) {
-                        serverId = part.substring("param2:".length()).trim();
-                        break; // param2が見つかったらループを抜ける
+                        serverId = part.substring(7).trim();
+                        break;
                     }
                 }
-                updateMessageAsCanceled(db1, serverId,context,moduleContext);
-                // serverIdを使用した処理をここに追加
+                updateMessageAsCanceled(db1, serverId, context, moduleContext);
                 XposedBridge.log("Server ID for NOTIFIED_DESTROY_MESSAGE: " + serverId);
             }
 
-            // serverIdとtalkIdが両方ともnullでない場合に処理を行う
             if (serverId != null && talkId != null) {
-                XposedBridge.log(paramValue + serverId);
-                String content = queryDatabase(db1, "SELECT content FROM chat_history WHERE server_id=?", serverId);
-                String imageCheck = queryDatabase(db1, "SELECT attachement_image FROM chat_history WHERE server_id=?", serverId);
-                String timeEpochStr = queryDatabase(db1, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
+                String content       = queryDatabase(db1,
+                        "SELECT content FROM chat_history WHERE server_id=?", serverId);
+                String imageCheck    = queryDatabase(db1,
+                        "SELECT attachement_image FROM chat_history WHERE server_id=?", serverId);
+                String timeEpochStr  = queryDatabase(db1,
+                        "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
                 String timeFormatted = formatMessageTime(timeEpochStr);
-                String groupName = queryDatabase(db1, "SELECT name FROM groups WHERE id=?", talkId);
-                String media = queryDatabase(db1, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
-                String talkName = queryDatabase(db2, "SELECT profile_name FROM contacts WHERE mid=?", talkId);
+                String groupName     = queryDatabase(db1,
+                        "SELECT name FROM groups WHERE id=?", talkId);
+                String media         = queryDatabase(db1,
+                        "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
+                String talkName      = queryDatabase(db2,
+                        "SELECT profile_name FROM contacts WHERE mid=?", talkId);
 
-                String name = (groupName != null ? groupName : (talkName != null ? talkName : "No Name" + ":" + ":" + "talkId" + talkId));
+                String name = (groupName != null ? groupName
+                        : (talkName != null ? talkName
+                        : "No Name" + ":" + ":" + "talkId" + talkId));
 
-                if (timeEpochStr == null) {
-                    saveUnresolvedIds(serverId, talkId, unresolvedFilePath);
-                }
-                String from_mid = null;
-                String sender_name = null;
+                String from_mid = null, sender_name = null;
                 if (groupName != null) {
-                    from_mid = queryDatabase(db1, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
+                    from_mid = queryDatabase(db1,
+                            "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
                     if (from_mid != null) {
-                        sender_name = queryDatabase(db2, "SELECT profile_name FROM contacts WHERE mid=?", from_mid);
+                        sender_name = queryDatabase(db2,
+                                "SELECT profile_name FROM contacts WHERE mid=?", from_mid);
                     }
                 }
-                if (sender_name != null) {
-                    name = groupName + ": " + sender_name;
-                }
+                if (sender_name != null) name = groupName + ": " + sender_name;
+
                 String mediaDescription = "";
                 if (media != null) {
                     switch (media) {
-                        case "7":
-                            mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                            break;
-                        case "1":
-                            mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                            break;
-                        case "2":
-                            mediaDescription = moduleContext.getResources().getString(R.string.video);
-                            break;
-                        default:
-                            mediaDescription = "";
-                            break;
+                        case "7": mediaDescription = moduleContext.getResources().getString(R.string.sticker); break;
+                        case "1": mediaDescription = moduleContext.getResources().getString(R.string.picture);  break;
+                        case "2": mediaDescription = moduleContext.getResources().getString(R.string.video);    break;
                     }
                 }
-               // XposedBridge.log("S" + serverId);
-                // 新しいメソッドを呼び出して、メッセージを取り消し済みとして更新
+
+                if (content != null) {
+                    content = content.replace("\r", "")
+                            .replace("\n", "↵");
+                }
 
                 String logEntry = (timeFormatted != null ? timeFormatted : "No Time: ")
-                        + name
-                        + ": "
-                        + ((content != null) ? content : (mediaDescription.isEmpty() ? "No content:" + serverId : ""))
+                        + name + ": "
+                        + ((content != null) ? content
+                        : (mediaDescription.isEmpty()
+                        ? "No content:" + serverId
+                        : ""))
                         + mediaDescription;
-                File fileToWrite = new File(context.getFilesDir(), Main_file);
 
+                File fileToWrite = new File(context.getFilesDir(), Main_file);
                 try {
                     if (!fileToWrite.getParentFile().exists()) {
-                        if (!fileToWrite.getParentFile().mkdirs()) {
-                            XposedBridge.log("Failed to create directory " + fileToWrite.getParent());
-                        }
+                        fileToWrite.getParentFile().mkdirs();
                     }
                     try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileToWrite, true))) {
                         writer.write(logEntry);
                         writer.newLine();
                     }
-                } catch (IOException ignored) {
+                } catch (IOException ignored) {}
+                if (timeEpochStr == null) {
+                    saveUnresolvedIds(serverId, talkId, unresolvedFilePath);
                 }
             }
         }
     }
 
     private void updateMessageAsCanceled(SQLiteDatabase db1, String serverId, Context context, Context moduleContext) {
-        // canceledContent をファイルから取得
         String canceledContent = getCanceledContentFromFile(context, moduleContext);
-        // 既存のメッセージを取得
         Cursor cursor = db1.rawQuery("SELECT * FROM chat_history WHERE server_id=?", new String[]{serverId});
 
-
         if (cursor.moveToFirst()) {
-            // カラムの値を取得（null の場合もそのまま代入）
             @SuppressLint("Range") String type = cursor.isNull(cursor.getColumnIndex("type")) ? null : cursor.getString(cursor.getColumnIndex("type"));
             @SuppressLint("Range") String chatId = cursor.isNull(cursor.getColumnIndex("chat_id")) ? null : cursor.getString(cursor.getColumnIndex("chat_id"));
             @SuppressLint("Range") String fromMid = cursor.isNull(cursor.getColumnIndex("from_mid")) ? null : cursor.getString(cursor.getColumnIndex("from_mid"));
@@ -575,7 +563,7 @@ public class UnsentRec implements IHook {
                 else values.put("attachement_image_size", (String) null);
                 values.put("attachement_type", "0");
                 values.put("attachement_local_uri", attachmentLocalUri);
-                values.put("parameter", "LIMEsUnsend"); // ここを修正
+                values.put("parameter", "LIMEsUnsend");
                 values.put("chunks", chunks);
 
                 db1.insert("chat_history", null, values);
@@ -605,18 +593,16 @@ public class UnsentRec implements IHook {
     }
 
     private String getCanceledContentFromFile(Context context,Context moduleContext) {
-        // フォルダのパスを設定
+
         File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
         if (!dir.exists()) {
             if (!dir.mkdirs()) {
-                return moduleContext.getResources().getString(R.string.canceled_message_txt); // フォルダ作成失敗時のデフォルト値
+                return moduleContext.getResources().getString(R.string.canceled_message_txt);
             }
         }
 
-        // ファイルのパスを設定
         File file = new File(dir, "canceled_message.txt");
 
-        // ファイルが存在しない場合、デフォルトの文字列を書き込む
         if (!file.exists()) {
             try (FileOutputStream fos = new FileOutputStream(file)) {
                 
@@ -624,11 +610,10 @@ public class UnsentRec implements IHook {
                 fos.write(defaultContent.getBytes());
             } catch (IOException e) {
                 String defaultContent = moduleContext.getResources().getString(R.string.canceled_message_txt);
-                return defaultContent; // ファイル書き込み失敗時のデフォルト値
+                return defaultContent;
             }
         }
 
-        // ファイルから文字列を読み取る
         StringBuilder contentBuilder = new StringBuilder();
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
@@ -636,90 +621,97 @@ public class UnsentRec implements IHook {
                 contentBuilder.append(line).append("\n");
             }
         } catch (IOException e) {
-            return moduleContext.getResources().getString(R.string.canceled_message_txt); // ファイル読み込み失敗時のデフォルト値
+            return moduleContext.getResources().getString(R.string.canceled_message_txt);
         }
 
-        // 読み取った内容を返す（末尾の改行を削除）
         String content = contentBuilder.toString().trim();
-        return content.isEmpty() ? moduleContext.getResources().getString(R.string.canceled_message_txt) : content; // 空ファイルの場合のデフォルト値
+        return content.isEmpty() ? moduleContext.getResources().getString(R.string.canceled_message_txt) : content;
     }
-    private void resolveUnresolvedIds(XC_LoadPackage.LoadPackageParam loadPackageParam, Context context, SQLiteDatabase db1, SQLiteDatabase db2, Context moduleContext) {
-        String unresolvedFilePath = context.getFilesDir() + "/UnresolvedIds.txt";
+    private void resolveUnresolvedIds(XC_LoadPackage.LoadPackageParam loadPackageParam,
+                                      Context        context,
+                                      SQLiteDatabase db1,
+                                      SQLiteDatabase db2,
+                                      Context        moduleContext) {
 
-        File unresolvedFile = new File(unresolvedFilePath);
-        File testFile = new File(context.getFilesDir(), Main_file);
+        String unresolvedFilePath = context.getFilesDir() + "/UnresolvedIds.txt";
+        File   unresolvedFile     = new File(unresolvedFilePath);
+        File   testFile           = new File(context.getFilesDir(), Main_file);
 
         if (!unresolvedFile.exists()) return;
 
-        try (BufferedReader reader = new BufferedReader(new FileReader(unresolvedFile));
+        try (BufferedReader reader   = new BufferedReader(new FileReader(unresolvedFile));
              BufferedWriter testWriter = new BufferedWriter(new FileWriter(testFile, true))) {
 
             String line;
             while ((line = reader.readLine()) != null) {
-                String[] parts = line.split(",");
-                String serverId = parts[0].split(":")[1];
-                String talkId = parts[1].split(":")[1];
 
-                String content = queryDatabase(db1, "SELECT content FROM chat_history WHERE server_id=?", serverId);
-                String imageCheck = queryDatabase(db1, "SELECT attachement_image FROM chat_history WHERE server_id=?", serverId);
-                String timeEpochStr = queryDatabase(db1, "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
+                String[] parts   = line.split(",");
+                String serverId  = parts[0].split(":")[1];
+                String talkId    = parts[1].split(":")[1];
+
+                String content       = queryDatabase(db1,
+                        "SELECT content FROM chat_history WHERE server_id=?", serverId);
+                String imageCheck    = queryDatabase(db1,
+                        "SELECT attachement_image FROM chat_history WHERE server_id=?", serverId);
+                String timeEpochStr  = queryDatabase(db1,
+                        "SELECT created_time FROM chat_history WHERE server_id=?", serverId);
                 String timeFormatted = formatMessageTime(timeEpochStr);
-                String groupName = queryDatabase(db1, "SELECT name FROM groups WHERE id=?", talkId);
-                String media = queryDatabase(db1, "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
-                String talkName = queryDatabase(db2, "SELECT profile_name FROM contacts WHERE mid=?", talkId);
-                String name = (groupName != null ? groupName : (talkName != null ? talkName : "No Name" + ":" + ":" + "talkId" + talkId));
-                String from_mid = null;
-                String sender_name = null;
+                String groupName     = queryDatabase(db1,
+                        "SELECT name FROM groups WHERE id=?", talkId);
+                String media         = queryDatabase(db1,
+                        "SELECT attachement_type FROM chat_history WHERE server_id=?", serverId);
+                String talkName      = queryDatabase(db2,
+                        "SELECT profile_name FROM contacts WHERE mid=?", talkId);
+
+                String name = (groupName != null ? groupName
+                        : (talkName != null ? talkName
+                        : "No Name" + ":" + ":" + "talkId" + talkId));
+
+                String from_mid = null, sender_name = null;
                 if (groupName != null) {
-                    from_mid = queryDatabase(db1, "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
+                    from_mid = queryDatabase(db1,
+                            "SELECT from_mid FROM chat_history WHERE server_id=?", serverId);
                     if (from_mid != null) {
-                        sender_name = queryDatabase(db2, "SELECT profile_name FROM contacts WHERE mid=?", from_mid);
+                        sender_name = queryDatabase(db2,
+                                "SELECT profile_name FROM contacts WHERE mid=?", from_mid);
                     }
                 }
+                if (sender_name != null) name = groupName + ": " + sender_name;
 
-                if (sender_name != null) {
-                    name = groupName + ": " + sender_name;
-                }
                 String mediaDescription = "";
                 if (media != null) {
                     switch (media) {
-                        case "7":
-                            mediaDescription = moduleContext.getResources().getString(R.string.sticker);
-                            break;
-                        case "1":
-                            mediaDescription = moduleContext.getResources().getString(R.string.picture);
-                            break;
-                        case "2":
-                            mediaDescription = moduleContext.getResources().getString(R.string.video);
-                            break;
-                        default:
-                            mediaDescription = "";
-                            break;
+                        case "7": mediaDescription = moduleContext.getResources().getString(R.string.sticker); break;
+                        case "1": mediaDescription = moduleContext.getResources().getString(R.string.picture);  break;
+                        case "2": mediaDescription = moduleContext.getResources().getString(R.string.video);    break;
                     }
                 }
 
+                if (content != null) {
+                    content = content.replace("\r", "")
+                            .replace("\n", "↵");
+                }
+
                 String logEntry = (timeFormatted != null ? timeFormatted : "No Time: ")
-                        + name
-                        + ": " + (content != null ? content : "NO get id:" + serverId)
+                        + name + ": "
+                        + (content != null ? content : "NO get id:" + serverId)
                         + mediaDescription;
+                testWriter.write(moduleContext.getResources()
+                        .getString(R.string.reacquisition) + logEntry);
+                testWriter.newLine();
+
+                updateMessageAsCanceled(db1, serverId, context, moduleContext);
+
                 if (timeEpochStr == null) {
                     saveUnresolvedIds(serverId, talkId, unresolvedFilePath);
                 }
-                testWriter.write(moduleContext.getResources().getString(R.string.reacquisition) + logEntry);
-                testWriter.newLine();
-                updateMessageAsCanceled(db1, serverId,context,moduleContext);
-
             }
-
-
             try (BufferedWriter clearWriter = new BufferedWriter(new FileWriter(unresolvedFile))) {
                 clearWriter.write("");
             }
 
-        } catch (IOException ignored) {
-        }
+        } catch (IOException ignored) {}
     }
-
 
     private String formatMessageTime(String timeEpochStr) {
         if (timeEpochStr == null) return null;
