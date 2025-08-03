@@ -53,8 +53,8 @@ public class RingTone implements IHook {
                 Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
                         "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
 
-                Uri ringtoneUri = getRingtoneUri(moduleContext, "ringtone.wav");
-                Uri ringtoneUriA = getRingtoneUri(moduleContext, "dial_tone.wav");
+                Uri ringtoneUri = getRingtoneUri(appContext,moduleContext, "ringtone.wav");
+                Uri ringtoneUriA = getRingtoneUri(appContext, moduleContext,"dial_tone.wav");
 
                 if (!limeOptions.StopCallTone.checked) {
                     Class<?> voIPBaseFragmentClass = loadPackageParam.classLoader.loadClass("com.linecorp.voip2.common.base.VoIPBaseFragment");
@@ -499,56 +499,80 @@ public class RingTone implements IHook {
             layout.addView(stopButton);
         }
     }
+    private Uri getRingtoneUri(Context appContext,Context moduleContext, String fileName) {
+        String backupUri = loadBackupUri(appContext);
+        XposedBridge.log("Lime: loadBackupUri → " + backupUri);
 
-
-    private Uri getRingtoneUri(Context moduleContext, String fileName) {
-        String backupUri = loadBackupUri(moduleContext);
         if (backupUri != null) {
             try {
                 Uri treeUri = Uri.parse(backupUri);
                 DocumentFile dir = DocumentFile.fromTreeUri(moduleContext, treeUri);
-                if (dir != null) {
-                    DocumentFile ringtoneFile = dir.findFile(fileName);
 
+                if (dir == null) {
+                    XposedBridge.log("Lime: DocumentFile.fromTreeUri returned null");
+                } else {
+                    XposedBridge.log("Lime: SAF directory URI → " + dir.getUri());
+
+                    DocumentFile ringtoneFile = dir.findFile(fileName);
                     if (ringtoneFile == null || !ringtoneFile.exists()) {
+                        XposedBridge.log("Lime: ファイル未検出 → コピーを実行");
                         copyRingtoneToUri(moduleContext, dir, fileName);
                         ringtoneFile = dir.findFile(fileName);
                     }
 
                     if (ringtoneFile != null && ringtoneFile.exists()) {
+                        XposedBridge.log("Lime: RingtoneFile URI → " + ringtoneFile.getUri());
                         return ringtoneFile.getUri();
+                    } else {
+                        XposedBridge.log("Lime: コピー後もファイル未検出");
                     }
                 }
             } catch (Exception e) {
-                XposedBridge.log("Lime: Error accessing ringtone URI: " + e.getMessage());
+                XposedBridge.log("Lime: Error accessing SA Furi or copying: " + Log.getStackTraceString(e));
             }
         }
 
-        // URIから見つからなかった場合はリソースから直接読み込む
-        return getRingtoneResourceUri(moduleContext, fileName);
+        // フォールバック：リソースからの取得
+        Uri resUri = getRingtoneResourceUri(moduleContext, fileName);
+        XposedBridge.log("Lime: Fallback resource URI → " + resUri);
+        return resUri;
     }
 
     private void copyRingtoneToUri(Context moduleContext, DocumentFile dir, String fileName) {
         try {
+            XposedBridge.log("Lime: copyRingtoneToUri 開始, dir URI=" + dir.getUri());
             String resourceName = fileName.replace(".wav", "");
             int resourceId = moduleContext.getResources().getIdentifier(
                     resourceName, "raw", "io.github.hiro.lime");
-            if (resourceId == 0) return;
+            if (resourceId == 0) {
+                XposedBridge.log("Lime: resourceId == 0 for " + resourceName);
+                return;
+            }
 
-            try (InputStream in = moduleContext.getResources().openRawResource(resourceId);
-                 OutputStream out = moduleContext.getContentResolver().openOutputStream(
-                         dir.createFile("audio/wav", fileName).getUri())) {
+            // SAF 上に新規ファイルを作成
+            DocumentFile created = dir.createFile("audio/wav", fileName);
+            if (created == null) {
+                XposedBridge.log("Lime: dir.createFile returned null");
+                return;
+            }
+            XposedBridge.log("Lime: Created file URI → " + created.getUri());
 
-                byte[] buffer = new byte[1024];
-                int length;
-                while ((length = in.read(buffer)) > 0) {
-                    out.write(buffer, 0, length);
+            try (
+                    InputStream  in  = moduleContext.getResources().openRawResource(resourceId);
+                    OutputStream out = moduleContext.getContentResolver().openOutputStream(created.getUri())
+            ) {
+                byte[] buf = new byte[4096];
+                int   len;
+                while ((len = in.read(buf)) > 0) {
+                    out.write(buf, 0, len);
                 }
+                XposedBridge.log("Lime: copyRingtoneToUri 成功 for " + fileName);
             }
         } catch (Exception e) {
-            XposedBridge.log("Lime: Error copying ringtone to URI: " + e.getMessage());
+            XposedBridge.log("Lime: Error in copyRingtoneToUri: " + Log.getStackTraceString(e));
         }
     }
+
 
     private Uri getRingtoneResourceUri(Context moduleContext, String fileName) {
         String resourceName = fileName.replace(".wav", "");

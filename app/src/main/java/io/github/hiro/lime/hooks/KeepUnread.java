@@ -136,7 +136,6 @@ public class KeepUnread implements IHook {
                             }
                         } else {
                             XposedBridge.log("Lime: Margin settings file not found at " + file.getAbsolutePath());
-                            // デフォルト値を設定
                             settings.put("keep_unread_horizontalMarginFactor", "0.5");
                             settings.put("keep_unread_verticalMarginDp", "50");
                             settings.put("keep_unread_size", "80");

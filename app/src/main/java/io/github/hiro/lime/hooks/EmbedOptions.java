@@ -3424,30 +3424,106 @@ public class EmbedOptions implements IHook {
         Toast.makeText(context, moduleContext.getResources().getString(resId), Toast.LENGTH_SHORT).show();
     }
 
-    private void backupChatsFolder(Context context,Context moduleContext) {
-        File originalChatsDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/files/chats");
-        File backupDir = new File(context.getFilesDir(), "LimeBackup");
+    private void backupChatsFolder(Context appCtx, Context moduleCtx) {
 
-        if (!backupDir.exists() && !backupDir.mkdirs()) {
-            backupDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/backup");
-            if (!backupDir.exists() && !backupDir.mkdirs()) {
-                Toast.makeText(context, "Failed to create backup directory", Toast.LENGTH_SHORT).show();
-                return;
-            }
-        }
+        File srcChats = new File(Environment.getExternalStorageDirectory(),
+                "Android/data/jp.naver.line.android/files/chats");
+        String backupUriS = loadBackupUri(appCtx);
 
-        File backupChatsDir = new File(backupDir, "chats_backup");
-        if (!backupChatsDir.exists() && !backupChatsDir.mkdirs()) {
-            Toast.makeText(context, "Failed to create chats_backup directory", Toast.LENGTH_SHORT).show();
+        if (backupUriS == null) {
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Picture_Back_up_Error_No_URI));
             return;
         }
 
-
         try {
-            copyDirectory(originalChatsDir, backupChatsDir);
-            Toast.makeText(context,moduleContext.getResources().getString(R.string.BackUp_Chat_Photo_Success), Toast.LENGTH_SHORT).show();
-        } catch (IOException ignored) {
-            Toast.makeText(context,moduleContext.getResources().getString(R.string.BackUp_Chat_Photo_Error), Toast.LENGTH_SHORT).show();
+            Uri treeUri = Uri.parse(backupUriS);
+            DocumentFile rootDir = DocumentFile.fromTreeUri(appCtx, treeUri);
+
+            if (rootDir == null || !rootDir.exists()) {
+                showToast(appCtx, moduleCtx.getString(
+                        R.string.Talk_Picture_Back_up_Error_No_Access));
+                return;
+            }
+
+            DocumentFile chatsDir = rootDir.findFile("chats_backup");
+            if (chatsDir != null) chatsDir.delete();        // 上書き用に削除
+            chatsDir = rootDir.createDirectory("chats_backup");
+            if (chatsDir == null) {
+                showToast(appCtx, moduleCtx.getString(
+                        R.string.Talk_Picture_Back_up_Error_Create_Dir));
+                return;
+            }
+
+            copyDirectoryToDocumentFile(appCtx, srcChats, chatsDir);
+
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Picture_Back_up_Success));
+
+        } catch (SecurityException e) {
+            XposedBridge.log("Lime-Backup Chats: SAF permission error → " + e);
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Picture_Back_up_Error_No_Access));
+        } catch (IOException | NullPointerException e) {
+            // NullPointerException は SAF が null を返した時を想定
+            XposedBridge.log("Lime-Backup Chats: error → " + e);
+            showToast(appCtx, moduleCtx.getString(
+                    R.string.Talk_Picture_Back_up_Error));
+        }
+    }
+    private void showToast(final Context context, final String message) {
+        new android.os.Handler(context.getMainLooper()).post(() ->
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        );
+    }
+
+    private void copyDirectoryToDocumentFile(Context ctx,
+                                             File srcDir,
+                                             DocumentFile destDir) throws IOException {
+
+        File[] children = srcDir.listFiles();
+        if (children == null) return;
+
+        for (File child : children) {
+            if (child.isDirectory()) {
+
+                DocumentFile newDir = destDir.createDirectory(child.getName());
+                if (newDir != null) {
+                    copyDirectoryToDocumentFile(ctx, child, newDir);
+                }
+
+            } else {
+                DocumentFile newFile = destDir.createFile(
+                        getMimeType(child.getName()), child.getName());
+                if (newFile == null) continue;
+
+                try (InputStream in = new FileInputStream(child);
+                     OutputStream out = ctx.getContentResolver()
+                             .openOutputStream(newFile.getUri())) {
+
+                    byte[] buf = new byte[4096];
+                    int len;
+                    while ((len = in.read(buf)) > 0) out.write(buf, 0, len);
+                }
+            }
+        }
+    }
+    private String getMimeType(String fileName) {
+        String extension = fileName.substring(fileName.lastIndexOf(".") + 1).toLowerCase();
+        switch (extension) {
+            case "jpg":
+            case "jpeg":
+                return "image/jpeg";
+            case "png":
+                return "image/png";
+            case "gif":
+                return "image/gif";
+            case "mp4":
+                return "video/mp4";
+            case "db":
+                return "application/x-sqlite3";
+            default:
+                return "application/octet-stream";
         }
     }
 
@@ -3480,29 +3556,106 @@ public class EmbedOptions implements IHook {
             destChannel.transferFrom(sourceChannel, 0, sourceChannel.size());
         }
     }
-
-
     private void restoreChatsFolder(Context context, Context moduleContext) {
-        File backupDir = new File(context.getFilesDir(), "LimeBackup/chats_backup");
-        File originalChatsDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/files/chats");
-        if (!backupDir.exists()) {
-            File alternativeBackupDir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/backup/chats_backup");
-            if (!alternativeBackupDir.exists()) {
-                Toast.makeText(context, moduleContext.getResources().getString(R.string.Restore_Chat_Photo_Not_Folder), Toast.LENGTH_SHORT).show();
-                return;
-            } else {
-                backupDir = alternativeBackupDir;
+        // ① 設定ファイルから URI を読み込む
+        String backupUriString = loadBackupUri(context);
+        File backupDirFile = null;
+        DocumentFile backupDirDoc = null;
+
+        if (backupUriString != null) {
+            Uri backupUri = Uri.parse(backupUriString);
+
+            if ("content".equals(backupUri.getScheme())) {
+                // SAF URI の場合は DocumentFile で扱う
+                backupDirDoc = DocumentFile.fromTreeUri(context, backupUri);
+            } else if ("file".equals(backupUri.getScheme()) || backupUri.getScheme() == null) {
+                // file:// またはパス文字列の場合
+                backupDirFile = new File(backupUri.getPath());
             }
         }
-        if (!originalChatsDir.exists() && !originalChatsDir.mkdirs()) {
-            Toast.makeText(context, moduleContext.getResources().getString(R.string.Restore_Create_Failed_Chat_Photo_Folder), Toast.LENGTH_SHORT).show();
+
+        // ② backup_uri.txt に何もなければ従来のパスを使う
+        if (backupDirDoc == null && backupDirFile == null) {
+            File defaultDir = new File(context.getFilesDir(), "LimeBackup/chats_backup");
+            if (defaultDir.exists()) {
+                backupDirFile = defaultDir;
+            } else {
+                File alt = new File(
+                        Environment.getExternalStorageDirectory(),
+                        "Android/data/jp.naver.line.android/backup/chats_backup"
+                );
+                if (alt.exists()) {
+                    backupDirFile = alt;
+                }
+            }
+        }
+
+        // ③ バックアップ元の存在チェック
+        if ((backupDirFile != null && (!backupDirFile.exists() || !backupDirFile.isDirectory()))
+                || (backupDirDoc  != null && !backupDirDoc.isDirectory())) {
+            Toast.makeText(
+                    context,
+                    moduleContext.getString(R.string.Restore_Chat_Photo_Not_Folder),
+                    Toast.LENGTH_SHORT
+            ).show();
             return;
         }
+
+        // ④ 復元先フォルダの準備
+        File targetDir = new File(
+                Environment.getExternalStorageDirectory(),
+                "Android/data/jp.naver.line.android/files/chats"
+        );
+        if (!targetDir.exists() && !targetDir.mkdirs()) {
+            Toast.makeText(
+                    context,
+                    moduleContext.getString(R.string.Restore_Create_Failed_Chat_Photo_Folder),
+                    Toast.LENGTH_SHORT
+            ).show();
+            return;
+        }
+
         try {
-            copyDirectory(backupDir, originalChatsDir);
-            Toast.makeText(context, moduleContext.getResources().getString(R.string.Restore_Chat_Photo_Success), Toast.LENGTH_SHORT).show();
+            if (backupDirFile != null) {
+                // ⑤-1. File ベースなら従来のコピー
+                copyDirectory(backupDirFile, targetDir);
+            } else {
+                // ⑤-2. SAF(DocumentFile) ベースのディレクトリを再帰的にコピー
+                copyFromDocumentFile(context, backupDirDoc, targetDir);
+            }
+            Toast.makeText(
+                    context,
+                    moduleContext.getString(R.string.Restore_Chat_Photo_Success),
+                    Toast.LENGTH_SHORT
+            ).show();
         } catch (IOException e) {
-            Toast.makeText(context, moduleContext.getResources().getString(R.string.Restore_Chat_Photo_Error), Toast.LENGTH_SHORT).show();
+            Toast.makeText(
+                    context,
+                    moduleContext.getString(R.string.Restore_Chat_Photo_Error),
+                    Toast.LENGTH_SHORT
+            ).show();
+            XposedBridge.log("Lime RestoreChats Error: " + e.getMessage());
+        }
+    }
+    private void copyFromDocumentFile(Context context, DocumentFile srcDir, File targetDir) throws IOException {
+        for (DocumentFile child : srcDir.listFiles()) {
+            if (child.isDirectory()) {
+                File sub = new File(targetDir, child.getName());
+                if (!sub.exists() && !sub.mkdirs()) {
+                    throw new IOException("Failed to create dir: " + sub);
+                }
+                copyFromDocumentFile(context, child, sub);
+            } else if (child.isFile()) {
+                // InputStream/OutputStream でコピー
+                try (InputStream in = context.getContentResolver().openInputStream(child.getUri());
+                     OutputStream out = new FileOutputStream(new File(targetDir, child.getName()))) {
+                    byte[] buf = new byte[8192];
+                    int len;
+                    while ((len = in.read(buf)) > 0) {
+                        out.write(buf, 0, len);
+                    }
+                }
+            }
         }
     }
 

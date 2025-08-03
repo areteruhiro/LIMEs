@@ -117,7 +117,6 @@ public class PreventMarkAsRead implements IHook {
                     File file = new File(dir, fileName);
                     Map<String, String> settings = new HashMap<>();
 
-                    // デフォルト値を設定
                     settings.put("Read_buttom_Chat_horizontalMarginFactor", "0.5");
                     settings.put("Read_buttom_Chat_verticalMarginDp", "15");
                     settings.put("chat_unread_size", "30");
@@ -141,17 +140,14 @@ public class PreventMarkAsRead implements IHook {
                 private void updateSwitchImage(ImageView imageView, boolean isOn, Context moduleContext, Context context) {
                     String imageName = isOn ? "read_switch_on.png" : "read_switch_off.png";
 
-                    // 1. URIから画像を読み込む
                     Drawable drawable = loadImageFromUri(context, imageName);
 
-                    // 2. 画像が存在しない場合はコピーを試みる
                     if (drawable == null) {
                         copyImageToUri(context, moduleContext, imageName);
-                        // 再度読み込みを試みる
+
                         drawable = loadImageFromUri(context, imageName);
                     }
 
-                    // 3. それでも失敗した場合はモジュールリソースを使用
                     if (drawable == null) {
                         int resId = moduleContext.getResources().getIdentifier(
                                 imageName.replace(".png", ""), "drawable", "io.github.hiro.lime");
