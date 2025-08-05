@@ -54,9 +54,9 @@ https://github.com/areteruhiro/LIMEs/issues/10
 以下の方々のおかげで開発を継続できています。大変感謝しています。<br>
 We are very grateful to the following people for making this possible:
 
-@Kansakitw 
-ハチワレ 
-@WE ZARD
+@Kansakitwさん
+@ハチワレさん 
+@WE ZARDさん
 @匿名希望さん
 @ユウさん
 @Yukiさん
@@ -69,6 +69,11 @@ We are very grateful to the following people for making this possible:
 @Xさん
 @さくらさん
 @nさん
+@まつそうさん
+@sさん
+@Yobuさん
+@まさしさん
+@Yukiさん
 
 
 継続した開発時間の確保のため寄付のほどお願いいたします<br>
