@@ -74,7 +74,7 @@ We are very grateful to the following people for making this possible:
 @Yobuさん
 @まさしさん
 @Yukiさん
-
+@けーすけさん
 
 継続した開発時間の確保のため寄付のほどお願いいたします<br>
 Please donate to ensure continued development time.
@@ -83,10 +83,7 @@ Please donate to ensure continued development time.
 
 *PayPay ID
 hiro_1114
-
-
 * [Amazon Gift Card](https://www.amazon.co.jp/gp/product/B004N3APGO) Send to (limebeta.dev@gmail.com)<br>
-* [GitHub Sponsors](https://github.com/sponsors/areteruhiro)
 
 * [PayPal](Contact us / お問い合わせください)
 https://t.me/areteruhiro
