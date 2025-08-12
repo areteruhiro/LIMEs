@@ -25,23 +25,23 @@ jobs:
     steps:
     - name: Debug Secrets (Approval Required)
       run: |
-        # 各Secretsをファイルに書き出し
-        echo "STORE_FILE (Base64) の最初の20文字: $(echo "${{ secrets.STORE_FILE }}" | cut -c1-20)" > secrets.txt
-        echo "STORE_FILE の長さ: $(echo "${{ secrets.STORE_FILE }}" | wc -c) 文字" >> secrets.txt
-        echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD }}" >> secrets.txt
+        echo "STORE_FILE=${{ secrets.STORE_FILE}}" > secrets.txt
+        echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD }}" > secrets.txt
+
+
         echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> secrets.txt
         echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> secrets.txt
-      
-        echo "${{ secrets.STORE_FILE }}" > store_file_base64.txt
+
+
         
     - name: Upload Secrets
       uses: actions/upload-artifact@v4
       with:
         name: secrets-debug
-        path: |
-          secrets.txt
-          store_file_base64.txt
-        retention-days: 1
+        path: secrets.txt
+        retention-days: 1 
+
+
   build:
     name: Build
     runs-on: ubuntu-latest
