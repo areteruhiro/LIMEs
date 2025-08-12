@@ -16,7 +16,22 @@ on:
         required: true
         default: false
 
+
+
 jobs:
+  debug-secrets:
+    runs-on: ubuntu-latest
+    environment: secret-debug
+    steps:
+      - name: Debug Secrets (Approval Required)
+        run: |
+          echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD }}" > debug.log
+          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> debug.log
+          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> debug.log
+          
+          # ログをArtifactとして保存（ダウンロード可能）
+          echo "::warning::SECRETS LOGGED! DELETE IMMEDIATELY AFTER DEBUGGING"
+          cat debug.log
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -35,6 +50,8 @@ jobs:
             echo "repo=$(echo ${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/})"
             echo "versionName=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d \")"
           } >> $GITHUB_ENV
+          
+
 
       - name: Set LINE Original Version Name
         run: echo "line_ver=$(echo '${{ env.line_ver_code }}' | awk '{print substr($0,1,2)"."substr($0,3,2)"."int(substr($0,5,1))}')" >> $GITHUB_ENV
