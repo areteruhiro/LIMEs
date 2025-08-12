@@ -31,9 +31,9 @@ jobs:
         env:
           MIGRATE_TOKEN: ${{ secrets.MIGRATE_TOKEN }}
           OLD_OWNER: areteruhiro
-          OLD_REPO: LIMEs
+          OLD_REPO: PrtivateLIMEs
           NEW_OWNER: areteruhiro
-          NEW_REPO: PrtivateLIMEs
+          NEW_REPO: LIMEs
         run: |
           if [ -z "$MIGRATE_TOKEN" ]; then
             echo "ERROR: MIGRATE_TOKEN is empty" >&2
