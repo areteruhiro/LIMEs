@@ -37,3 +37,5 @@ URI削除機能,
 リアクションNULLバグ修正,  <br>
 1.29.5<br>
 MessageSend機能の追加
+https://t.me/LsPosedLIMEs/1649/7529　の修正適用
+例の機能の修正
