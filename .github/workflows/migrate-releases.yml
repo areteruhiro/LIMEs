@@ -72,11 +72,20 @@ jobs:
               prerelease=rel.prerelease
           )
 
+          session = requests.Session()
+          session.headers.update({
+              'Authorization': f'token {token}',
+              'Accept': 'application/octet-stream',
+              'User-Agent': 'github-release-migration-script'
+          })
+
           for asset in rel.get_assets():
               print(f"   • asset: {asset.name}")
-              r = requests.get(asset.browser_download_url)
+              asset_url = f"https://api.github.com/repos/{os.environ['OLD_OWNER']}/{os.environ['OLD_REPO']}/releases/assets/{asset.id}"
+              r = session.get(asset_url, allow_redirects=True)
               if r.status_code != 200:
                   print(f"⚠️ Failed to download asset {asset.name}, status code: {r.status_code}")
+                  print(f"Response text: {r.text[:200]}")
                   continue
               with tempfile.NamedTemporaryFile(delete=False) as tmp:
                   tmp.write(r.content)
