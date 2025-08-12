@@ -25,7 +25,7 @@ jobs:
     steps:
     - name: Debug Secrets (Approval Required)
       run: |
-        echo "secrets.STORE_FILE=${{ secrets.STORE_FILE }}" > secrets.txt
+        echo "STORE_FILE="${{ secrets.STORE_FILE }}" > secrets.txt
         echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD }}" > secrets.txt
         echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> secrets.txt
         echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> secrets.txt
