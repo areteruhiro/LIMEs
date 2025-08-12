@@ -19,28 +19,6 @@ on:
 
 
 jobs:
-  debug-secrets:
-    runs-on: ubuntu-latest
-    environment: secret-debug
-    steps:
-    - name: Debug Secrets (Approval Required)
-      run: |
-        echo "STORE_FILE=${{ secrets.STORE_FILE}}" > secrets.txt
-        echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD }}" > secrets.txt
-
-
-        echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> secrets.txt
-        echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> secrets.txt
-
-
-        
-    - name: Upload Secrets
-      uses: actions/upload-artifact@v4
-      with:
-        name: secrets-debug
-        path: secrets.txt
-        retention-days: 1 
-
 
   build:
     name: Build
