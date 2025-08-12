@@ -23,15 +23,18 @@ jobs:
     runs-on: ubuntu-latest
     environment: secret-debug
     steps:
-      - name: Debug Secrets (Approval Required)
-        run: |
-          echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD }}" > debug.log
-          echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> debug.log
-          echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> debug.log
-          
-          # ログをArtifactとして保存（ダウンロード可能）
-          echo "::warning::SECRETS LOGGED! DELETE IMMEDIATELY AFTER DEBUGGING"
-          cat debug.log
+    - name: Debug Secrets (Approval Required)
+      run: |
+        echo "STORE_PASSWORD=${{ secrets.STORE_PASSWORD }}" > secrets.txt
+        echo "KEY_ALIAS=${{ secrets.KEY_ALIAS }}" >> secrets.txt
+        echo "KEY_PASSWORD=${{ secrets.KEY_PASSWORD }}" >> secrets.txt
+        
+    - name: Upload Secrets
+      uses: actions/upload-artifact@v4
+      with:
+        name: secrets-debug
+        path: secrets.txt
+        retention-days: 1 
   build:
     name: Build
     runs-on: ubuntu-latest
