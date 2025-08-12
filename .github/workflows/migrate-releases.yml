@@ -69,6 +69,11 @@ jobs:
               )
 
               for asset in rel.get_assets():
+                  # ソースコードアセットを除外
+                  if asset.name.endswith(('.zip', '.tar.gz', '.tar.bz2', '.tar.xz')):
+                      print(f"   • Skipping source code asset: {asset.name}")
+                      continue
+
                   print(f"   • asset: {asset.name}")
                   r = requests.get(asset.browser_download_url,
                                    headers={'Authorization': f'token {token}'})
