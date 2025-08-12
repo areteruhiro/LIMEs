@@ -27,7 +27,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install PyGithub requests
 
-      - name: Migrate releases from LIMEs to PrtivateLIMEs
+      - name: Migrate latest release from LIMEs to PrtivateLIMEs
         env:
           MIGRATE_TOKEN: ${{ secrets.MIGRATE_TOKEN }}
           OLD_OWNER: areteruhiro
@@ -49,36 +49,41 @@ jobs:
           src = Github(token).get_repo(f"{os.environ['OLD_OWNER']}/{os.environ['OLD_REPO']}")
           dst = Github(token).get_repo(f"{os.environ['NEW_OWNER']}/{os.environ['NEW_REPO']}")
 
-          for rel in src.get_releases():
-              tag = rel.tag_name
-              try:
-                  # すでに存在するかチェック
-                  dst.get_release(tag)
-                  print(f"→ Skipping existing release: {tag}")
-                  continue
-              except UnknownObjectException:
-                  pass
+          releases = list(src.get_releases())
+          if not releases:
+              print("No releases found in source repository.")
+              exit(0)
 
-              print(f"→ Migrating release: {tag}")
-              new_rel = dst.create_git_release(
-                  tag=tag,
-                  name=rel.title or tag,
-                  message=rel.body or "",
-                  draft=rel.draft,
-                  prerelease=rel.prerelease
-              )
+          rel = releases[0]  # 最新リリース（リストの最初）
+          tag = rel.tag_name
+          try:
+              dst.get_release(tag)
+              print(f"→ Skipping existing release: {tag}")
+              exit(0)
+          except UnknownObjectException:
+              pass
 
-              for asset in rel.get_assets():
-                  print(f"   • asset: {asset.name}")
-                  r = requests.get(asset.browser_download_url,
-                                   headers={'Authorization': f'token {token}'})
-                  with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                      tmp.write(r.content)
-                      tmp.flush()
-                      new_rel.upload_asset(
-                          path=tmp.name,
-                          name=asset.name,
-                          label=asset.label or asset.name
-                      )
+          print(f"→ Migrating latest release: {tag}")
+          new_rel = dst.create_git_release(
+              tag=tag,
+              name=rel.title or tag,
+              message=rel.body or "",
+              draft=rel.draft,
+              prerelease=rel.prerelease
+          )
+
+          for asset in rel.get_assets():
+              print(f"   • asset: {asset.name}")
+              r = requests.get(asset.browser_download_url,
+                               headers={'Authorization': f'token {token}'})
+              with tempfile.NamedTemporaryFile(delete=False) as tmp:
+                  tmp.write(r.content)
+                  tmp.flush()
+                  new_rel.upload_asset(
+                      path=tmp.name,
+                      name=asset.name,
+                      label=asset.label or asset.name
+                  )
+
           print("✅ Migration complete")
           EOF
