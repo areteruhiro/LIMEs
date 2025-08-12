@@ -12,13 +12,6 @@ jobs:
     timeout-minutes: 360
 
     steps:
-      - name: Clean up runner disk
-        run: |
-          echo "Disk usage before cleanup:" && df -h
-          sudo rm -rf $RUNNER_TEMP/* $RUNNER_TOOL_CACHE/*
-          rm -rf $GITHUB_WORKSPACE/tmp || true
-          echo "Disk usage after cleanup:" && df -h
-
       - name: Checkout
         uses: actions/checkout@v3
         with:
@@ -38,9 +31,9 @@ jobs:
         env:
           MIGRATE_TOKEN: ${{ secrets.MIGRATE_TOKEN }}
           OLD_OWNER: areteruhiro
-          OLD_REPO: LIMEs
+          OLD_REPO: PrtivateLIMEs
           NEW_OWNER: areteruhiro
-          NEW_REPO: PrtivateLIMEs
+          NEW_REPO: LIMEs
         run: |
           if [ -z "$MIGRATE_TOKEN" ]; then
             echo "ERROR: MIGRATE_TOKEN is empty" >&2
