@@ -54,7 +54,7 @@ jobs:
               print("No releases found in source repository.")
               exit(0)
 
-          rel = releases[0]  # 最新リリース（リストの最初）
+          rel = releases[0]  # 最新リリース
           tag = rel.tag_name
           try:
               dst.get_release(tag)
@@ -74,8 +74,10 @@ jobs:
 
           for asset in rel.get_assets():
               print(f"   • asset: {asset.name}")
-              r = requests.get(asset.browser_download_url,
-                               headers={'Authorization': f'token {token}'})
+              r = requests.get(asset.browser_download_url)
+              if r.status_code != 200:
+                  print(f"⚠️ Failed to download asset {asset.name}, status code: {r.status_code}")
+                  continue
               with tempfile.NamedTemporaryFile(delete=False) as tmp:
                   tmp.write(r.content)
                   tmp.flush()
