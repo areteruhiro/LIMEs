@@ -54,5 +54,5 @@ shrinkResources true
 
 <br>
 1.29.7
-一部の端末でエラーが発生するため
-ModifyRequest/responを一時無効化
+一部の端末でエラーが発生するため不必要な権限の削除
+環境調整
