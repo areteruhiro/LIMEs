@@ -44,8 +44,7 @@ https://t.me/LsPosedLIMEs/1649/7529　の修正適用
 1.29.6
 予約送信機能重複対策<br>
 リアクションカウント機能の強化<br
-リアクション通知機能のnull対策<br>
-ピン機能のバグの修正<br>
+ピン機能のバグの修正<br> リアクション通知機能のnull対策<br>
 SendEnterChange_InChat（15.11.2のみ）
 SendEnterChange_ChatListの追加<br>
 minifyEnabled true
