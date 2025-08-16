@@ -39,3 +39,11 @@ URI削除機能,
 MessageSend機能の追加
 https://t.me/LsPosedLIMEs/1649/7529　の修正適用
 例の機能の修正
+
+<br>
+1.29.6
+予約送信機能重複対策<br>
+リアクションカウント機能の強化<br
+リアクション通知機能のnull対策<br>
+ピン機能のバグの修正<br>
+SendEnterChange_InChat,SendEnterChange_ChatListの追加<br>
