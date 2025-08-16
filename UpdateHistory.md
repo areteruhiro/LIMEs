@@ -50,4 +50,4 @@ SendEnterChange_InChat（15.11.2のみ）
 SendEnterChange_ChatListの追加<br>
 minifyEnabled true
 shrinkResources true
-の有効化
+の適用
