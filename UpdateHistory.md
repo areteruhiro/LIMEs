@@ -47,3 +47,6 @@ https://t.me/LsPosedLIMEs/1649/7529　の修正適用
 リアクション通知機能のnull対策<br>
 ピン機能のバグの修正<br>
 SendEnterChange_InChat,SendEnterChange_ChatListの追加<br>
+minifyEnabled true
+shrinkResources true
+の有効化
