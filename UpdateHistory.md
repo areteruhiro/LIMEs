@@ -50,3 +50,9 @@ SendEnterChange_ChatListの追加<br>
 minifyEnabled true
 shrinkResources true
 の適用
+
+
+<br>
+1.29.7
+一部の端末でエラーが発生するため
+ModifyRequest/responを一時無効化
