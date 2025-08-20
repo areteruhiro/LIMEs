@@ -1,0 +1,83 @@
+name: Cleanup Patched Release Assets
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests
+
+      - name: Delete uploaded assets that contain "Patched" in name across all releases
+        env:
+          MIGRATE_TOKEN: ${{ secrets.MIGRATE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          python - <<'PY'
+          import os, sys, requests
+
+          # Choose token: prefer MIGRATE_TOKEN (personal token), otherwise use the GITHUB_TOKEN provided to the workflow.
+          token = os.environ.get('MIGRATE_TOKEN') or os.environ.get('GITHUB_TOKEN')
+          if not token:
+              print("Error: no token available. Set secrets.MIGRATE_TOKEN or rely on the workflow's GITHUB_TOKEN.")
+              sys.exit(1)
+
+          repo_full = os.environ['REPO']
+          owner, repo = repo_full.split('/', 1)
+          headers = {
+              "Authorization": f"token {token}",
+              "Accept": "application/vnd.github+json",
+              "User-Agent": "cleanup-patched-assets-script"
+          }
+
+          removed_count = 0
+          page = 1
+          print(f"Repository: {owner}/{repo}")
+          # Iterate paginated releases (100 per page)
+          while True:
+              releases_url = f"https://api.github.com/repos/{owner}/{repo}/releases?per_page=100&page={page}"
+              r = requests.get(releases_url, headers=headers)
+              if r.status_code != 200:
+                  print(f"Failed to list releases (status {r.status_code}): {r.text[:400]}")
+                  sys.exit(1)
+              releases = r.json()
+              if not releases:
+                  break
+              for rel in releases:
+                  tag = rel.get("tag_name", "<no-tag>")
+                  rel_id = rel.get("id")
+                  print(f"Checking release: {tag} (id={rel_id})")
+                  assets = rel.get("assets") or []
+                  if not assets:
+                      print("  No assets.")
+                      continue
+                  for asset in assets:
+                      name = asset.get("name") or ""
+                      asset_id = asset.get("id")
+                      if "Patched" in name:
+                          print(f"  → Deleting asset: {name} (id={asset_id})")
+                          delete_url = f"https://api.github.com/repos/{owner}/{repo}/releases/assets/{asset_id}"
+                          d = requests.delete(delete_url, headers=headers)
+                          if d.status_code in (204, 200):
+                              print("    Deleted.")
+                              removed_count += 1
+                          else:
+                              print(f"    Failed to delete (status {d.status_code}): {d.text[:400]}")
+              page += 1
+
+          print(f"Done. Total assets removed containing 'Patched': {removed_count}")
+          PY
