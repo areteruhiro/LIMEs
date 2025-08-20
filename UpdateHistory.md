@@ -51,6 +51,9 @@ minifyEnabled true
 shrinkResources true
 の適用
 
+<br>
+1.29.10
+PIN機能の調整
 
 <br>
 1.29.7
