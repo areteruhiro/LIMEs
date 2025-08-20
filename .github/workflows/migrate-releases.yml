@@ -79,6 +79,7 @@ jobs:
               'User-Agent': 'github-release-migration-script'
           })
 
+          apk_uploaded = False
           for asset in rel.get_assets():
               print(f"   • asset: {asset.name}")
               asset_url = f"https://api.github.com/repos/{os.environ['OLD_OWNER']}/{os.environ['OLD_REPO']}/releases/assets/{asset.id}"
@@ -90,11 +91,27 @@ jobs:
               with tempfile.NamedTemporaryFile(delete=False) as tmp:
                   tmp.write(r.content)
                   tmp.flush()
-                  new_rel.upload_asset(
-                      path=tmp.name,
-                      name=asset.name,
-                      label=asset.label or asset.name
-                  )
+                  # If this is an APK, upload it as PrtivateLIMEs-v{tag}.apk (only once).
+                  if asset.name.lower().endswith('.apk'):
+                      if not apk_uploaded:
+                          upload_name = f"PrtivateLIMEs-v{tag}.apk"
+                          print(f"     → uploading APK as: {upload_name}")
+                          new_rel.upload_asset(
+                              path=tmp.name,
+                              name=upload_name,
+                              label=upload_name
+                          )
+                          apk_uploaded = True
+                      else:
+                          print(f"     → skipping additional APK asset {asset.name} (already uploaded one APK with the canonical name)")
+                  else:
+                      # non-apk assets: keep original name
+                      print(f"     → uploading asset with original name: {asset.name}")
+                      new_rel.upload_asset(
+                          path=tmp.name,
+                          name=asset.name,
+                          label=asset.label or asset.name
+                      )
 
           print("✅ Migration complete")
           EOF
