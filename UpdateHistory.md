@@ -59,3 +59,6 @@ PIN機能の調整
 1.29.7
 一部の端末でエラーが発生するため不必要な権限の削除
 環境調整
+<br>
+1.29.11
+chat_ui_square_ai_summary_button　delete機能の追加
