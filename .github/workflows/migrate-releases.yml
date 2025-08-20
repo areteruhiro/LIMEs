@@ -41,7 +41,7 @@ jobs:
           fi
 
           python << 'EOF'
-          import os, requests, tempfile
+          import os, requests, tempfile, shutil
           from github import Github
           from github.GithubException import UnknownObjectException
 
@@ -56,6 +56,7 @@ jobs:
 
           rel = releases[0]  # 最新リリース
           tag = rel.tag_name
+
           try:
               dst.get_release(tag)
               print(f"→ Skipping existing release: {tag}")
@@ -79,39 +80,63 @@ jobs:
               'User-Agent': 'github-release-migration-script'
           })
 
-          apk_uploaded = False
-          for asset in rel.get_assets():
-              print(f"   • asset: {asset.name}")
-              asset_url = f"https://api.github.com/repos/{os.environ['OLD_OWNER']}/{os.environ['OLD_REPO']}/releases/assets/{asset.id}"
-              r = session.get(asset_url, allow_redirects=True)
-              if r.status_code != 200:
-                  print(f"⚠️ Failed to download asset {asset.name}, status code: {r.status_code}")
-                  print(f"Response text: {r.text[:200]}")
-                  continue
-              with tempfile.NamedTemporaryFile(delete=False) as tmp:
-                  tmp.write(r.content)
-                  tmp.flush()
-                  # If this is an APK, upload it as PrtivateLIMEs-v{tag}.apk (only once).
-                  if asset.name.lower().endswith('.apk'):
-                      if not apk_uploaded:
-                          upload_name = f"PrtivateLIMEs-v{tag}.apk"
-                          print(f"     → uploading APK as: {upload_name}")
-                          new_rel.upload_asset(
-                              path=tmp.name,
-                              name=upload_name,
-                              label=upload_name
-                          )
-                          apk_uploaded = True
-                      else:
-                          print(f"     → skipping additional APK asset {asset.name} (already uploaded one APK with the canonical name)")
-                  else:
-                      # non-apk assets: keep original name
-                      print(f"     → uploading asset with original name: {asset.name}")
-                      new_rel.upload_asset(
-                          path=tmp.name,
-                          name=asset.name,
-                          label=asset.label or asset.name
-                      )
+          uploaded_any = False
 
-          print("✅ Migration complete")
+          # Purpose: upload only APK assets, and rename the uploaded APK to:
+          #   PrtivateLIMEs-v{version}.apk
+          # If tag already starts with 'v', we avoid double 'v' and use PrtivateLIMEs-{tag}.apk
+          if tag.startswith('v'):
+              target_filename = f"PrtivateLIMEs-{tag}.apk"
+          else:
+              target_filename = f"PrtivateLIMEs-v{tag}.apk"
+
+          for asset in rel.get_assets():
+              # Only consider .apk assets
+              if not asset.name.lower().endswith('.apk'):
+                  print(f"   • skipping non-apk asset: {asset.name}")
+                  continue
+
+              print(f"   • asset: {asset.name} -> will be uploaded as: {target_filename}")
+
+              asset_url = f"https://api.github.com/repos/{os.environ['OLD_OWNER']}/{os.environ['OLD_REPO']}/releases/assets/{asset.id}"
+              try:
+                  # stream the download to avoid loading entire file into memory
+                  with session.get(asset_url, stream=True, allow_redirects=True) as r:
+                      if r.status_code != 200:
+                          print(f"⚠️ Failed to download asset {asset.name}, status code: {r.status_code}")
+                          print(f"Response text: {r.text[:200]}")
+                          continue
+                      with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(asset.name)[1]) as tmp:
+                          for chunk in r.iter_content(chunk_size=8192):
+                              if chunk:
+                                  tmp.write(chunk)
+                          tmp_path = tmp.name
+
+                  # upload with the normalized filename
+                  print(f"Uploading as {target_filename} ...")
+                  new_rel.upload_asset(
+                      path=tmp_path,
+                      name=target_filename,
+                      label=target_filename
+                  )
+                  uploaded_any = True
+              except Exception as e:
+                  print(f"⚠️ Error handling asset {asset.name}: {e}")
+              finally:
+                  # cleanup temp file
+                  try:
+                      if 'tmp_path' in locals() and os.path.exists(tmp_path):
+                          os.remove(tmp_path)
+                  except Exception:
+                      pass
+
+              # After uploading the first APK, stop — requirement was to upload the apk file only
+              if uploaded_any:
+                  print("→ Uploaded first APK and stopping further uploads (per config).")
+                  break
+
+          if not uploaded_any:
+              print("⚠️ No APK assets were found to upload. Nothing was uploaded.")
+          else:
+              print("✅ Migration complete")
           EOF
