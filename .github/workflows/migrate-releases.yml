@@ -1,4 +1,4 @@
-name: Migrate Releases
+name: Migrat
 
 on:
   workflow_dispatch:
