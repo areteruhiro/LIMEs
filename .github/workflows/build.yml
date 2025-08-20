@@ -1,146 +1,160 @@
-name: Build
+name: Migrate Releases
 
 on:
-  push:
-  pull_request:
   workflow_dispatch:
-    inputs:
-      release:
-        description: 'Release'
-        type: boolean
-        required: true
-        default: false
-      lspatch:
-        description: 'LSPatch'
-        type: boolean
-        required: true
-        default: false
 
-
+permissions:
+  contents: write
 
 jobs:
-
-  build:
-    name: Build
+  migrate:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    timeout-minutes: 360
+
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Set environments
-        run: |
-          {
-            echo "version=v$(grep versionName app/build.gradle | awk '{print $2}' | tr -d \")"
-            echo "line_ver_code=$(grep HOOK_TARGET_VERSION app/build.gradle | awk '{print $4}' | tr -d \'\")"
-            echo "commit=$(echo ${{ github.sha }} | cut -c-7)"
-            echo "repo=$(echo ${GITHUB_REPOSITORY#$GITHUB_REPOSITORY_OWNER/})"
-            echo "versionName=$(grep versionName app/build.gradle | awk '{print $2}' | tr -d \")"
-          } >> $GITHUB_ENV
-          
-
-
-      - name: Set LINE Original Version Name
-        run: echo "line_ver=$(echo '${{ env.line_ver_code }}' | awk '{print substr($0,1,2)"."substr($0,3,2)"."int(substr($0,5,1))}')" >> $GITHUB_ENV
-
-      - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/checkout@v3
         with:
-          distribution: 'temurin'
-          java-version: 21
+          clean: true
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
 
-      - name: Release check
-        if: github.event.inputs.release == 'true'
+      - name: Install dependencies
         run: |
-          if [ "${{ secrets.STORE_FILE }}" == "" ]; then
-            echo -e "\nERROR!\nTo release, you need to set up a signing key!\n"
-            echo "STORE_FILE: A Base64 encoded string of the signing key in JKS format"
-            echo "STORE_PASSWORD: Key store password"
-            echo "KEY_ALIAS: Key alias"
-            echo "KEY_PASSWORD: Key password"
-            echo ""
-            exit 1
-          fi
-          if [ "${{ steps.previous.outputs.tag }}" == "${{ env.versionName }}" ]; then
-            echo -e "\nERROR!\nThe same tag already exists!\n"
-            echo "Please change versionName in build.gradle"
-            echo ""
+          python -m pip install --upgrade pip
+          pip install PyGithub requests
+
+      - name: Migrate latest release from LIMEs to PrtivateLIMEs
+        env:
+          MIGRATE_TOKEN: ${{ secrets.MIGRATE_TOKEN }}
+          OLD_OWNER: areteruhiro
+          OLD_REPO: PrtivateLIMEs
+          NEW_OWNER: areteruhiro
+          NEW_REPO: LIMEs
+        run: |
+          if [ -z "$MIGRATE_TOKEN" ]; then
+            echo "ERROR: MIGRATE_TOKEN is empty" >&2
             exit 1
           fi
 
-      - name: Download Required APKs
-        if: github.event.inputs.release == 'true'
-        run: |
-          curl -L -o LINE-15.5.4-arm64-v8a.armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm64-v8a.+.arm-v7a.apk
-          curl -L -o LINE-15-5-4-armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.5.4/15.4.4arm-v7a.apk
-          curl -L -o LINE-15-9-3-armeabi-v7a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.9.3/15.9.3_armeabi-v7a.apk
-          curl -L -o LINE-15.9.3-arm64-v8a.apk https://github.com/areteruhiro/LIMEs/releases/download/15.9.3/line-15-9-3arm64-v8a.apk
-      - name: Download LSPatch
-        if: github.event.inputs.release == 'true'
-        run: |
-          curl -L -o lspatch.jar https://github.com/JingMatrix/LSPatch/releases/download/v0.7/lspatch.jar
+          python << 'EOF'
+          import os, requests, tempfile, sys
+          from github import Github
+          from github.GithubException import UnknownObjectException
 
-      - name: Build with Gradle
-        run: |
-          if [ "${{ github.event.inputs.release }}" == "true" ]; then
-            echo "${{ secrets.STORE_FILE }}" | base64 -d > app/release.jks
-            export STORE_PASSWORD="${{ secrets.STORE_PASSWORD }}"
-            export KEY_ALIAS="${{ secrets.KEY_ALIAS }}"
-            export KEY_PASSWORD="${{ secrets.KEY_PASSWORD }}"
-            ./gradlew assembleRelease --no-daemon --stacktrace
-            cp -f app/build/outputs/apk/release/app-release.apk ${{ env.repo }}-${{ env.version }}.apk
-          else
-            ./gradlew assembleDebug --no-daemon --stacktrace
-          fi
-      - name: LSPatch
+          token = os.environ['MIGRATE_TOKEN']
+          src = Github(token).get_repo(f"{os.environ['OLD_OWNER']}/{os.environ['OLD_REPO']}")
+          dst = Github(token).get_repo(f"{os.environ['NEW_OWNER']}/{os.environ['NEW_REPO']}")
 
-        if: github.event.inputs.release == 'true'
-        run: |
-          for file in LINE-15.5.4-arm64-v8a.armeabi-v7a.apk LINE-15-5-4-armeabi-v7a.apk LINE-15-9-3-armeabi-v7a.apk LINE-15.9.3-arm64-v8a.apk ; do
-          
-            echo "Patching $file..."
-            java -jar lspatch.jar "$file" -m "${{ env.repo }}-${{ env.version }}.apk" -l 2 -v
+          releases = list(src.get_releases())
+          if not releases:
+              print("No releases found in source repository.")
+              sys.exit(0)
 
-            # Determine the expected output file name
-            output_file="${file%.apk}-430-lspatched.apk"
+          rel = releases[0]  # 最新リリース
+          tag = rel.tag_name or ""
+          print(f"Source release tag: '{tag}'")
+          print("Source release assets (names):")
+          for a in rel.get_assets():
+              print("  -", a.name)
 
-            # List the current directory to see what files are present
-            echo "Current directory contents after patching:"
-            ls -l
+          try:
+              dst.get_release(tag)
+              print(f"→ Skipping existing release: {tag}")
+              sys.exit(0)
+          except UnknownObjectException:
+              pass
 
-            # Move the patched file using the correct naming convention
-            mv "$output_file" "Patched_${{ env.version }}_$file" || echo "Patched file not found for $file"
-          done
-          
+          print(f"→ Migrating latest release: {tag}")
+          new_rel = dst.create_git_release(
+              tag=tag,
+              name=rel.title or tag,
+              message=rel.body or "",
+              draft=rel.draft,
+              prerelease=rel.prerelease
+          )
 
-      - name: Upload module (Debug)
-        uses: actions/upload-artifact@v4
-        if: github.event.inputs.release != 'true' 
-        with:
-          name: ${{ env.repo }}-${{ env.versionName }}@${{ env.commit }}
-          path: app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
+          session = requests.Session()
+          session.headers.update({
+              'Authorization': f'token {token}',
+              'Accept': 'application/octet-stream',
+              'User-Agent': 'github-release-migration-script'
+          })
 
-      - name: Release
-        uses: softprops/action-gh-release@v2
-        if: github.event.inputs.release == 'true'
-        with:
-          tag_name: ${{ env.version }}
-          files: |
-            ${{ env.repo }}-${{ env.version }}.apk
-            Patched_${{ env.version }}_LINE-15.5.4-arm64-v8a.armeabi-v7a.apk
-            Patched_${{ env.version }}_LINE-15-5-4-armeabi-v7a.apk
-            Patched_${{ env.version }}_LINE-15-9-3-armeabi-v7a.apk
-            Patched_${{ env.version }}_LINE-15.9.3-arm64-v8a.apk
-          body: |
-            # 更新内容
-            [UpdateHistory.md](https://github.com/areteruhiro/LIMEs/blob/master/UpdateHistory.md)
-            ## 対応するLINEのバージョン
-            14.19.1 <br>14.21.1 <br>15.0.0  <br>15.1.X <br>15.2.1 <br>15.3.X <br> 15.4.0-15.4.1<br>15.5.1 -15.5.4 <br>15.6.x <br>15.7.x(Maybe) <br>15.9.2 - 19.2.3(Maybe)
+          uploaded_any = False
 
-            ### 差分
-            https://github.com/${{ github.repository }}/compare/${{ env.version }}^...${{ env.version }}
+          # Build target filename and ensure it contains the required prefix
+          if tag.startswith('v'):
+              target_filename = f"PrtivateLIMEs-{tag}.apk"
+          else:
+              target_filename = f"PrtivateLIMEs-v{tag}.apk"
+
+          print(f"Computed target upload filename: '{target_filename}'")
+
+          # Guard: require the filename to include the exact substring
+          if "PrtivateLIMEs-" not in target_filename:
+              print(f"ERROR: target filename '{target_filename}' does not include 'PrtivateLIMEs-' as required. Aborting.", file=sys.stderr)
+              # Do not proceed with upload if name doesn't match requirement
+              sys.exit(1)
+
+          for asset in rel.get_assets():
+              # Only consider .apk assets
+              if not asset.name.lower().endswith('.apk'):
+                  print(f"   • skipping non-apk asset: {asset.name}")
+                  continue
+
+              print(f"   • asset found: {asset.name} -> will be uploaded as: {target_filename}")
+
+              asset_url = f"https://api.github.com/repos/{os.environ['OLD_OWNER']}/{os.environ['OLD_REPO']}/releases/assets/{asset.id}"
+              tmp_path = None
+              try:
+                  # stream the download to avoid loading entire file into memory
+                  with session.get(asset_url, stream=True, allow_redirects=True) as r:
+                      print(f"     Download HTTP status: {r.status_code}")
+                      if r.status_code != 200:
+                          print(f"⚠️ Failed to download asset {asset.name}, status code: {r.status_code}")
+                          print(f"Response text (truncated): {r.text[:400]}")
+                          continue
+                      with tempfile.NamedTemporaryFile(delete=False, suffix=os.path.splitext(asset.name)[1]) as tmp:
+                          for chunk in r.iter_content(chunk_size=8192):
+                              if chunk:
+                                  tmp.write(chunk)
+                          tmp_path = tmp.name
+
+                  # Upload with the normalized filename
+                  print(f"     Uploading as {target_filename} ...")
+                  new_rel.upload_asset(
+                      path=tmp_path,
+                      name=target_filename,
+                      label=target_filename
+                  )
+                  uploaded_any = True
+              except Exception as e:
+                  print(f"⚠️ Error handling asset {asset.name}: {e}")
+              finally:
+                  # cleanup temp file
+                  try:
+                      if tmp_path and os.path.exists(tmp_path):
+                          os.remove(tmp_path)
+                  except Exception:
+                      pass
+
+              # After uploading the first APK, stop — requirement was to upload the apk file only
+              if uploaded_any:
+                  print("→ Uploaded first APK and stopping further uploads (per config).")
+                  break
+
+          if not uploaded_any:
+              print("⚠️ No APK assets were found to upload. Nothing was uploaded.")
+              # List the assets again for investigation
+              print("Assets present on source release (detailed):")
+              for a in rel.get_assets():
+                  print(f"  - name: {a.name}, size: {a.size}, id: {a.id}")
+              # Exit with non-zero so the workflow shows failure and you can inspect logs
+              sys.exit(1)
+          else:
+              print("✅ Migration complete")
+          EOF
