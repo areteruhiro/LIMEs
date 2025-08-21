@@ -62,3 +62,5 @@ PIN機能の調整
 <br>
 1.29.11
 chat_ui_square_ai_summary_button　delete機能の追加
+<br>
+1.30.0 15.12.2対応
