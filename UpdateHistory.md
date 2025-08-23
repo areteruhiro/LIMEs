@@ -70,7 +70,7 @@ chat_ui_square_ai_summary_button　delete機能の追加
 メディア保存時　Rename機能を修正
 MessageSend_intent機能の追加
 参考
-https://raw.githubusercontent.com/areteruhiro/LIMEs/refs/heads/master/%E3%83%A1%E3%83%83%E3%82%BB%E3%83%BC%E3%82%B8%E9%80%81%E4%BF%A1.macro
+https://drive.usercontent.google.com/uc?id=1zB1LhH4YGo9AfeckbtSmxFnjxDfG_CqN&authuser=1&export=download
 SendMessageの保存ファイルを内部化
 既読者確認データ削除ボタンの位置を動的に移動できるように
 
