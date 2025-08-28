@@ -1,5 +1,4 @@
-https://img.shields.io/github/downloads/areteruhiro/LIMEs/total
-
+[![Download](https://img.shields.io/github/downloads/areteruhiro/LIMEs/)]
 # <img src="app/src/main/ic_launcher-playstore.png" width="60px"> LIMEs: Adkiller for LINE
 
 GitHubは更新を頻繁にしません、テレグラム/Discordで最新の情報を確認してください
