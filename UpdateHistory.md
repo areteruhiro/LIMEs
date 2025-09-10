@@ -87,3 +87,14 @@ SendMessageの保存ファイルを内部化
 <br>
 リアクションリストボタンのクラッシュ対策
 既読データの削除機能の修正
+<br>
+主要なボタンを動的に場所を移動できるように変更
+既読者確認機能のリバース
+チャット非表示機能のバグ修正
+
+<br>
+1.30.8alpha
+RemoveGcsLypRecommend の修正
+keepUnreadの修正
+既読確認機能のクラッシュ対策 Maybe
+SendEnterChange_InChat 機能の仕様変更
