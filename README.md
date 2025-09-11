@@ -11,12 +11,11 @@ LINE 株式会社やその他第三者のサービス提供を妨害したり、
 本モジュールを利用した結果について、開発者は一切の責任を負いません。
 
 # Support Server
-https://t.me/LsPosedLIMEs
 
 https://discord.gg/5WWxUkMsNJ
  # 導入方法
  
- [ROOT](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20root.md) 
+ [ROOT](https://giteruthub.com/arehiro/LIMEs/blob/master/README%20for%20root.md) 
  
  [LsPatch](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20LsPatch.md) 
 
