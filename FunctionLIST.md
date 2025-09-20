@@ -42,3 +42,10 @@
 - 通話項目からプリ項目を削除
 - リアクションカウンター機能
 - 写真、動画保存時のファイル名を変更
+- サイレントメッセージの通知を発行　(DisableSilentMessage)
+- リアクションされた際に通知を発行　(NotificationReaction)
+- エンターキーで送信をチャット内　OR チャットリストで変更 (SendEnterChange_ChatList SendEnterChange_InChat)
+- ホームのRecommend欄の削除　RemoveGcsLypRecommend
+- リアクション一覧ポップアップ表示ボタンの作成　ReactionList_db
+- 切断時に切断音を鳴らすCallDisconnectTone
+- 
