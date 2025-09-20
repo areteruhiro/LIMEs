@@ -140,29 +140,6 @@ LINEアプリの <kbd>ホーム</kbd> > <kbd>⚙</kbd> から｢**設定**｣に
 <img src="https://github.com/user-attachments/assets/a9ee3b95-f785-4fac-9937-b904fe84f7b2" width="400px" alt="Sample screenshot">
 </details>
 
-
-### 1. デバイス、アプリバージョンを偽装してログイン
-この機能は自己責任です
-
-### 3. Android ID を偽装する
-この方法は**両方のデバイスを Root 化している**場合のみ可能です。  
-<https://jesuscorona.hatenablog.com/entry/2019/02/10/010920> にあるように、メッセージの同期などに若干の遅れが生じることに注意が必要です。
-
-<details>
-
-- メリット：3 端末以上でもログイン可能・すべてのサービスを使用可能
-- デメリット：メッセージの同期に遅れが生じる・Root 限定
-
-#### 手順
-
-1. LINE と LIME をインストールする
-2. LINE ログイン画面で、「複数デバイスログイン (Android ID を偽装)」にチェックを入れる
-3. <kbd>設定</kbd> > <kbd>アプリ</kbd> > <kbd>LINE</kbd> より、LINE アプリの設定画面から「強制停止」と「ストレージとキャッシュ」の「キャッシュを削除」をタップ
-4. LINE アプリを再度開き、ログインする
-5. ログイン後、[Swift Backup](https://play.google.com/store/apps/details?id=org.swiftapps.swiftbackup) を利用して LINE アプリをバックアップ (詳しくは[こちら](https://blog.hogehoge.com/2022/01/android-swift-backup.html))
-6. Swift Backup のバックアップフォルダをもう一つの端末に移し、バックアップした LINE をインストール (詳しくは[こちら](https://blog.hogehoge.com/2022/05/SwiftBackup2.html))
-7. LINE アプリを**開かず**に先に LIME をインストールする
-
 </details>
 
 ## 問題の報告
