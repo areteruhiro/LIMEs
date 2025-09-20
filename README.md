@@ -1,21 +1,14 @@
-[![Download](https://img.shields.io/github/downloads/areteruhiro/LIMEs/total
-)]
 # <img src="app/src/main/ic_launcher-playstore.png" width="60px"> LIMEs: Adkiller for LINE
 
 GitHubは更新を頻繁にしません、テレグラム/Discordで最新の情報を確認してください
-# 注意
- 本モジュールは学習目的でのみ開発・利用するものです。
-Android のアプリケーション動作原理、フック処理、リバースエンジニアリングに関する技術理解を深めることを目的としており、
-LINE 株式会社やその他第三者のサービス提供を妨害したり、営利目的で利用することは意図していません。
-実際の利用においては、各サービスの利用規約や関連法令を遵守してください。
-本モジュールを利用した結果について、開発者は一切の責任を負いません。
 
 # Support Server
+https://t.me/LsPosedLIMEs
 
 https://discord.gg/5WWxUkMsNJ
  # 導入方法
  
- [ROOT](https://giteruthub.com/arehiro/LIMEs/blob/master/README%20for%20root.md) 
+ [ROOT](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20root.md) 
  
  [LsPatch](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20LsPatch.md) 
 
@@ -28,6 +21,8 @@ https://discord.gg/5WWxUkMsNJ
  
 
 # 確認済みのバグやエラー
+・設定が保存されない <br>
+https://t.me/LsPosedLIMEs/2425/2450
 
 ## トーク画像のリストアについて
 
@@ -59,9 +54,9 @@ https://github.com/areteruhiro/LIMEs/issues/10
 以下の方々のおかげで開発を継続できています。大変感謝しています。<br>
 We are very grateful to the following people for making this possible:
 
-@Kansakitwさん
-@ハチワレさん 
-@WE ZARDさん
+@Kansakitw 
+ハチワレ 
+@WE ZARD
 @匿名希望さん
 @ユウさん
 @Yukiさん
@@ -74,37 +69,31 @@ We are very grateful to the following people for making this possible:
 @Xさん
 @さくらさん
 @nさん
-@まつそうさん
-@sさん
-@Yobuさん
-@まさしさん
-@Yukiさん
-@けーすけさん
-@けけさん
 
 
 継続した開発時間の確保のため寄付のほどお願いいたします<br>
 Please donate to ensure continued development time.
 
-* [Pay Pay](https://qr.paypay.ne.jp/p2p01_ZcPhJJ3YF3cS6sKv)<br>
+* [Pay Pay](https://qr.paypay.ne.jp/p2p01_oDVfRTzTKrCLCXmn)<br>
 
 *PayPay ID
 hiro_1114
+
+
 * [Amazon Gift Card](https://www.amazon.co.jp/gp/product/B004N3APGO) Send to (limebeta.dev@gmail.com)<br>
+* [GitHub Sponsors](https://github.com/sponsors/areteruhiro)
 
 * [PayPal](Contact us / お問い合わせください)
 https://t.me/areteruhiro
 
 # 更新について
+更新内容を記載していないReleaseについては、差分を押してください、必要でない更新でなければ無理して更新を行う必要はありません。
+更新名による判断<br>
+(例)v1.12.5
 
-1. メジャーバージョン (X)：<br>
-最も左の数字で、システム全体の大規模な変更や重要な機能追加、または互換性のない変更があった際に上げます。﻿<br>
-2. マイナーバージョン (Y)：<br>
-中央の数字で、既存の機能に後方互換性のある機能追加があった際に上げます。﻿<br>
-3. パッチバージョン (Z)：<br>
-最も右の数字で、後方互換性のあるバグ修正や軽微な修正があった際に上げます<br>
+v1.12.6 →適応するLINEバージョンの変更<br>
+v1.12.5a, v1.12.5a1→仕様変更
 
-https://egg.5ch.net/test/read.cgi/android/1740022664/667　より引用
 
 ## Thank you
 
@@ -181,4 +170,5 @@ LINEアプリの <kbd>ホーム</kbd> > <kbd>⚙</kbd> から｢**設定**｣に
 新たなバグや修正方法を見つけた場合は、報告 をお願いします。
 
 To foreigners, please translate your report into English and submit it rather than translating it into Japanese.
+
 
