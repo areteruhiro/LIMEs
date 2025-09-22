@@ -66,6 +66,10 @@ We are very grateful to the following people for making this possible:
 
 @daizouさん
 @けけさん
+@けーすけさん
+@まつそうさん
+@なななさん
+
 
 
 継続した開発時間の確保のため寄付のほどお願いいたします<br>
