@@ -41,8 +41,9 @@
 - 通話画面にLINEを開くボタンの追加 
 - 通話項目からプリ項目を削除
 - リアクションカウンター機能
-- 写真、動画保存時のファイル名を変更
+- Media Rename Save 写真、動画保存時のファイル名を変更
 - サイレントメッセージの通知を発行　(DisableSilentMessage)
+- Reaction Count LINE本来のリアクションリストにカウント機能を追加します
 - リアクションされた際に通知を発行　(NotificationReaction)
 - エンターキーで送信をチャット内　OR チャットリストで変更 (SendEnterChange_ChatList SendEnterChange_InChat)
 - ホームのRecommend欄の削除　RemoveGcsLypRecommend
