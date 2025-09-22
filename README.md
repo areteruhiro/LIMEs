@@ -3,8 +3,6 @@
 GitHubは更新を頻繁にしません、テレグラム/Discordで最新の情報を確認してください
 
 # Support Server
-https://t.me/LsPosedLIMEs
-
 https://discord.gg/5WWxUkMsNJ
  # 導入方法
  
