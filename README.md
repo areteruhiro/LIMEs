@@ -16,11 +16,7 @@ https://discord.gg/5WWxUkMsNJ
 "LINEをより使いやすく"
 
 [機能リスト](https://github.com/areteruhiro/LIMEs/blob/master/FunctionLIST.md) 
- 
 
-# 確認済みのバグやエラー
-・設定が保存されない <br>
-https://t.me/LsPosedLIMEs/2425/2450
 
 ## トーク画像のリストアについて
 
@@ -67,6 +63,8 @@ We are very grateful to the following people for making this possible:
 @Xさん
 @さくらさん
 @nさん
+
+@daizouさん
 
 
 継続した開発時間の確保のため寄付のほどお願いいたします<br>
