@@ -93,3 +93,15 @@
 - keepUnreadの修正
 - 既読確認機能のクラッシュ対策 Maybe
 - SendEnterChange_InChat 機能の仕様変更
+
+## 1.30.14beta
+- RemoveGcsLypRecommend の修正
+- keepUnreadの修正
+- 既読確認機能のクラッシュ対策 Maybe
+- SendEnterChange_InChat 機能の仕様変更→対応バージョンの制限がなくなりました
+- ring機能のエラーを修正
+- ReactionList_dbの画像化
+- 通話音声系（LsPatch）の修正をしました。(切断時の音声を鳴らす機能をオプション化)
+- support device dual app(Chat BackUp)
+- Pached LINE 15.12.12 _armeabi-v7aに修正
+- 主要なボタンを動的に場所を移動できるように変更
