@@ -189,6 +189,9 @@ PC (Windows) 版 LINE に偽装します。これにより PC 版 LINE は強制
 
 新たなバグや修正方法を見つけた場合は、[報告](https://github.com/Chipppppppppp/LIME/issues/new/choose)をお願いします。
 
+
+<iframe style="width:100%;height:auto;min-width:600px;min-height:400px;" src="https://www.star-history.com/embed?secret=#areteruhiro/LIMEs&Date" frameBorder="0"></iframe>
+
 > [!NOTE]
 > 日本語がわかる場合は日本語で記述してください。
 
