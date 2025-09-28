@@ -150,6 +150,11 @@ LINEアプリの <kbd>ホーム</kbd> > <kbd>⚙</kbd> から｢**設定**｣に
 
 新たなバグや修正方法を見つけた場合は、報告 をお願いします。
 
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=areteruhiro/LIMEs&type=Date)](https://www.star-history.com/#areteruhiro/LIMEs&Date)
+
 To foreigners, please translate your report into English and submit it rather than translating it into Japanese.
 
 
