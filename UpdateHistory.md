@@ -105,3 +105,8 @@
 - support device dual app(Chat BackUp)
 - Pached LINE 15.12.12 _armeabi-v7aに修正
 - 主要なボタンを動的に場所を移動できるように変更
+
+## 1.30.18α
+- RemoveGcsLypRecommendの改善
+- ボタンの位置を座標で指定できるように
+- ボタンの設定を設定しやすいように
