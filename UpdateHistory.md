@@ -110,7 +110,8 @@
 - RemoveGcsLypRecommendの改善
 - ボタンの位置を座標で指定できるように
 - ボタンの設定を設定しやすいように
-
+## v1.30.21a
+- StopCallToneが無効時に有効になっていたのを修正
 ## v1.30.22a
 - Enable_Theme_Validation　機能
 https://github.com/areteruhiro/LIMEs/issues/32
