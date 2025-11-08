@@ -115,3 +115,7 @@
 ## v1.30.22a
 - Enable_Theme_Validation　機能
 https://github.com/areteruhiro/LIMEs/issues/32
+## 1.30.28alpha
+- read check write fix
+- WalleteRemoveLayout add
+- notification fix
