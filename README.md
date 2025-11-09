@@ -56,7 +56,7 @@ Please donate to ensure continued development time.
 
 * [Pay Pay](https://qr.paypay.ne.jp/p2p01_nWvlCJ1weTI1E22Q)<br>
 
-*PayPay ID
+* PayPay ID
 hiro_1114
 
 
