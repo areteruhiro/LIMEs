@@ -1,5 +1,6 @@
 # 変更履歴
 
+
 ## v1.25.25a
 - 15.9.x対応、既読者確認機能のクラス名変更
 
@@ -110,12 +111,33 @@
 - RemoveGcsLypRecommendの改善
 - ボタンの位置を座標で指定できるように
 - ボタンの設定を設定しやすいように
+- 
 ## v1.30.21a
 - StopCallToneが無効時に有効になっていたのを修正
+- 
 ## v1.30.22a
 - Enable_Theme_Validation　機能
 https://github.com/areteruhiro/LIMEs/issues/32
+
+## v1.30.24a
+- CopyFileButtonの作成 
+- drawable→rawを参照するように
+
+## 1.30.25
+- fix db Crash option
+
+## 1.30.26 
+- Notification Reaction Fix.
+
+## 1.30.27alpha
+- 既読者確認についてのクラッシュを修正しました。
+
 ## 1.30.28alpha
 - read check write fix
 - WalleteRemoveLayout add
 - notification fix
+
+## 1.30.29alpha
+- read data,reaction listのダークモード
+- /Setting/Notification_Setting_False.txt が存在している場合全てを通知するように
+- 戻るボタンを押した際にlimesボタンが作成されるのを修正
