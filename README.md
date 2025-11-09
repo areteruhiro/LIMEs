@@ -48,28 +48,7 @@ https://github.com/areteruhiro/LIMEs/issues/10
 以下の方々のおかげで開発を継続できています。大変感謝しています。<br>
 We are very grateful to the following people for making this possible:
 
-@Kansakitw 
-ハチワレ 
-@WE ZARD
-@匿名希望さん
-@ユウさん
-@Yukiさん
-@Fuku5656 さん
-@としさん
-@kurage pucapucaさん
-@Naotoさん
-@C1el_55K
-@かなでさん
-@Xさん
-@さくらさん
-@nさん
-
-@daizouさん
-@けけさん
-@けーすけさん
-@まつそうさん
-@なななさん
-
+https://discord.com/channels/1392057820316303362/1437001953950437417
 
 
 寄付のほどお願いいたします<br>
