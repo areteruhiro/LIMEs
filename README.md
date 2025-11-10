@@ -101,7 +101,7 @@ https://github.com/reindex-ot
 
 バグ報告、仕様提案
 5チャンネラー
-https://egg.5ch.net/test/read.cgi/android/1729438846/
+https://egg.5ch.net/test/read.cgi/android/1740022664
 
 
 ## 使用方法
