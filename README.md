@@ -3,7 +3,7 @@
 GitHubは頻繁に更新しません。
 Discordで最新の情報を確認してください。
 
-# Support Server
+# サポート
 https://discord.gg/5WWxUkMsNJ
  # 導入方法
  
