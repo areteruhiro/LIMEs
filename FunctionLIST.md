@@ -1,5 +1,5 @@
-
-## 機能
+## 機能概要
+[カテゴリ別各機能の詳細](https://github.com/areteruhiro/LIMEs/blob/master/FunctionLIST-Details.md)
 
 - 不要なボトムバーのアイコンの削除
 - ボトムバーのアイコンのラベルの削除
