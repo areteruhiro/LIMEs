@@ -17,8 +17,6 @@ LINE  <br>
 
 https://www.apkmirror.com/apk/line-corporation/line/
 
-クラッシュやなんらかのエラーが発生した場合、自分の端末のアーキテクチャに対応するファイルをダウンロード
-
 [アーキテクチャの確認](https://play.google.com/store/apps/details?id=com.ytheekshana.deviceinfo)→CPU→サーポートされているABI
 
 
