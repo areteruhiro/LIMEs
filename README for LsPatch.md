@@ -1,7 +1,6 @@
 ## 方法①導入済みのものを利用する
 
-1,Patched LINE <br>
-2,LIMEs モジュールをインストール
+
 →Discordサーバーへ
 
 
