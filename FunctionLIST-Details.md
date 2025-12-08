@@ -238,5 +238,5 @@
 - **Reset URI**<br>
 - **ConyFile**<br>
 - **WalletEdit_Button**<br>
-</details>
-<div style="text-align: right;">最終更新：2025/12/08</div>
+</details><br>
+最終更新：2025/12/08
