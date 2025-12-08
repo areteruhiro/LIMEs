@@ -33,6 +33,9 @@ https://github.com/areteruhiro/LIMEs/issues/10
 以下の方々のおかげで開発を継続できています。大変感謝しています。<br>
 We are very grateful to the following people for making this possible:
 
+
+https://github.com/ericlin870102
+
 https://discord.com/channels/1392057820316303362/1437001953950437417
 
 
