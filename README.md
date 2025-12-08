@@ -56,7 +56,7 @@ https://discord.gg/5Egz2JkD
 ## Thank you
 
 コラボレーター
-@YuzuMikan
+@YuzuMikan404
 
 LIME  開発者
 https://github.com/Chipppppppppp
