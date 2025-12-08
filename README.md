@@ -69,17 +69,10 @@ https://t.me/areteruhiro
 [Discord]
 https://discord.gg/5Egz2JkD
 
-
-# 更新について
-更新内容を記載していないReleaseについては、差分を押してください、必要でない更新でなければ無理して更新を行う必要はありません。
-更新名による判断<br>
-(例)v1.12.5
-
-v1.12.6 →適応するLINEバージョンの変更<br>
-v1.12.5a, v1.12.5a1→仕様変更
-
-
 ## Thank you
+
+コラボレーター
+@YuzuMikan
 
 LIME  開発者
 https://github.com/Chipppppppppp
@@ -88,11 +81,14 @@ https://github.com/Chipppppppppp
 https://github.com/s1204IT
 
 
+
+## 便利アプリ
+
+
 apks→apk
 
 ①AntiSplit<br>
 https://github.com/AbdurazaaqMohammed/AntiSplit-M
-
 
 ②M apk tool<br>
 https://maximoff.su/apktool/?lang=en
