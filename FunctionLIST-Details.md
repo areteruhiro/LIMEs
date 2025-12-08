@@ -1,5 +1,5 @@
 ## 機能詳細
-随時更新します。
+各機能の詳細についてまとめています。随時更新します。
 <details>
 <summary>
  一般
@@ -239,4 +239,4 @@
 - **ConyFile**<br>
 - **WalletEdit_Button**<br>
 </details>
-最終更新：2025/12/08
+<div style="text-align: right;">最終更新：2025/12/08</div>
