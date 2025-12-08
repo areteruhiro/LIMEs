@@ -1,5 +1,6 @@
 ## 機能概要
-各機能カテゴリ別の詳細はこちら
+[カテゴリ別各機能の詳細](https://github.com/YuzuMikan404/LIMEs/blob/master/FunctionLIST-Details.md)
+
 - 不要なボトムバーのアイコンの削除
 - ボトムバーのアイコンのラベルの削除
 - 広告・おすすめの削除
