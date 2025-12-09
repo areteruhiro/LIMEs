@@ -1,5 +1,7 @@
 \n\n## 1.31.7_alpha
-- EmbedOptionsテーマカラーの調整(お試し)## 1.31.6_alpha
+- EmbedOptionsテーマカラーの調整(お試し)
+
+## 1.31.6_alpha
 - yml修正
 
 ## v1.30.29alpha
