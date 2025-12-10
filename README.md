@@ -17,7 +17,8 @@ Discordで最新の情報を確認してください。
 
 "LINEをより使いやすく"
 
-[機能リスト](https://github.com/areteruhiro/LIMEs/blob/master/FunctionLIST.md) 
+[機能概要](https://github.com/areteruhiro/LIMEs/blob/master/FunctionLIST.md) 
+[各機能の詳細](https://github.com/areteruhiro/LIMEs/blob/master/FunctionLIST-Details.md)
 
 
 ## トーク履歴の自動バックアップについて
