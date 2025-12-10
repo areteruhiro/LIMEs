@@ -1,4 +1,5 @@
-## 1.31.7_alpha
+\n\n## 1.31.8_alpha
+- Fix Reaction count Custom emoji## 1.31.7_alpha
 - EmbedOptionsテーマカラーの調整(お試し)
 - 旧設定画面の削除
 
