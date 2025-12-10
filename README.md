@@ -58,29 +58,26 @@ https://discord.gg/5Egz2JkD
 
 ## Thank you
 
-コラボレーター
-@YuzuMikan404
-
-LIME  開発者
+LIME 開発者
 https://github.com/Chipppppppppp
 
 コラボレーター
 https://github.com/s1204IT
-
+https://github.com/YuzuMikan404
 
 
 ## 便利アプリ
 
 
-apks→apk
+apksやapkmからapkに変換する際に役立ちます
 
-①AntiSplit<br>
+①AntiSplit-M<br>
 https://github.com/AbdurazaaqMohammed/AntiSplit-M
 
 ②M apk tool<br>
 https://maximoff.su/apktool/?lang=en
 
-Icon
+LIMEs Icon
 https://github.com/reindex-ot
 
 バグ報告、仕様提案
