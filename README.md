@@ -18,6 +18,7 @@ Discordで最新の情報を確認してください。
 "LINEをより使いやすく"
 
 [機能概要](https://github.com/areteruhiro/LIMEs/blob/master/FunctionLIST.md) 
+
 [各機能の詳細](https://github.com/areteruhiro/LIMEs/blob/master/FunctionLIST-Details.md)
 
 
@@ -71,7 +72,7 @@ https://github.com/YuzuMikan404
 ## 便利アプリ
 
 
-apksやapkmからapkに変換する際に役立ちます
+apksやapkmからapkに変換する際に重宝します
 
 ①AntiSplit-M<br>
 https://github.com/AbdurazaaqMohammed/AntiSplit-M
@@ -110,7 +111,7 @@ LINEアプリの <kbd>ホーム</kbd> > <kbd>⚙</kbd> から｢**設定**｣に
 
 ## 問題の報告
 
-新たなバグや修正方法を見つけた場合は、報告 をお願いします。
+新たなバグや修正方法を見つけた場合は、DiscordやGithubのIssuesにて 報告 をお願いします。
 
 
 ## Star History
