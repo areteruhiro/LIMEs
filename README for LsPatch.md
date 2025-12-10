@@ -10,18 +10,18 @@
 
 1. [**JingMatrix LSPatch**](https://github.com/JingMatrix/LSPatch/) をインストール
 
-1.5パッチするapkについて
+2.パッチするapkについて
 LINE  <br>
 
 https://www.apkmirror.com/apk/line-corporation/line/
 
 [アーキテクチャの確認](https://play.google.com/store/apps/details?id=com.ytheekshana.deviceinfo)→CPU→サーポートされているABI
+※基本最近に発売されている端末なら、arm64-v8aが多いです
 
+・arm64-v8a https://d.apkpure.com/b/XAPK/jp.naver.line.android?
 
 ・armeabi-v7a
 https://line-android-universal-download.line-scdn.net
-
-・arm64-v8a https://d.apkpure.com/b/XAPK/jp.naver.line.android?
 
 
 M apk tool <br>
