@@ -4,8 +4,9 @@ GitHubは頻繁に更新しません。
 Discordで最新の情報を確認してください。
 
 # サポート
-https://discord.gg/5WWxUkMsNJ
- # 導入方法
+ [Discordサーバー](https://discord.gg/5WWxUkMsNJ)
+
+# 導入方法
  
  [ROOT](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20root.md) 
  
