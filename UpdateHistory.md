@@ -1,4 +1,4 @@
-\n\n## 1.31.9_alphaDisable Notification add　Album
+\n\n## 1.31.10_alphaDowngrade (true)\n\n\n\n## 1.31.9_alphaDisable Notification add　Album
 PhotoSave Rename Fix
 header_setting_dark.png
 header_setting_light.png add
