@@ -1,4 +1,4 @@
-\n\n## 1.31.12_alpha main hooks add TokenGet
+\n\n## 1.31.12_alphaMaybe fix yml\n\n\n\n## 1.31.12_alpha main hooks add TokenGet
  DisableSilentMessage disable log
  Maybe fix yml\n\n\n\n## 1.31.11_alphabuild.gradle の更新\n\n\n\n## 1.31.10_alphaDowngrade (true)\n\n\n\n## 1.31.9_alphaDisable Notification add　Album
 PhotoSave Rename Fix
