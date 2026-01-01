@@ -19,6 +19,14 @@ LINE 株式会社やその他第三者のサービス提供を妨害したり、
  
  [LsPatch](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20LsPatch.md) 
 
+### 非 Root 端末
+
+> [!WARNING]
+> 非 root 端末では､ 以下の問題があります  
+> - Google アカウント (ドライブ) を使用したトーク履歴の復元ができない  
+>   ([この方法](https://github.com/Chipppppppppp/LIME/issues/50#issuecomment-2174842592) でログインすれば可能)  
+> - コインの購入が不可  
+> - LINE Pay の一部の機能が使用不可 
 
 ## 概要
 
