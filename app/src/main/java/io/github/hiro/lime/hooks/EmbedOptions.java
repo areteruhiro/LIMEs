@@ -10,17 +10,22 @@ import android.app.AndroidAppHelper;
 import android.app.ProgressDialog;
 import android.content.ClipData;
 import android.content.ClipboardManager;
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.Configuration;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
+import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.BitmapDrawable;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -28,25 +33,33 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Process;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.TextWatcher;
 import android.text.method.ScrollingMovementMethod;
+import android.util.AttributeSet;
 import android.util.Base64;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.view.Window;
-import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
+import androidx.core.util.Supplier;
 import androidx.documentfile.provider.DocumentFile;
 
 import java.io.BufferedReader;
@@ -87,8 +100,282 @@ import io.github.hiro.lime.R;
 import io.github.hiro.lime.Utils;
 
 public class EmbedOptions implements IHook {
+
+    private DocumentPreferences sDocPrefs = null;
+
+    private boolean sOptionsLoadedFromPrefs = false;
+    private  Activity activity2 = null;
     @Override
     public void hook(LimeOptions limeOptions, XC_LoadPackage.LoadPackageParam loadPackageParam) throws Throwable {
+        final Class<?> headerButtonClass = XposedHelpers.findClass(
+                "jp.naver.line.android.common.view.header.HeaderButton",
+                loadPackageParam.classLoader
+        );
+
+        XposedHelpers.findAndHookConstructor(
+                headerButtonClass,
+                Context.class,
+                AttributeSet.class,
+                new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        final View headerButton = (View) param.thisObject;
+                        final Context ctx = headerButton.getContext();
+
+                        final Context moduleContext = AndroidAppHelper.currentApplication()
+                                .createPackageContext(Constants.MODULE_NAME, Context.CONTEXT_IGNORE_SECURITY);
+
+                        final String backupUri = loadBackupUri(ctx);
+                        if (backupUri == null) {
+                            XposedBridge.log("Lime: Settings URI not configured");
+                            return;
+                        }
+                        final Uri treeUri = Uri.parse(backupUri);
+
+                        headerButton.post(() -> {
+                            try {
+                                int targetId = ctx.getResources().getIdentifier(
+                                        "notification_header_button",
+                                        "id",
+                                        Constants.PACKAGE_NAME
+                                );
+                                if (targetId == 0) return;
+
+                                if (headerButton.getId() != targetId) return;
+
+                                ViewParent vp = headerButton.getParent();
+                                if (!(vp instanceof ViewGroup)) return;
+                                ViewGroup parent = (ViewGroup) vp;
+                                final String PARENT_TAG = "lime_settings_header_parent";
+                                Object parentTag = parent.getTag();
+                                if (PARENT_TAG.equals(parentTag)) {
+                                    return;
+                                }
+                                final String CHILD_TAG = "lime_settings_header_button";
+                                for (int i = 0; i < parent.getChildCount(); i++) {
+                                    View child = parent.getChildAt(i);
+                                    Object tag = child.getTag();
+                                    if (CHILD_TAG.equals(tag)) {
+                                        parent.setTag(PARENT_TAG);
+                                        return;
+                                    }
+                                }
+
+                                Map<String, String> settings = readSettingsFromFile(ctx);
+                                float readCheckerSizeDp = 60f;
+                                try {
+                                    readCheckerSizeDp = Float.parseFloat(
+                                            settings.getOrDefault("header_setting_size", "60")
+                                    );
+                                } catch (Throwable ignore) {
+                                }
+
+
+                                ImageView imageButton = new ImageView(ctx);
+                                imageButton.setTag(CHILD_TAG);
+                                boolean dark = isDarkMode(ctx);
+//                                XposedBridge.log("LIMEs[UI]: isDarkMode = " + dark);
+                                String themeSuffix = dark ? "light" : "dark";
+                                String imageName = "header_setting_" + themeSuffix + ".png";
+//                                XposedBridge.log("LIMEs[UI]: imageName = " + imageName);
+                                Drawable drawable = loadImageFromUri(ctx, imageName);
+
+                                if (drawable == null) {
+                                    copyImageToUri(ctx, moduleContext, imageName);
+                                    drawable = loadImageFromUri(ctx, imageName);
+                                }
+
+                                if (drawable == null) {
+                                    int resId = moduleContext.getResources().getIdentifier(
+                                            imageName.replace(".png", ""), "drawable", Constants.MODULE_NAME);
+                                    if (resId != 0) {
+                                        drawable = moduleContext.getResources().getDrawable(resId);
+                                    }
+                                }
+
+                                if (drawable != null) {
+                                    int sizeInPx = dpToPx(moduleContext, readCheckerSizeDp);
+                                    drawable = scaleDrawable(drawable, sizeInPx, sizeInPx);
+                                    imageButton.setImageDrawable(drawable);
+                                }
+
+                                ViewGroup.LayoutParams lp = headerButton.getLayoutParams();
+                                ViewGroup.LayoutParams newLp;
+                                if (lp != null) {
+                                    newLp = new ViewGroup.LayoutParams(lp);
+                                } else {
+                                    newLp = new ViewGroup.LayoutParams(
+                                            ViewGroup.LayoutParams.WRAP_CONTENT,
+                                            ViewGroup.LayoutParams.WRAP_CONTENT
+                                    );
+                                }
+                                imageButton.setLayoutParams(newLp);
+
+                                View.OnClickListener listener = v -> {
+                                    try {
+                                        Context contextV = v.getContext();
+
+                                        if (backupUri == null) {
+                                            Toast.makeText(
+                                                    contextV,
+                                                    "Please select settings folder first",
+                                                    Toast.LENGTH_LONG
+                                            ).show();
+                                            return;
+                                        }
+                                        if (sDocPrefs == null) {
+                                            sDocPrefs = new DocumentPreferences(contextV, treeUri);
+                                        }
+
+                                        if (!sOptionsLoadedFromPrefs) {
+                                            for (LimeOptions.Option option : limeOptions.options) {
+                                                option.checked = Boolean.parseBoolean(
+                                                        sDocPrefs.getSetting(
+                                                                option.name,
+                                                                String.valueOf(option.checked)
+                                                        )
+                                                );
+                                            }
+                                            sOptionsLoadedFromPrefs = true;
+                                        }
+                                        Utils.addModuleAssetPath(contextV);
+
+                                        Activity activity = (Activity) contextV;
+                                        activity2 = (Activity) contextV;
+                                        ViewGroup viewGroup =
+                                                activity.findViewById(android.R.id.content);
+
+                                        FrameLayout rootLayout = new FrameLayout(contextV);
+                                        rootLayout.setLayoutParams(
+                                                new ViewGroup.LayoutParams(
+                                                        ViewGroup.LayoutParams.MATCH_PARENT,
+                                                        ViewGroup.LayoutParams.MATCH_PARENT
+                                                )
+                                        );
+
+                                        ScrollView categoryLayout =
+                                                createCategoryListLayout(
+                                                        contextV,
+                                                        Arrays.asList(limeOptions.options),
+                                                        sDocPrefs,
+                                                        moduleContext,
+                                                        loadPackageParam,
+                                                        true
+                                                );
+
+                                        showView(rootLayout, categoryLayout);
+                                        viewGroup.addView(rootLayout);
+
+                                    } catch (Throwable e) {
+                                        new Handler(Looper.getMainLooper()).post(() -> {
+                                            try {
+                                                if (moduleContext != null) {
+                                                    Toast.makeText(
+                                                            moduleContext,
+                                                            moduleContext.getString(
+                                                                    R.string.Error_Create_setting_Button
+                                                            ) + moduleContext.getString(
+                                                                    R.string.save_failed
+                                                            ),
+                                                            Toast.LENGTH_LONG
+                                                    ).show();
+                                                }
+                                            } catch (Throwable ignore) {
+                                            }
+                                        });
+                                    }
+                                };
+                                imageButton.setOnClickListener(listener);
+                                final String PREF_IMG = "HeaderSetting_button_position";
+                                final String KEY_IMG_X = "img_x";
+                                final String KEY_IMG_Y = "img_y";
+                                SharedPreferences spImg =
+                                        ctx.getSharedPreferences(PREF_IMG, Context.MODE_PRIVATE);
+
+                                float savedImgX = spImg.getFloat(KEY_IMG_X, Float.NaN);
+                                float savedImgY = spImg.getFloat(KEY_IMG_Y, Float.NaN);
+
+                                if (!Float.isNaN(savedImgX) && !Float.isNaN(savedImgY)) {
+                                    imageButton.setX(savedImgX);
+                                    imageButton.setY(savedImgY);
+                                }
+
+                                imageButton.setOnTouchListener(new View.OnTouchListener() {
+                                    private final Handler h = new Handler(Looper.getMainLooper());
+                                    private boolean dragging = false;
+                                    private float offsetX, offsetY;
+                                    private final Runnable startDrag = () -> dragging = true;
+
+                                    private float clamp(float value, float min, float max) {
+                                        return Math.max(min, Math.min(value, max));
+                                    }
+
+                                    @Override
+                                    public boolean onTouch(View v, MotionEvent e) {
+                                        switch (e.getActionMasked()) {
+                                            case MotionEvent.ACTION_DOWN:
+                                                h.postDelayed(startDrag, 500);
+                                                offsetX = e.getRawX() - v.getX();
+                                                offsetY = e.getRawY() - v.getY();
+                                                return false;
+
+                                            case MotionEvent.ACTION_MOVE:
+                                                if (dragging) {
+                                                    float newX = e.getRawX() - offsetX;
+                                                    float newY = e.getRawY() - offsetY;
+
+                                                    int pw = parent.getWidth();
+                                                    int ph = parent.getHeight();
+                                                    int vw = v.getWidth();
+                                                    int vh = v.getHeight();
+
+                                                    newX = clamp(newX, 0, pw - vw);
+                                                    newY = clamp(newY, 0, ph - vh);
+
+                                                    v.setX(newX);
+                                                    v.setY(newY);
+                                                    return true;
+                                                }
+                                                return false;
+
+                                            case MotionEvent.ACTION_UP:
+                                            case MotionEvent.ACTION_CANCEL:
+                                                h.removeCallbacks(startDrag);
+                                                if (dragging) {
+                                                    dragging = false;
+
+                                                    spImg.edit()
+                                                            .putFloat(KEY_IMG_X, v.getX())
+                                                            .putFloat(KEY_IMG_Y, v.getY())
+                                                            .apply();
+                                                    return true;
+                                                }
+                                                return false;
+                                        }
+                                        return false;
+                                    }
+                                });
+                                int index = parent.indexOfChild(headerButton);
+                                if (index < 0) {
+                                    parent.addView(imageButton, newLp);
+                                } else {
+                                    int insertPos = Math.max(0, index);
+                                    parent.addView(imageButton, insertPos, newLp);
+                                }
+
+                                parent.setTag(PARENT_TAG);
+
+                            } catch (Throwable t) {
+                                XposedBridge.log("Lime HeaderButton ctor hook error: " + t);
+                            }
+                        });
+
+                    }
+                }
+        );
+
+
+
         if (limeOptions.removeOption.checked) return;
 
 
@@ -100,18 +387,36 @@ public class EmbedOptions implements IHook {
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         Context contextV = getTargetAppContext(loadPackageParam);
                         Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                                "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                                Constants.MODULE_NAME, Context.CONTEXT_IGNORE_SECURITY);
                         String backupUri = loadBackupUri(contextV);
                         if (backupUri == null) {
                             XposedBridge.log("Lime: Settings URI not configured");
                             return;
                         }
 
+
                         Uri treeUri = Uri.parse(backupUri);
+                        Object fragmentObj = param.thisObject;
+                        if (fragmentObj == null) {
+                            XposedBridge.log("Lime: fragmentObj is null in onViewCreated");
+                            return;
+                        }
 
 
-                        if (limeOptions.NewOption.checked) {
+                        Activity activity2 = null;
+                        try {
+                            Object actObj = XposedHelpers.callMethod(fragmentObj, "getActivity");
+                            if (actObj instanceof Activity) {
+                                activity2 = (Activity) actObj;
+                            }
+                        } catch (Throwable t) {
+                            XposedBridge.log("Lime: getActivity call failed: " + t);
+                        }
 
+                        if (activity2 == null) {
+                            XposedBridge.log("Lime: activity is null in onViewCreated");
+                            return;
+                        }
                             try {
                                 PackageManager pm = contextV.getPackageManager();
                                 String versionName = "";
@@ -152,24 +457,22 @@ public class EmbedOptions implements IHook {
                                 int statusBarHeight = getStatusBarHeight(context);
 
                                 String versionNameStr = String.valueOf(versionName);
-                                String majorVersionStr = versionNameStr.split("\\.")[0]; // Extract the major version number
-                                int versionNameInt = Integer.parseInt(majorVersionStr); // Convert the major version to an integer
+                                String majorVersionStr = versionNameStr.split("\\.")[0];
+                                int versionNameInt = Integer.parseInt(majorVersionStr);
 
                                 if (versionNameInt >= 15) {
-                                    layoutParams.topMargin = statusBarHeight; // Set margin to status bar height
+                                    layoutParams.topMargin = statusBarHeight;
                                 } else {
-                                    layoutParams.topMargin = Utils.dpToPx(5, context); // Set margin to 5dp
+                                    layoutParams.topMargin = Utils.dpToPx(5, context);
                                 }
                                 button.setLayoutParams(layoutParams);
 
                                 button.setOnClickListener(view -> {
-                                    // カテゴリ一覧画面を生成
-
                                     if (backupUri == null) {
                                         Toast.makeText(context, "Please select settings folder first", Toast.LENGTH_LONG).show();
                                         return;
                                     }
-                                    ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), docPrefs, moduleContext, loadPackageParam);
+                                    ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), docPrefs, moduleContext, loadPackageParam, false);
                                     showView(rootLayout, categoryLayout);
                                 });
                                 rootLayout.addView(button);
@@ -187,617 +490,27 @@ public class EmbedOptions implements IHook {
                                 });
                             }
 
-
-                        } else {
-                            DocumentPreferences docPrefs = new DocumentPreferences(contextV, treeUri);
-                            try {
-                                PackageManager pm = contextV.getPackageManager();
-                                String versionName = "";
-                                try {
-                                    versionName = pm.getPackageInfo(loadPackageParam.packageName, 0).versionName;
-                                } catch (PackageManager.NameNotFoundException e) {
-                                    e.printStackTrace();
-                                }
-
-
-                                Set<String> checkedOptions = new HashSet<>();
-
-                                for (LimeOptions.Option option : limeOptions.options) {
-                                    if (!checkedOptions.contains(option.name)) {
-                                        // DocumentPreferencesから設定を読み込む
-                                        option.checked = Boolean.parseBoolean(
-                                                docPrefs.getSetting(option.name, String.valueOf(option.checked))
-                                        );
-                                        checkedOptions.add(option.name);
-                                    }
-                                }
-                                ViewGroup viewGroup = ((ViewGroup) param.args[0]);
-                                Context context = viewGroup.getContext();
-                                Utils.addModuleAssetPath(context);
-
-                                LinearLayout layout = new LinearLayout(context);
-                                layout.setLayoutParams(new LinearLayout.LayoutParams(
-                                        LinearLayout.LayoutParams.MATCH_PARENT,
-                                        LinearLayout.LayoutParams.MATCH_PARENT));
-                                layout.setOrientation(LinearLayout.VERTICAL);
-                                layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
-                                Switch switchRedirectWebView = null;
-                                Switch photoAddNotificationView = null;
-                                Switch ReadCheckerView = null;
-                                Switch preventUnsendMessageView = null;
-                                Switch DarkModeView = null;
-                                List<Switch> webViewChildSwitches = new ArrayList<>();
-                                List<Switch> photoNotificationChildSwitches = new ArrayList<>();
-                                List<Switch> ReadCheckerSwitches = new ArrayList<>();
-                                List<Switch> preventUnsendMessageSwitches = new ArrayList<>();
-                                List<Switch> DarkModeSwitches = new ArrayList<>();
-                                for (LimeOptions.Option option : limeOptions.options) {
-                                    final String name = option.name;
-
-                                    Switch switchView = new Switch(context);
-                                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                                            LinearLayout.LayoutParams.WRAP_CONTENT
-                                    );
-                                    params.topMargin = Utils.dpToPx(20, context);
-                                    switchView.setLayoutParams(params);
-                                    switchView.setText(option.id);
-                                    switchView.setChecked(option.checked);
-                                    switchView.setTextColor(Color.WHITE);
-                                    switch (name) {
-                                        case "redirect_webview":
-                                            switchRedirectWebView = switchView;
-                                            switchRedirectWebView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                                for (Switch child : webViewChildSwitches) {
-                                                    child.setEnabled(isChecked);
-                                                    if (!isChecked) child.setChecked(false);
-                                                }
-                                            });
-                                            break;
-                                        case "PhotoAddNotification":
-                                            photoAddNotificationView = switchView;
-                                            photoAddNotificationView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                                for (Switch child : photoNotificationChildSwitches) {
-                                                    child.setEnabled(isChecked);
-                                                    if (!isChecked) child.setChecked(false);
-                                                }
-                                            });
-                                            break;
-                                        case "ReadChecker":
-                                            ReadCheckerView = switchView;
-                                            ReadCheckerView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                                for (Switch child : ReadCheckerSwitches) {
-                                                    child.setEnabled(isChecked);
-                                                    if (!isChecked) child.setChecked(false);
-                                                }
-                                            });
-                                            break;
-                                        case "prevent_unsend_message":
-                                            preventUnsendMessageView = switchView;
-                                            preventUnsendMessageView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                                for (Switch child : preventUnsendMessageSwitches) {
-                                                    child.setEnabled(isChecked);
-                                                    if (!isChecked) child.setChecked(false);
-                                                }
-                                            });
-                                            break;
-
-                                        case "DarkColor":
-                                            DarkModeView = switchView;
-                                            DarkModeView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                                                for (Switch child : DarkModeSwitches) {
-                                                    child.setEnabled(isChecked);
-                                                    if (!isChecked) child.setChecked(false);
-                                                }
-                                            });
-                                            break;
-
-                                        case "open_in_browser":
-                                            webViewChildSwitches.add(switchView);
-                                            switchView.setEnabled(switchRedirectWebView != null && switchRedirectWebView.isChecked());
-                                            break;
-
-                                        case "hide_canceled_message":
-                                            preventUnsendMessageSwitches.add(switchView);
-                                            switchView.setEnabled(preventUnsendMessageView != null && preventUnsendMessageView.isChecked());
-                                            break;
-
-                                        case "GroupNotification":
-                                        case "CansellNotification":
-                                        case "AddCopyAction":
-                                        case "original_ID":
-                                        case "DisableSilentMessage":
-                                            photoNotificationChildSwitches.add(switchView);
-                                            switchView.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked());
-                                            break;
-
-                                        case "MySendMessage":
-                                        case "ReadCheckerChatdataDelete":
-                                            ReadCheckerSwitches.add(switchView);
-                                            switchView.setEnabled(ReadCheckerView != null && ReadCheckerView.isChecked());
-                                            break;
-
-                                        case "DarkModSync":
-                                            DarkModeSwitches.add(switchView);
-                                            switchView.setEnabled(DarkModeView != null && DarkModeView.isChecked());
-                                            break;
-                                    }
-
-                                    layout.addView(switchView);
-                                }
-
-                                if (switchRedirectWebView != null) {
-                                    switchRedirectWebView.setChecked(switchRedirectWebView.isChecked());
-                                }
-                                if (photoAddNotificationView != null) {
-                                    photoAddNotificationView.setChecked(photoAddNotificationView.isChecked());
-                                }
-
-                                {
-                                    final String script = new String(Base64.decode(docPrefs.getSetting("encoded_js_modify_request", ""), Base64.NO_WRAP));
-                                    LinearLayout layoutModifyRequest = new LinearLayout(context);
-                                    layoutModifyRequest.setLayoutParams(new LinearLayout.LayoutParams(
-                                            LinearLayout.LayoutParams.MATCH_PARENT,
-                                            LinearLayout.LayoutParams.MATCH_PARENT));
-                                    layoutModifyRequest.setOrientation(LinearLayout.VERTICAL);
-                                    layoutModifyRequest.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
-
-                                    EditText editText = new EditText(context);
-                                    editText.setLayoutParams(new LinearLayout.LayoutParams(
-                                            LinearLayout.LayoutParams.MATCH_PARENT,
-                                            LinearLayout.LayoutParams.WRAP_CONTENT));
-                                    editText.setTypeface(Typeface.MONOSPACE);
-                                    editText.setInputType(InputType.TYPE_CLASS_TEXT |
-                                            InputType.TYPE_TEXT_FLAG_MULTI_LINE |
-                                            InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
-                                            InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE);
-                                    editText.setMovementMethod(new ScrollingMovementMethod());
-                                    editText.setTextIsSelectable(true);
-                                    editText.setHorizontallyScrolling(true);
-                                    editText.setVerticalScrollBarEnabled(true);
-                                    editText.setHorizontalScrollBarEnabled(true);
-                                    editText.setText(script);
-
-                                    layoutModifyRequest.addView(editText);
-
-                                    LinearLayout buttonLayout = new LinearLayout(context);
-                                    LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                                            LinearLayout.LayoutParams.MATCH_PARENT,
-                                            LinearLayout.LayoutParams.WRAP_CONTENT);
-                                    buttonParams.topMargin = Utils.dpToPx(10, context);
-                                    buttonLayout.setLayoutParams(buttonParams);
-                                    buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
-
-                                    Button copyButton = new Button(context);
-                                    copyButton.setText(R.string.button_copy);
-                                    copyButton.setOnClickListener(v -> {
-                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                        ClipData clip = ClipData.newPlainText("", editText.getText().toString());
-                                        clipboard.setPrimaryClip(clip);
-                                    });
-
-                                    buttonLayout.addView(copyButton);
-
-                                    Button pasteButton = new Button(context);
-                                    pasteButton.setText(R.string.button_paste);
-                                    pasteButton.setOnClickListener(v -> {
-                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                        if (clipboard != null && clipboard.hasPrimaryClip()) {
-                                            ClipData clip = clipboard.getPrimaryClip();
-                                            if (clip != null && clip.getItemCount() > 0) {
-                                                CharSequence pasteData = clip.getItemAt(0).getText();
-                                                editText.setText(pasteData);
-                                            }
-                                        }
-                                    });
-
-                                    buttonLayout.addView(pasteButton);
-                                    layoutModifyRequest.addView(buttonLayout);
-                                    ScrollView scrollView = new ScrollView(context);
-                                    scrollView.addView(layoutModifyRequest);
-                                    AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
-                                            .setTitle(R.string.modify_request);
-                                    builder.setView(scrollView);
-                                    Button backupButton = new Button(context);
-                                    buttonParams.topMargin = Utils.dpToPx(20, context);
-                                    backupButton.setLayoutParams(buttonParams);
-                                    backupButton.setText(moduleContext.getResources().getString(R.string.Back_Up));
-                                    backupButton.setOnClickListener(v -> backupChatHistory(context, moduleContext));
-                                    layout.addView(backupButton);
-
-
-                                    Button restoreButton = new Button(context);
-                                    restoreButton.setLayoutParams(buttonParams);
-                                    restoreButton.setText(moduleContext.getResources().getString(R.string.Restore));
-                                    restoreButton.setOnClickListener(v -> showFilePickerChatHistory(context, moduleContext));
-                                    layout.addView(restoreButton);
-
-                                    Button restoreChatListButton = new Button(context);
-                                    restoreChatListButton.setLayoutParams(buttonParams);
-                                    restoreChatListButton.setText(moduleContext.getResources().getString(R.string.restoreChatListButton));
-                                    restoreChatListButton.setOnClickListener(v -> showFilePickerChatlist(context, moduleContext));
-                                    layout.addView(restoreChatListButton);
-
-                                    Button backupfolderButton = new Button(context);
-                                    backupfolderButton.setLayoutParams(buttonParams);
-                                    backupfolderButton.setText(moduleContext.getResources().getString(R.string.Talk_Picture_Back_up));
-                                    backupfolderButton.setOnClickListener(v -> backupChatsFolder(context, moduleContext));
-                                    layout.addView(backupfolderButton);
-
-                                    Button restorefolderButton = new Button(context);
-                                    restorefolderButton.setLayoutParams(buttonParams);
-                                    restorefolderButton.setText(moduleContext.getResources().getString(R.string.Picure_Restore));
-                                    restorefolderButton.setOnClickListener(v -> restoreChatsFolder(context, moduleContext));
-                                    layout.addView(restorefolderButton);
-                                    if (limeOptions.MuteGroup.checked) {
-                                        Button MuteGroups_Button = new Button(context);
-                                        MuteGroups_Button.setLayoutParams(buttonParams);
-                                        MuteGroups_Button.setText(moduleContext.getResources().getString(R.string.Mute_Group));
-                                        MuteGroups_Button.setOnClickListener(v -> MuteGroups_Button(context, moduleContext));
-                                        layout.addView(MuteGroups_Button);
-                                    }
-
-                                    Button KeepUnread_Button = new Button(context);
-                                    KeepUnread_Button.setLayoutParams(buttonParams);
-                                    KeepUnread_Button.setText(moduleContext.getResources().getString(R.string.edit_margin_settings));
-                                    KeepUnread_Button.setOnClickListener(v -> KeepUnread_Button(context, moduleContext));
-                                    layout.addView(KeepUnread_Button);
-
-                                    if (limeOptions.preventUnsendMessage.checked) {
-                                        Button canceled_message_Button = new Button(context);
-                                        canceled_message_Button.setLayoutParams(buttonParams);
-                                        canceled_message_Button.setText(moduleContext.getResources().getString(R.string.canceled_message));
-                                        canceled_message_Button.setOnClickListener(v -> Cancel_Message_Button(context, moduleContext));
-                                        layout.addView(canceled_message_Button);
-                                    }
-                                    if (limeOptions.CansellNotification.checked) {
-
-                                        Button CansellNotification_Button = new Button(context);
-                                        CansellNotification_Button.setLayoutParams(buttonParams);
-                                        CansellNotification_Button.setText(moduleContext.getResources().getString(R.string.CansellNotification));
-                                        CansellNotification_Button.setOnClickListener(v -> CansellNotification(context, moduleContext));
-                                        layout.addView(CansellNotification_Button);
-                                    }
-
-                                    if (limeOptions.BlockCheck.checked) {
-
-                                        Button BlockCheck_Button = new Button(context);
-                                        BlockCheck_Button.setLayoutParams(buttonParams);
-                                        BlockCheck_Button.setText(moduleContext.getResources().getString(R.string.BlockCheck));
-                                        BlockCheck_Button.setOnClickListener(v -> Blocklist(context, moduleContext));
-                                        layout.addView(BlockCheck_Button);
-                                    }
-                                    if (limeOptions.preventUnsendMessage.checked) {
-                                        Button hide_canceled_message_Button = new Button(context);
-                                        hide_canceled_message_Button.setLayoutParams(buttonParams);
-                                        hide_canceled_message_Button.setText(moduleContext.getResources().getString(R.string.hide_canceled_message));
-                                        hide_canceled_message_Button.setOnClickListener(v -> new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
-                                                .setTitle(moduleContext.getResources().getString(R.string.HideSetting))
-                                                .setMessage(moduleContext.getResources().getString(R.string.HideSetting_selection))
-                                                .setPositiveButton(moduleContext.getResources().getString(R.string.Hide), (dialog, which) -> updateMessagesVisibility(context, true, moduleContext))
-                                                .setNegativeButton(moduleContext.getResources().getString(R.string.Show), (dialog, which) -> updateMessagesVisibility(context, false, moduleContext))
-                                                .setIcon(android.R.drawable.ic_dialog_info)
-                                                .show());
-                                        layout.addView(hide_canceled_message_Button);
-                                    }
-
-                                    if (limeOptions.PinList.checked) {
-
-                                        Button PinList_Button = new Button(context);
-                                        PinList_Button.setLayoutParams(buttonParams);
-                                        PinList_Button.setText(moduleContext.getResources().getString(R.string.PinList));
-                                        PinList_Button.setOnClickListener(v -> PinListButton(context, moduleContext));
-                                        layout.addView(PinList_Button);
-                                    }
-                                    Button resetButton = new Button(context);
-                                    resetButton.setLayoutParams(buttonParams);
-                                    resetButton.setText(moduleContext.getResources().getString(R.string.ResetButton));
-
-                                    resetButton.setOnClickListener(v -> {
-                                        try {
-
-                                            File settingsDir  = new File(context.getFilesDir(), "LimeBackup");
-                                            File settingsFile = new File(settingsDir, "backup_uri.txt");
-
-                                            String toastMsg;
-                                            if (settingsFile.exists()) {
-                                                boolean deleted = settingsFile.delete();
-                                                toastMsg = deleted
-                                                        ? " Reset URI"
-                                                        : "Error";
-
-                                                Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                                                context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
-                                                Process.killProcess(Process.myPid());
-                                            } else {
-                                                toastMsg = "リセット対象の URI はありません";
-                                            }
-
-                                            Toast.makeText(moduleContext, toastMsg, Toast.LENGTH_SHORT).show();
-                                            XposedBridge.log("Lime: ResetButton pressed – " + toastMsg);
-                                        } catch (Throwable t) {
-                                            XposedBridge.log(t);
-                                            Toast.makeText(moduleContext,
-                                                    "エラー: " + t.getMessage(),
-                                                    Toast.LENGTH_LONG).show();
-                                        }
-                                    });
-
-                                    layout.addView(resetButton);
-
-                                    builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
-                                        String code = editText.getText().toString();
-                                        if (!code.equals(script)) {
-                                            try {
-
-                                                if (backupUri == null) {
-                                                    Toast.makeText(contextV, "Settings URI not configured", Toast.LENGTH_LONG).show();
-                                                    return;
-                                                }
-                                                // Base64エンコードして設定を保存
-                                                String encodedCode = Base64.encodeToString(code.getBytes(), Base64.NO_WRAP);
-                                                docPrefs.saveSetting("encoded_js_modify_request", encodedCode);
-
-                                                // アプリを再起動
-                                                Toast.makeText(contextV.getApplicationContext(),
-                                                        contextV.getString(R.string.restarting),
-                                                        Toast.LENGTH_SHORT).show();
-                                                Process.killProcess(Process.myPid());
-                                                contextV.startActivity(new Intent()
-                                                        .setClassName(Constants.PACKAGE_NAME,
-                                                                "jp.naver.line.android.activity.SplashActivity"));
-
-                                            } catch (IOException e) {
-                                                Toast.makeText(contextV,
-                                                        "Failed to save settings: " + e.getMessage(),
-                                                        Toast.LENGTH_LONG).show();
-                                                XposedBridge.log("Save modify request error: " + e.getMessage());
-                                            }
-                                        }
-                                    });
-
-                                    builder.setNegativeButton(R.string.negative_button, null);
-
-                                    builder.setOnDismissListener(dialog -> editText.setText(script));
-
-                                    AlertDialog dialog = builder.create();
-                                    Button button = new Button(context);
-                                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                                            LinearLayout.LayoutParams.WRAP_CONTENT);
-                                    params.topMargin = Utils.dpToPx(20, context);
-                                    button.setLayoutParams(params);
-                                    button.setText(R.string.modify_request);
-                                    button.setOnClickListener(view -> dialog.show());
-                                    layout.addView(button);
-                                }
-
-                                {
-                                    final String script = new String(Base64.decode(docPrefs.getSetting("encoded_js_modify_response", ""), Base64.NO_WRAP));
-                                    LinearLayout layoutModifyResponse = new LinearLayout(context);
-                                    layoutModifyResponse.setLayoutParams(new LinearLayout.LayoutParams(
-                                            LinearLayout.LayoutParams.MATCH_PARENT,
-                                            LinearLayout.LayoutParams.MATCH_PARENT));
-                                    layoutModifyResponse.setOrientation(LinearLayout.VERTICAL);
-                                    layoutModifyResponse.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
-                                    EditText editText = new EditText(context);
-                                    editText.setLayoutParams(new LinearLayout.LayoutParams(
-                                            LinearLayout.LayoutParams.MATCH_PARENT,
-                                            LinearLayout.LayoutParams.WRAP_CONTENT));
-                                    editText.setTypeface(Typeface.MONOSPACE);
-                                    editText.setInputType(InputType.TYPE_CLASS_TEXT |
-                                            InputType.TYPE_TEXT_FLAG_MULTI_LINE |
-                                            InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS |
-                                            InputType.TYPE_TEXT_FLAG_IME_MULTI_LINE);
-                                    editText.setMovementMethod(new ScrollingMovementMethod());
-                                    editText.setTextIsSelectable(true);
-                                    editText.setHorizontallyScrolling(true);
-                                    editText.setVerticalScrollBarEnabled(true);
-                                    editText.setHorizontalScrollBarEnabled(true);
-                                    editText.setText(script);
-                                    layoutModifyResponse.addView(editText);
-                                    LinearLayout buttonLayout = new LinearLayout(context);
-                                    LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                                            LinearLayout.LayoutParams.MATCH_PARENT,
-                                            LinearLayout.LayoutParams.WRAP_CONTENT);
-                                    buttonParams.topMargin = Utils.dpToPx(10, context);
-                                    buttonLayout.setLayoutParams(buttonParams);
-                                    buttonLayout.setOrientation(LinearLayout.HORIZONTAL);
-
-                                    Button copyButton = new Button(context);
-                                    copyButton.setText(R.string.button_copy);
-                                    copyButton.setOnClickListener(v -> {
-                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                        ClipData clip = ClipData.newPlainText("", editText.getText().toString());
-                                        clipboard.setPrimaryClip(clip);
-                                    });
-
-                                    buttonLayout.addView(copyButton);
-
-                                    Button pasteButton = new Button(context);
-                                    pasteButton.setText(R.string.button_paste);
-                                    pasteButton.setOnClickListener(v -> {
-                                        ClipboardManager clipboard = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
-                                        if (clipboard != null && clipboard.hasPrimaryClip()) {
-                                            ClipData clip = clipboard.getPrimaryClip();
-                                            if (clip != null && clip.getItemCount() > 0) {
-                                                CharSequence pasteData = clip.getItemAt(0).getText();
-                                                editText.setText(pasteData);
-                                            }
-                                        }
-                                    });
-
-                                    buttonLayout.addView(pasteButton);
-                                    layoutModifyResponse.addView(buttonLayout);
-                                    ScrollView scrollView = new ScrollView(context);
-                                    scrollView.addView(layoutModifyResponse);
-                                    AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
-                                            .setTitle(R.string.modify_response);
-                                    builder.setView(scrollView);
-                                    builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
-                                        String code = editText.getText().toString();
-                                        if (!code.equals(script)) {
-                                            try {
-                                                docPrefs.saveSetting("encoded_js_modify_response", Base64.encodeToString(code.getBytes(), Base64.NO_WRAP));
-                                            } catch (IOException e) {
-                                                throw new RuntimeException(e);
-                                            }
-                                            Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                                            Process.killProcess(Process.myPid());
-                                            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
-                                        }
-                                    });
-
-                                    builder.setNegativeButton(R.string.negative_button, null);
-
-                                    builder.setOnDismissListener(dialog -> editText.setText(script));
-                                    AlertDialog dialog = builder.create();
-                                    Button button = new Button(context);
-                                    LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
-                                            LinearLayout.LayoutParams.WRAP_CONTENT,
-                                            LinearLayout.LayoutParams.WRAP_CONTENT);
-                                    params.topMargin = Utils.dpToPx(20, context);
-                                    button.setLayoutParams(params);
-                                    button.setText(R.string.modify_response);
-                                    button.setOnClickListener(view -> dialog.show());
-
-                                    layout.addView(button);
-                                }
-                                String LIMEs_versionName = BuildConfig.VERSION_NAME; // versionNameを取得
-                                ScrollView scrollView = new ScrollView(context);
-                                scrollView.addView(layout);
-                                AlertDialog.Builder builder = new AlertDialog.Builder(context, R.style.Theme_AppCompat_Dialog)
-                                        .setTitle("LIMEs" + " (" + LIMEs_versionName + ")");
-                                builder.setView(scrollView);
-                                builder.setPositiveButton(R.string.positive_button, (dialog, which) -> {
-                                    boolean optionChanged = false;
-                                    boolean saveSuccess = true; // 保存成功フラグ
-
-                                    for (int i = 0; i < limeOptions.options.length; ++i) {
-                                        Switch switchView = (Switch) layout.getChildAt(i);
-                                        boolean isChecked = switchView.isChecked();
-
-                                        // 変更があったかチェック
-                                        if (limeOptions.options[i].checked != isChecked) {
-                                            optionChanged = true;
-                                        }
-
-                                        // 保存処理の結果をチェック
-                                        try {
-                                            if (!docPrefs.saveSetting(limeOptions.options[i].name, String.valueOf(isChecked))) {
-                                                saveSuccess = false;
-                                            }
-                                        } catch (IOException e) {
-                                            throw new RuntimeException(e);
-                                        }
-                                    }
-
-                                    if (!saveSuccess) {
-                                        Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();
-                                    } else if (optionChanged) {
-                                        Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                                        Process.killProcess(Process.myPid());
-                                        context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
-                                    }
-                                });
-
-                                builder.setNegativeButton(R.string.negative_button, null);
-
-                                builder.setOnDismissListener(dialog -> {
-                                    for (int i = 0; i < limeOptions.options.length; ++i) {
-                                        Switch switchView = (Switch) layout.getChildAt(i);
-                                        switchView.setChecked(limeOptions.options[i].checked);
-                                    }
-                                });
-
-                                AlertDialog dialog = builder.create();
-                                Button button = new Button(context);
-                                button.setText(R.string.app_name);
-
-                                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(
-                                        FrameLayout.LayoutParams.WRAP_CONTENT,
-                                        FrameLayout.LayoutParams.WRAP_CONTENT);
-                                layoutParams.gravity = Gravity.TOP | Gravity.END;
-                                layoutParams.rightMargin = Utils.dpToPx(10, context);
-
-                                // ステータスバーの高さを取得
-                                int statusBarHeight = getStatusBarHeight(context);
-
-                                // ステータスバーの高さに係数（0.1）を掛けて調整
-
-                                String versionNameStr = String.valueOf(versionName);
-                                String majorVersionStr = versionNameStr.split("\\.")[0]; // Extract the major version number
-                                int versionNameInt = Integer.parseInt(majorVersionStr); // Convert the major version to an integer
-
-                                if (versionNameInt >= 15) {
-                                    layoutParams.topMargin = statusBarHeight; // Set margin to status bar height
-                                } else {
-                                    layoutParams.topMargin = Utils.dpToPx(5, context); // Set margin to 5dp
-                                }
-                                button.setLayoutParams(layoutParams);
-                                button.setOnClickListener(view -> dialog.show());
-
-                                FrameLayout frameLayout = new FrameLayout(context);
-                                frameLayout.setLayoutParams(new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-                                frameLayout.addView(button);
-                                viewGroup.addView(frameLayout);
-
-                            } catch (Exception e) {
-                                // エラー情報を詳細にログ出力
-                                // XposedBridge.log("設定作成エラー: " + e.getClass().getSimpleName() + " - " + e.getMessage());
-
-
-                                try {
-                                    // UIスレッドでToastを表示
-                                    new Handler(Looper.getMainLooper()).post(() -> {
-                                        if (moduleContext != null) {
-                                            Toast.makeText(
-                                                    moduleContext,
-                                                    moduleContext.getString(R.string.Error_Create_setting_Button)
-                                                            + "\nError: " + e.getClass().getSimpleName(),
-                                                    Toast.LENGTH_LONG
-                                            ).show();
-                                        } else {
-                                            // XposedBridge.log("Toast表示失敗: moduleContextがnullです");
-                                        }
-                                    });
-                                } catch (Throwable t) {
-                                    // XposedBridge.log("Toast表示中に例外発生: " + t);
-                                    t.printStackTrace();
-                                }
-                            }
-                        }
                     }
-                    });
+                });
 
-// ベースクラス名を定義
         String baseName = "androidx.fragment.app.";
         List<String> validClasses = new ArrayList<>();
-
-// a-zの全文字をループしてクラス存在チェック
         for (char c = 'a'; c <= 'z'; c++) {
             String className = baseName + c;
             try {
-                // クラスの存在確認
                 Class<?> clazz = loadPackageParam.classLoader.loadClass(className);
 
-                // onActivityResultメソッドの存在確認
                 try {
                     clazz.getDeclaredMethod("onActivityResult", int.class, int.class, Intent.class);
                     validClasses.add(className);
                     XposedBridge.log("Found valid fragment class: " + className);
-                } catch (NoSuchMethodException ignored) {
-                    // メソッドがない場合はスキップ
-                }
-            } catch (ClassNotFoundException ignored) {
-                // クラスがない場合はスキップ
-            }
+                } catch (NoSuchMethodException ignored) {}
+            } catch (ClassNotFoundException ignored) {}
         }
 
         if (validClasses.isEmpty()) {
             XposedBridge.log("No valid fragment class found with onActivityResult method");
         } else {
-            // 全ての有効なクラスに対してフックを試みる
             for (String fragmentClass : validClasses) {
                 try {
                     XposedHelpers.findAndHookMethod(
@@ -809,7 +522,7 @@ public class EmbedOptions implements IHook {
                                 @Override
                                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                                     Context moduleContext = AndroidAppHelper.currentApplication().createPackageContext(
-                                            "io.github.hiro.lime", Context.CONTEXT_IGNORE_SECURITY);
+                                            Constants.MODULE_NAME, Context.CONTEXT_IGNORE_SECURITY);
                                     int requestCode = (int) param.args[0];
                                     int resultCode = (int) param.args[1];
                                     Intent data = (Intent) param.args[2];
@@ -926,365 +639,439 @@ public class EmbedOptions implements IHook {
         parent.addView(view);
     }
 
-    private ScrollView createCategoryListLayout(Context context, List<LimeOptions.Option> options, DocumentPreferences docPrefs, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
-        // ScrollView を親レイアウトとして作成
-        ScrollView scrollView = new ScrollView(context);
-        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
+        private ScrollView createCategoryListLayout(
+                Context context,
+                List<LimeOptions.Option> options,
+                DocumentPreferences docPrefs,
+                Context moduleContext,
+                XC_LoadPackage.LoadPackageParam loadPackageParam,
+                boolean launchedFromHeader
+        ) {
 
-        // スクロール対象の LinearLayout
-        LinearLayout layout = new LinearLayout(context);
-        layout.setLayoutParams(new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT));
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
-        layout.setBackgroundColor(Color.BLACK);
-        scrollView.setFillViewport(true);
+            boolean dark = isDarkMode(context);
+            ThemePalette P = new ThemePalette(dark);
 
-        // バージョン情報表示
-        String LIMEs_versionName = BuildConfig.VERSION_NAME;
-        TextView versionTextView = new TextView(context);
-        versionTextView.setText("LIMEs" + " (" + LIMEs_versionName + ")");
-        versionTextView.setTextSize(16);
-        versionTextView.setTextColor(Color.WHITE);
-        versionTextView.setGravity(Gravity.CENTER);
-        versionTextView.setPadding(0, Utils.dpToPx(10, context), 0, Utils.dpToPx(10, context));
-        layout.addView(versionTextView);
+            ScrollView scrollView = new ScrollView(context);
+            scrollView.setLayoutParams(new ViewGroup.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+            scrollView.setFillViewport(true);
 
-        // カテゴリごとにオプションを分類
-        Map<LimeOptions.OptionCategory, List<LimeOptions.Option>> categorizedOptions = new LinkedHashMap<>();
-        List<LimeOptions.OptionCategory> categoryOrder = Arrays.asList(
-                LimeOptions.OptionCategory.GENERAL,
-                LimeOptions.OptionCategory.NOTIFICATIONS,
-                LimeOptions.OptionCategory.CHAT,
-                LimeOptions.OptionCategory.Ad,
-                LimeOptions.OptionCategory.CALL,
-                LimeOptions.OptionCategory.Theme,
-                LimeOptions.OptionCategory.OTHER
-        );
+            LinearLayout layout = new LinearLayout(context);
+            layout.setLayoutParams(new LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT));
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setPadding(
+                    Utils.dpToPx(20, context),
+                    Utils.dpToPx(20, context),
+                    Utils.dpToPx(20, context),
+                    Utils.dpToPx(20, context)
+            );
+            layout.setBackgroundColor(P.bg);
 
-        // カテゴリ初期化
-        for (LimeOptions.OptionCategory category : categoryOrder) {
-            categorizedOptions.put(category, new ArrayList<>());
-        }
+            // ===============================
+            // Version Text
+            // ===============================
+            String version = BuildConfig.VERSION_NAME;
+            TextView versionTextView = new TextView(context);
+            versionTextView.setText("LIMEs (" + version + ")");
+            versionTextView.setTextSize(16);
+            versionTextView.setTextColor(P.fg);
+            versionTextView.setGravity(Gravity.CENTER);
+            versionTextView.setPadding(
+                    0,
+                    Utils.dpToPx(10, context),
+                    0,
+                    Utils.dpToPx(10, context)
+            );
+            layout.addView(versionTextView);
 
-        // オプション分類
-        for (LimeOptions.Option option : options) {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                categorizedOptions
-                        .computeIfAbsent(option.category, k -> new ArrayList<>())
-                        .add(option);
+            // ===============================
+            // Category 分類
+            // ===============================
+            Map<LimeOptions.OptionCategory, List<LimeOptions.Option>> categorizedOptions = new LinkedHashMap<>();
+            List<LimeOptions.OptionCategory> categoryOrder = Arrays.asList(
+                    LimeOptions.OptionCategory.GENERAL,
+                    LimeOptions.OptionCategory.NOTIFICATIONS,
+                    LimeOptions.OptionCategory.CHAT,
+                    LimeOptions.OptionCategory.Ad,
+                    LimeOptions.OptionCategory.CALL,
+                    LimeOptions.OptionCategory.Theme,
+                    LimeOptions.OptionCategory.OTHER
+            );
+
+            for (LimeOptions.OptionCategory category : categoryOrder) {
+                categorizedOptions.put(category, new ArrayList<>());
             }
-        }
 
-        // カテゴリ表示
-        for (Map.Entry<LimeOptions.OptionCategory, List<LimeOptions.Option>> entry : categorizedOptions.entrySet()) {
-            LimeOptions.OptionCategory category = entry.getKey();
-            List<LimeOptions.Option> optionsInCategory = entry.getValue();
+            for (LimeOptions.Option option : options) {
+                categorizedOptions.computeIfAbsent(option.category, k -> new ArrayList<>()).add(option);
+            }
 
-            TextView categoryTitle = new TextView(context);
-            categoryTitle.setText(category.getName(context));
-            categoryTitle.setTextSize(18);
-            categoryTitle.setPadding(0, Utils.dpToPx(10, context), 0, Utils.dpToPx(5, context));
-            categoryTitle.setTextColor(Color.WHITE);
-            categoryTitle.setClickable(true);
-            categoryTitle.setOnClickListener(v -> {
-                LinearLayout optionsLayout = createOptionsLayout(context, optionsInCategory, docPrefs, moduleContext, loadPackageParam);
-                showView((ViewGroup) layout.getParent(), optionsLayout);
+            // ===============================
+            // Category Title ＋ Divider
+            // ===============================
+            for (Map.Entry<LimeOptions.OptionCategory, List<LimeOptions.Option>> entry : categorizedOptions.entrySet()) {
+                LimeOptions.OptionCategory category = entry.getKey();
+                List<LimeOptions.Option> optionsInCategory = entry.getValue();
+
+                TextView categoryTitle = new TextView(context);
+                categoryTitle.setText(category.getName(context));
+                categoryTitle.setTextSize(18);
+                categoryTitle.setPadding(
+                        0,
+                        Utils.dpToPx(12, context),
+                        0,
+                        Utils.dpToPx(6, context)
+                );
+                categoryTitle.setTextColor(P.fg);
+                categoryTitle.setClickable(true);
+                categoryTitle.setOnClickListener(v -> {
+                    LinearLayout optionsLayout = createOptionsLayout(
+                            context,
+                            optionsInCategory,
+                            docPrefs,
+                            moduleContext,
+                            loadPackageParam,
+                            launchedFromHeader
+                    );
+                    showView((ViewGroup) layout.getParent(), optionsLayout);
+                });
+
+                layout.addView(categoryTitle);
+
+                layout.addView(createDivider(context, P));
+            }
+
+            // ===============================
+            // Additional Buttons
+            // ===============================
+            addAdditionalButtons(context, layout, docPrefs, moduleContext);
+
+            // ===============================
+            // Save (Restart) Button
+            // ===============================
+            layout.addView(createDivider(context, P));
+
+            Button saveButton = new Button(context);
+            saveButton.setText(moduleContext.getString(R.string.Restart));
+            saveButton.setTextColor(P.fg);
+            saveButton.setBackgroundColor(P.btnBg);
+            saveButton.setOnClickListener(v -> {
+                boolean saveSuccess = true;
+
+                try {
+                    for (LimeOptions.Option option : limeOptions.options) {
+                        docPrefs.saveSetting(option.name, String.valueOf(option.checked));
+                    }
+                } catch (IOException e) {
+                    saveSuccess = false;
+                    XposedBridge.log("Lime: Save failed: " + e.getMessage());
+                }
+
+                if (!saveSuccess) {
+                    Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(
+                            context.getApplicationContext(),
+                            context.getString(R.string.restarting),
+                            Toast.LENGTH_SHORT
+                    ).show();
+                    context.startActivity(
+                            new Intent().setClassName(
+                                    Constants.PACKAGE_NAME,
+                                    "jp.naver.line.android.activity.SplashActivity"
+                            )
+                    );
+                    Process.killProcess(Process.myPid());
+                }
+            });
+            layout.addView(saveButton);
+
+            // ===============================
+            // Back Button
+            // ===============================
+            layout.addView(createDivider(context, P));
+
+            Button hideButton = new Button(context);
+            hideButton.setText(moduleContext.getString(R.string.back));
+            hideButton.setTextColor(P.fg);
+            hideButton.setBackgroundColor(P.btnBg);
+
+            hideButton.setOnClickListener(v -> {
+                if (launchedFromHeader) {
+                    // ヘッダーオーバーレイ → 閉じる
+                    ViewParent p1 = layout.getParent();
+                    if (p1 instanceof View) {
+                        View scroll = (View) p1;
+                        ViewParent p2 = scroll.getParent();
+                        if (p2 instanceof ViewGroup) {
+                            ((ViewGroup) p2).removeView((View) p1);
+                        }
+                    }
+                } else {
+                    // 通常メニュー → 元のレイアウトに戻る
+                    ViewParent parent = layout.getParent();
+                    if (parent instanceof ViewGroup) {
+                        ViewGroup vg = (ViewGroup) parent;
+                        View buttonLayout = createButtonLayout(context, docPrefs, moduleContext, loadPackageParam, true);
+                        showView(vg, buttonLayout);
+                    }
+                }
             });
 
-            layout.addView(categoryTitle);
+            layout.addView(hideButton);
+
+            scrollView.addView(layout);
+            return scrollView;
         }
+    public static class SettingActionButton {
+        public final LimeOptions.OptionCategory category;
+        public final Supplier<Boolean> visibleCondition;
+        public final String title;
+        public final View.OnClickListener onClick;
 
-        // 追加ボタン
-        addAdditionalButtons(context, layout, docPrefs, moduleContext);
+        public SettingActionButton(
+                LimeOptions.OptionCategory category,
+                Supplier<Boolean> visibleCondition,
+                String title,
+                View.OnClickListener onClick
+        ) {
+            this.category = category;
+            this.visibleCondition = visibleCondition;
+            this.title = title;
+            this.onClick = onClick;
+        }
+    }
+    private List<SettingActionButton> getSettingActionButtons(
+            Context context,
+            Context moduleContext
+    ) {
+        return Arrays.asList(
 
-        // 保存ボタン
-        Button saveButton = new Button(context);
-        saveButton.setText(moduleContext.getString(R.string.Restart));
-        saveButton.setTextColor(Color.WHITE);
-        saveButton.setBackgroundColor(Color.DKGRAY);
-        saveButton.setOnClickListener(v -> {
-            boolean saveSuccess = true;
 
-            try {
-                for (LimeOptions.Option option : limeOptions.options) {
-                    docPrefs.saveSetting(option.name, String.valueOf(option.checked));
-                }
-            } catch (IOException e) {
-                saveSuccess = false;
-                XposedBridge.log("Lime: Save failed: " + e.getMessage());
-            }
+                new SettingActionButton(
+                        LimeOptions.OptionCategory.CHAT,
+                        () -> limeOptions.PhotoSave.checked,
+                        "PhotoSave Name",
+                        v -> SettingPhotoSave(context, moduleContext)
+                )
 
-            if (!saveSuccess) {
-                Toast.makeText(context, context.getString(R.string.save_failed), Toast.LENGTH_LONG).show();
-            } else {
-                Toast.makeText(context.getApplicationContext(), context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-                context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
-                Process.killProcess(Process.myPid());
-            }
-        });
-        layout.addView(saveButton);
 
-        // 戻るボタン
-        Button hideButton = new Button(context);
-        hideButton.setText(moduleContext.getString(R.string.back));
-        hideButton.setTextColor(Color.WHITE);
-        hideButton.setBackgroundColor(Color.DKGRAY);
-        hideButton.setOnClickListener(v -> {
-            showView((ViewGroup) layout.getParent(), createButtonLayout(context, docPrefs, moduleContext, loadPackageParam, loadPackageParam));
-        });
-        layout.addView(hideButton);
-
-        scrollView.addView(layout);
-        return scrollView;
+        );
     }
 
-    private LinearLayout createOptionsLayout(Context context, List<LimeOptions.Option> options, DocumentPreferences docPrefs, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam) {
+    private LinearLayout createOptionsLayout(
+            Context context,
+            List<LimeOptions.Option> options,
+            DocumentPreferences docPrefs,
+            Context moduleContext,
+            XC_LoadPackage.LoadPackageParam loadPackageParam,
+            boolean launchedFromHeader
+    ) {
+
+        boolean dark = isDarkMode(context);
+        ThemePalette P = new ThemePalette(dark);
+
         LinearLayout layout = new LinearLayout(context);
         layout.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.MATCH_PARENT));
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context), Utils.dpToPx(20, context));
-        layout.setBackgroundColor(Color.BLACK);
+        layout.setPadding(
+                Utils.dpToPx(20, context),
+                Utils.dpToPx(20, context),
+                Utils.dpToPx(20, context),
+                Utils.dpToPx(20, context)
+        );
+        layout.setBackgroundColor(P.bg);
         layout.setClickable(true);
         layout.setFocusable(true);
 
-        String LIMEs_versionName = BuildConfig.VERSION_NAME;
+        // ===============================
+        // Version
+        // ===============================
         TextView versionTextView = new TextView(context);
-        versionTextView.setText("LIMEs" + " (" + LIMEs_versionName + ")");
+        versionTextView.setText("LIMEs (" + BuildConfig.VERSION_NAME + ")");
         versionTextView.setTextSize(16);
-        versionTextView.setTextColor(Color.WHITE);
+        versionTextView.setTextColor(P.fg);
         versionTextView.setGravity(Gravity.CENTER);
         versionTextView.setPadding(0, Utils.dpToPx(10, context), 0, Utils.dpToPx(10, context));
         layout.addView(versionTextView);
 
+        // ===============================
+        // 親子 Switch 管理用
+        // ===============================
         Switch switchRedirectWebView = null;
         Switch photoAddNotificationView = null;
-        Switch ReadCheckerView = null;
+        Switch readCheckerView = null;
         Switch preventUnsendMessageView = null;
-        Switch DarkModeView = null;
+        Switch darkModeView = null;
+        Switch preventUnreadView = null;
+
         List<Switch> webViewChildSwitches = new ArrayList<>();
         List<Switch> photoNotificationChildSwitches = new ArrayList<>();
-        List<Switch> ReadCheckerSwitches = new ArrayList<>();
+        List<Switch> readCheckerSwitches = new ArrayList<>();
         List<Switch> preventUnsendMessageSwitches = new ArrayList<>();
-        List<Switch> DarkModeSwitches = new ArrayList<>();
+        List<Switch> darkModeSwitches = new ArrayList<>();
+        List<Switch> preventUnreadSwitches = new ArrayList<>();
 
+        // ===============================
+        // Switch 描画
+        // ===============================
         for (LimeOptions.Option option : options) {
-            Switch switchView = new Switch(context);
+            Switch sw = new Switch(context);
             LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT);
             params.topMargin = Utils.dpToPx(10, context);
-            switchView.setLayoutParams(params);
-            switchView.setText(option.id);
-            switchView.setTextColor(Color.WHITE);
-            switchView.setChecked(option.checked);
+            sw.setLayoutParams(params);
 
-            switchView.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            sw.setText(option.id);
+            sw.setTextColor(P.fg);
+            sw.setChecked(option.checked);
+
+            sw.setOnCheckedChangeListener((buttonView, isChecked) -> {
                 option.checked = isChecked;
                 try {
                     docPrefs.saveSetting(option.name, String.valueOf(isChecked));
                 } catch (IOException e) {
-                    throw new RuntimeException(e);
+                    XposedBridge.log(e);
                 }
             });
 
             switch (option.name) {
+
+                case "PhotoSave":
+                    // 親スイッチ（ボタン表示条件に使用）
+                    break;
+
                 case "redirect_webview":
-                    switchRedirectWebView = switchView;
-                    switchRedirectWebView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                        for (Switch child : webViewChildSwitches) {
-                            child.setEnabled(isChecked);
-                            if (!isChecked) {
-                                child.setChecked(false);
-                                // 子スイッチの状態を保存
-                                String childName = getOptionNameFromSwitch(child, options);
-                                if (childName != null) {
-                                    try {
-                                        docPrefs.saveSetting(childName, "false");
-                                    } catch (IOException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                }
-                            }
-                        }
-                        // 親スイッチの状態を保存
-                        try {
-                            docPrefs.saveSetting("redirect_webview", String.valueOf(isChecked));
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-                    break;
-
-                case "PhotoAddNotification":
-                    photoAddNotificationView = switchView;
-                    photoAddNotificationView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                        for (Switch child : photoNotificationChildSwitches) {
-                            child.setEnabled(isChecked);
-                            if (!isChecked) {
-                                child.setChecked(false);
-                                String childName = getOptionNameFromSwitch(child, options);
-                                if (childName != null) {
-                                    try {
-                                        docPrefs.saveSetting(childName, "false");
-                                    } catch (IOException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                }
-                            }
-                        }
-                        try {
-                            docPrefs.saveSetting("PhotoAddNotification", String.valueOf(isChecked));
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-                    break;
-
-                case "ReadChecker":
-                    ReadCheckerView = switchView;
-                    ReadCheckerView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                        for (Switch child : ReadCheckerSwitches) {
-                            child.setEnabled(isChecked);
-                            if (!isChecked) {
-                                child.setChecked(false);
-                                String childName = getOptionNameFromSwitch(child, options);
-                                if (childName != null) {
-                                    try {
-                                        docPrefs.saveSetting(childName, "false");
-                                    } catch (IOException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                }
-                            }
-                        }
-                        try {
-                            docPrefs.saveSetting("ReadChecker", String.valueOf(isChecked));
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-                    break;
-
-                case "prevent_unsend_message":
-                    preventUnsendMessageView = switchView;
-                    preventUnsendMessageView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                        for (Switch child : preventUnsendMessageSwitches) {
-                            child.setEnabled(isChecked);
-                            if (!isChecked) {
-                                child.setChecked(false);
-                                String childName = getOptionNameFromSwitch(child, options);
-                                if (childName != null) {
-                                    try {
-                                        docPrefs.saveSetting(childName, "false");
-                                    } catch (IOException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                }
-                            }
-                        }
-                        try {
-                            docPrefs.saveSetting("prevent_unsend_message", String.valueOf(isChecked));
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-                    break;
-
-                case "DarkColor":
-                    DarkModeView = switchView;
-                    DarkModeView.setOnCheckedChangeListener((buttonView, isChecked) -> {
-                        for (Switch child : DarkModeSwitches) {
-                            child.setEnabled(isChecked);
-                            if (!isChecked) {
-                                child.setChecked(false);
-                                String childName = getOptionNameFromSwitch(child, options);
-                                if (childName != null) {
-                                    try {
-                                        docPrefs.saveSetting(childName, "false");
-                                    } catch (IOException e) {
-                                        throw new RuntimeException(e);
-                                    }
-                                }
-                            }
-                        }
-                        try {
-                            docPrefs.saveSetting("DarkColor", String.valueOf(isChecked));
-                        } catch (IOException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
+                    switchRedirectWebView = sw;
                     break;
 
                 case "open_in_browser":
-                    webViewChildSwitches.add(switchView);
-                    switchView.setEnabled(switchRedirectWebView != null && switchRedirectWebView.isChecked());
+                    webViewChildSwitches.add(sw);
+                    sw.setEnabled(switchRedirectWebView != null && switchRedirectWebView.isChecked());
                     break;
 
-                case "hide_canceled_message":
-                    preventUnsendMessageSwitches.add(switchView);
-                    switchView.setEnabled(preventUnsendMessageView != null && preventUnsendMessageView.isChecked());
+                case "PhotoAddNotification":
+                    photoAddNotificationView = sw;
                     break;
 
                 case "GroupNotification":
                 case "CansellNotification":
                 case "AddCopyAction":
                 case "DisableSilentMessage":
-                    photoNotificationChildSwitches.add(switchView);
-                    switchView.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked());
+                    photoNotificationChildSwitches.add(sw);
+                    sw.setEnabled(photoAddNotificationView != null && photoAddNotificationView.isChecked());
+                    break;
+
+                case "ReadChecker":
+                    readCheckerView = sw;
                     break;
 
                 case "MySendMessage":
                 case "ReadCheckerChatdataDelete":
-                    ReadCheckerSwitches.add(switchView);
-                    switchView.setEnabled(ReadCheckerView != null && ReadCheckerView.isChecked());
+                    readCheckerSwitches.add(sw);
+                    sw.setEnabled(readCheckerView != null && readCheckerView.isChecked());
+                    break;
+
+                case "prevent_unsend_message":
+                    preventUnsendMessageView = sw;
+                    break;
+
+                case "hide_canceled_message":
+                    preventUnsendMessageSwitches.add(sw);
+                    sw.setEnabled(preventUnsendMessageView != null && preventUnsendMessageView.isChecked());
+                    break;
+
+                case "DarkColor":
+                    darkModeView = sw;
                     break;
 
                 case "DarkModSync":
-                    DarkModeSwitches.add(switchView);
-                    switchView.setEnabled(DarkModeView != null && DarkModeView.isChecked());
+                    darkModeSwitches.add(sw);
+                    sw.setEnabled(darkModeView != null && darkModeView.isChecked());
+                    break;
+
+                case "prevent_mark_as_read":
+                    preventUnreadView = sw;
                     break;
             }
 
-            layout.addView(switchView);
+            layout.addView(sw);
         }
+
+        // ===============================
+        // カテゴリ別 設定画面ボタン
+        // ===============================
+        LimeOptions.OptionCategory currentCategory = options.isEmpty()
+                ? null
+                : options.get(0).category;
+
+        if (currentCategory != null) {
+            for (SettingActionButton btn : getSettingActionButtons(context, moduleContext)) {
+                if (btn.category != currentCategory) continue;
+                if (btn.visibleCondition != null && !btn.visibleCondition.get()) continue;
+
+                layout.addView(createDivider(context, P));
+
+                Button b = new Button(context);
+                b.setText(btn.title);
+                b.setTextColor(P.fg);
+                b.setBackgroundColor(P.btnBg);
+                b.setOnClickListener(btn.onClick);
+
+                layout.addView(b);
+            }
+        }
+
+        // ===============================
+        // Restart
+        // ===============================
+        layout.addView(createDivider(context, P));
 
         Button saveButton = new Button(context);
         saveButton.setText(moduleContext.getString(R.string.Restart));
-        saveButton.setTextColor(Color.WHITE);
-        saveButton.setBackgroundColor(Color.DKGRAY);
+        saveButton.setTextColor(P.fg);
+        saveButton.setBackgroundColor(P.btnBg);
         saveButton.setOnClickListener(v -> {
             Toast.makeText(context, context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
-            context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME, "jp.naver.line.android.activity.SplashActivity"));
+            context.startActivity(new Intent().setClassName(
+                    Constants.PACKAGE_NAME,
+                    "jp.naver.line.android.activity.SplashActivity"
+            ));
             Process.killProcess(Process.myPid());
         });
         layout.addView(saveButton);
 
-        // 戻るボタン
+        // ===============================
+        // Back
+        // ===============================
         Button backButton = new Button(context);
         backButton.setText(moduleContext.getString(R.string.back));
-        backButton.setTextColor(Color.WHITE);
-        backButton.setBackgroundColor(Color.DKGRAY);
+        backButton.setTextColor(P.fg);
+        backButton.setBackgroundColor(P.btnBg);
         backButton.setOnClickListener(v -> {
-            ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), docPrefs, moduleContext, loadPackageParam);
+            ScrollView categoryLayout = createCategoryListLayout(
+                    context,
+                    Arrays.asList(limeOptions.options),
+                    docPrefs,
+                    moduleContext,
+                    loadPackageParam,
+                    launchedFromHeader
+            );
             showView((ViewGroup) layout.getParent(), categoryLayout);
         });
         layout.addView(backButton);
 
-        // スクロールビューでラップ
         ScrollView scrollView = new ScrollView(context);
-        scrollView.setLayoutParams(new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
         scrollView.addView(layout);
-
         return layout;
     }
+
 
     private String getOptionNameFromSwitch(Switch switchView, List<LimeOptions.Option> options) {
         try {
@@ -1300,7 +1087,14 @@ public class EmbedOptions implements IHook {
         }
         return null;
     }
-    private View createButtonLayout(Context context, DocumentPreferences docPrefs, Context moduleContext, XC_LoadPackage.LoadPackageParam loadPackageParam, XC_LoadPackage.LoadPackageParam viewGroup) {
+    private View createButtonLayout(
+
+            Context context,
+            DocumentPreferences docPrefs,
+            Context moduleContext,
+            XC_LoadPackage.LoadPackageParam loadPackageParam,
+            boolean launchedFromHeader
+    ) {
         PackageManager pm = context.getPackageManager();
         String versionName = "";
         try {
@@ -1308,11 +1102,11 @@ public class EmbedOptions implements IHook {
         } catch (PackageManager.NameNotFoundException e) {
             e.printStackTrace();
         }
+
         FrameLayout rootLayout = new FrameLayout(context);
         rootLayout.setLayoutParams(new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.MATCH_PARENT));
-
 
         Button button = new Button(context);
         button.setText(R.string.app_name);
@@ -1322,7 +1116,6 @@ public class EmbedOptions implements IHook {
                 FrameLayout.LayoutParams.WRAP_CONTENT);
         layoutParams.gravity = Gravity.TOP | Gravity.END;
         layoutParams.rightMargin = Utils.dpToPx(10, context);
-
 
         int statusBarHeight = getStatusBarHeight(context);
 
@@ -1338,122 +1131,221 @@ public class EmbedOptions implements IHook {
         button.setLayoutParams(layoutParams);
 
         button.setOnClickListener(view -> {
-
-            ScrollView categoryLayout = createCategoryListLayout(context, Arrays.asList(limeOptions.options), docPrefs, moduleContext, loadPackageParam);
+            ScrollView categoryLayout = createCategoryListLayout(
+                    context,
+                    Arrays.asList(limeOptions.options),
+                    docPrefs,
+                    moduleContext,
+                    loadPackageParam,
+                    launchedFromHeader // ★右上ボタン経由
+            );
             showView(rootLayout, categoryLayout);
         });
 
-
         rootLayout.addView(button);
-
         return rootLayout;
     }
 
+    private View createDivider(Context context, ThemePalette P) {
+        View divider = new View(context);
+        divider.setLayoutParams(new LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                2
+        ));
+        divider.setBackgroundColor(P.divider);
+        return divider;
+    }
     private void addAdditionalButtons(Context context, LinearLayout layout, DocumentPreferences docPrefs, Context moduleContext) {
-        // 復元ボタン
+
+        boolean dark = isDarkMode(context);
+        ThemePalette P = new ThemePalette(dark);
+
+        layout.addView(createDivider(context, P));
+
+        Button resetFcmButton = new Button(context);
+        resetFcmButton.setText("FCM AppID リセット");
+        resetFcmButton.setTextColor(P.fg);
+        resetFcmButton.setBackgroundColor(P.btnBg);
+
+        resetFcmButton.setOnClickListener(v ->
+                resetFcmAppId(context)
+        );
+
+        layout.addView(resetFcmButton);
+
+
+        // ============================================================
+        // KeepUnread Button
+        // ============================================================
+        layout.addView(createDivider(context, P));
+        Button keepUnreadButton = new Button(context);
+        keepUnreadButton.setText(moduleContext.getString(R.string.edit_margin_settings));
+        keepUnreadButton.setTextColor(P.fg);
+        keepUnreadButton.setBackgroundColor(P.btnBg);
+        keepUnreadButton.setOnClickListener(v -> KeepUnread_Button(context, moduleContext));
+        layout.addView(keepUnreadButton);
+
+        // ============================================================
+        // Restore Chat History
+        // ============================================================
+            layout.addView(createDivider(context, P));
         Button restoreButton = new Button(context);
-        restoreButton.setText(moduleContext.getResources().getString(R.string.Restore));
+        restoreButton.setText(moduleContext.getString(R.string.Restore));
+        restoreButton.setTextColor(P.fg);
+        restoreButton.setBackgroundColor(P.btnBg);
         restoreButton.setOnClickListener(v -> showFilePickerChatHistory(context, moduleContext));
         layout.addView(restoreButton);
 
-        // チャットリスト復元ボタン
+        // ============================================================
+        // Restore Chat List
+        // ============================================================
+            layout.addView(createDivider(context, P));
         Button restoreChatListButton = new Button(context);
-        restoreChatListButton.setText(moduleContext.getResources().getString(R.string.restoreChatListButton));
+        restoreChatListButton.setText(moduleContext.getString(R.string.restoreChatListButton));
+        restoreChatListButton.setTextColor(P.fg);
+        restoreChatListButton.setBackgroundColor(P.btnBg);
         restoreChatListButton.setOnClickListener(v -> showFilePickerChatlist(context, moduleContext));
         layout.addView(restoreChatListButton);
 
-        // バックアップボタン
+        // ============================================================
+        // Backup Chat History
+        // ============================================================
+            layout.addView(createDivider(context, P));
         Button backupButton = new Button(context);
-        backupButton.setText(moduleContext.getResources().getString(R.string.Back_Up));
+        backupButton.setText(moduleContext.getString(R.string.Back_Up));
+        backupButton.setTextColor(P.fg);
+        backupButton.setBackgroundColor(P.btnBg);
         backupButton.setOnClickListener(v -> backupChatHistory(context, moduleContext));
         layout.addView(backupButton);
 
-        // トーク画像バックアップボタン
+        // ============================================================
+        // Backup Image Folder
+        // ============================================================
+            layout.addView(createDivider(context, P));
         Button backupfolderButton = new Button(context);
-        backupfolderButton.setText(moduleContext.getResources().getString(R.string.Talk_Picture_Back_up));
+        backupfolderButton.setText(moduleContext.getString(R.string.Talk_Picture_Back_up));
+        backupfolderButton.setTextColor(P.fg);
+        backupfolderButton.setBackgroundColor(P.btnBg);
         backupfolderButton.setOnClickListener(v -> backupChatsFolder(context, moduleContext));
         layout.addView(backupfolderButton);
 
-        // 画像復元ボタン
+        // ============================================================
+        // Restore Image Folder
+        // ============================================================
+            layout.addView(createDivider(context, P));
         Button restorefolderButton = new Button(context);
-        restorefolderButton.setText(moduleContext.getResources().getString(R.string.Picure_Restore));
+        restorefolderButton.setText(moduleContext.getString(R.string.Picure_Restore));
+        restorefolderButton.setTextColor(P.fg);
+        restorefolderButton.setBackgroundColor(P.btnBg);
         restorefolderButton.setOnClickListener(v -> restoreChatsFolder(context, moduleContext));
         layout.addView(restorefolderButton);
 
+        // ============================================================
+        // Get MID/ID Button
+        // ============================================================
+            layout.addView(createDivider(context, P));
         Button GetMidIdButton = new Button(context);
-        GetMidIdButton.setText(moduleContext.getResources().getString(R.string.GetMidIdButton));
+        GetMidIdButton.setText(moduleContext.getString(R.string.GetMidIdButton));
+        GetMidIdButton.setTextColor(P.fg);
+        GetMidIdButton.setBackgroundColor(P.btnBg);
         GetMidIdButton.setOnClickListener(v -> GetMidId(context, moduleContext));
         layout.addView(GetMidIdButton);
 
-        // グループミュートボタン（条件付き）
+        // ============================================================
+        // Mute Groups
+        // ============================================================
         if (limeOptions.MuteGroup.checked) {
+                layout.addView(createDivider(context, P));
             Button muteGroupsButton = new Button(context);
-            muteGroupsButton.setText(moduleContext.getResources().getString(R.string.Mute_Group));
+            muteGroupsButton.setText(moduleContext.getString(R.string.Mute_Group));
+            muteGroupsButton.setTextColor(P.fg);
+            muteGroupsButton.setBackgroundColor(P.btnBg);
             muteGroupsButton.setOnClickListener(v -> MuteGroups_Button(context, moduleContext));
             layout.addView(muteGroupsButton);
         }
 
-        // 未読維持設定ボタン
-        Button keepUnreadButton = new Button(context);
-        keepUnreadButton.setText(moduleContext.getResources().getString(R.string.edit_margin_settings));
-        keepUnreadButton.setOnClickListener(v -> KeepUnread_Button(context, moduleContext));
-        layout.addView(keepUnreadButton);
-
-        // 取消メッセージボタン（条件付き）
+        // ============================================================
+        // Prevent Unsend Message (Canceled Message Edit)
+        // ============================================================
         if (limeOptions.preventUnsendMessage.checked) {
+                layout.addView(createDivider(context, P));
             Button canceledMessageButton = new Button(context);
-            canceledMessageButton.setText(moduleContext.getResources().getString(R.string.canceled_message));
+            canceledMessageButton.setText(moduleContext.getString(R.string.canceled_message));
+            canceledMessageButton.setTextColor(P.fg);
+            canceledMessageButton.setBackgroundColor(P.btnBg);
             canceledMessageButton.setOnClickListener(v -> Cancel_Message_Button(context, moduleContext));
             layout.addView(canceledMessageButton);
         }
 
-        // 通知キャンセルボタン（条件付き）
+        // ============================================================
+        // Cancel Notification
+        // ============================================================
         if (limeOptions.CansellNotification.checked) {
+                layout.addView(createDivider(context, P));
             Button cansellNotificationButton = new Button(context);
-            cansellNotificationButton.setText(moduleContext.getResources().getString(R.string.CansellNotification));
+            cansellNotificationButton.setText(moduleContext.getString(R.string.CansellNotification));
+            cansellNotificationButton.setTextColor(P.fg);
+            cansellNotificationButton.setBackgroundColor(P.btnBg);
             cansellNotificationButton.setOnClickListener(v -> CansellNotification(context, moduleContext));
             layout.addView(cansellNotificationButton);
         }
 
-        // ブロックチェックボタン（条件付き）
+        // ============================================================
+        // Block Check
+        // ============================================================
         if (limeOptions.BlockCheck.checked) {
+                layout.addView(createDivider(context, P));
             Button blockCheckButton = new Button(context);
-            blockCheckButton.setText(moduleContext.getResources().getString(R.string.BlockCheck));
+            blockCheckButton.setText(moduleContext.getString(R.string.BlockCheck));
+            blockCheckButton.setTextColor(P.fg);
+            blockCheckButton.setBackgroundColor(P.btnBg);
             blockCheckButton.setOnClickListener(v -> Blocklist(context, moduleContext));
             layout.addView(blockCheckButton);
         }
 
-        // 取消メッセージ非表示ボタン（条件付き）
-        if (limeOptions.preventUnsendMessage.checked) {
-            Button hideCanceledMessageButton = new Button(context);
-            hideCanceledMessageButton.setText(moduleContext.getResources().getString(R.string.hide_canceled_message));
-            hideCanceledMessageButton.setOnClickListener(v -> {
-                new AlertDialog.Builder(context)
-                        .setTitle(moduleContext.getResources().getString(R.string.HideSetting))
-                        .setMessage(moduleContext.getResources().getString(R.string.HideSetting_selection))
-                        .setPositiveButton(moduleContext.getResources().getString(R.string.Hide), (dialog, which) -> {
-                            updateMessagesVisibility(context, true, moduleContext);
-                        })
-                        .setNegativeButton(moduleContext.getResources().getString(R.string.Show), (dialog, which) -> {
-                            updateMessagesVisibility(context, false, moduleContext);
-                        })
-                        .setIcon(android.R.drawable.ic_dialog_info)
-                        .show();
-            });
-            layout.addView(hideCanceledMessageButton);
-        }
-
-        // ピン留めリストボタン（条件付き）
+        // ============================================================
+        // Pin List
+        // ============================================================
         if (limeOptions.PinList.checked) {
+                layout.addView(createDivider(context, P));
             Button pinListButton = new Button(context);
-            pinListButton.setText(moduleContext.getResources().getString(R.string.PinList));
+            pinListButton.setText(moduleContext.getString(R.string.PinList));
+            pinListButton.setTextColor(P.fg);
+            pinListButton.setBackgroundColor(P.btnBg);
             pinListButton.setOnClickListener(v -> PinListButton(context, moduleContext));
             layout.addView(pinListButton);
         }
 
-        // リクエスト修正ボタン（DocumentPreferencesを使用）
+        // ============================================================
+        // Read Check List (Edit)
+        // ============================================================
+        if (limeOptions.PreventMarkAsRead_Setting.checked) {
+                layout.addView(createDivider(context, P));
+            Button showChatCheckListDialog = new Button(context);
+            showChatCheckListDialog.setText("Read Check Edit");
+            showChatCheckListDialog.setTextColor(P.fg);
+            showChatCheckListDialog.setBackgroundColor(P.btnBg);
+            showChatCheckListDialog.setOnClickListener(v -> showChatCheckListDialog(activity2, context));
+            layout.addView(showChatCheckListDialog);
+        }
+//        if (limeOptions.PhotoSave.checked) {
+//            layout.addView(createDivider(context, P));
+//            Button PhotoSave = new Button(context);
+//            PhotoSave.setText("PhotoSave Name");
+//            PhotoSave.setTextColor(P.fg);
+//            PhotoSave.setBackgroundColor(P.btnBg);
+//            PhotoSave.setOnClickListener(v -> SettingPhotoSave(activity2, moduleContext));
+//            layout.addView(PhotoSave);
+//        }
+
+        // ============================================================
+        // Modify Request JavaScript
+        // ============================================================
+            layout.addView(createDivider(context, P));
         Button modifyRequestButton = new Button(context);
         modifyRequestButton.setText(R.string.modify_request);
+        modifyRequestButton.setTextColor(P.fg);
+        modifyRequestButton.setBackgroundColor(P.btnBg);
         modifyRequestButton.setOnClickListener(v -> {
             try {
                 String encodedJs = docPrefs.getSetting("encoded_js_modify_request", "");
@@ -1467,21 +1359,24 @@ public class EmbedOptions implements IHook {
                                         Base64.encodeToString(content.getBytes(), Base64.NO_WRAP));
                             } catch (IOException e) {
                                 Toast.makeText(context, "Failed to save request modification", Toast.LENGTH_SHORT).show();
-                                XposedBridge.log("Save modify request error: " + e.getMessage());
                             }
                         },
                         moduleContext
                 );
             } catch (Exception e) {
                 Toast.makeText(context, "Error loading request settings", Toast.LENGTH_SHORT).show();
-                XposedBridge.log("Load modify request error: " + e.getMessage());
             }
         });
         layout.addView(modifyRequestButton);
 
-        // レスポンス修正ボタン（DocumentPreferencesを使用）
+        // ============================================================
+        // Modify Response JavaScript
+        // ============================================================
+            layout.addView(createDivider(context, P));
         Button modifyResponseButton = new Button(context);
         modifyResponseButton.setText(R.string.modify_response);
+        modifyResponseButton.setTextColor(P.fg);
+        modifyResponseButton.setBackgroundColor(P.btnBg);
         modifyResponseButton.setOnClickListener(v -> {
             try {
                 String encodedJs = docPrefs.getSetting("encoded_js_modify_response", "");
@@ -1495,47 +1390,497 @@ public class EmbedOptions implements IHook {
                                         Base64.encodeToString(content.getBytes(), Base64.NO_WRAP));
                             } catch (IOException e) {
                                 Toast.makeText(context, "Failed to save response modification", Toast.LENGTH_SHORT).show();
-                                XposedBridge.log("Save modify response error: " + e.getMessage());
                             }
                         },
                         moduleContext
                 );
             } catch (Exception e) {
                 Toast.makeText(context, "Error loading response settings", Toast.LENGTH_SHORT).show();
-                XposedBridge.log("Load modify response error: " + e.getMessage());
             }
         });
         layout.addView(modifyResponseButton);
+
+        // ============================================================
+        // Reset URI Button
+        // ============================================================
+            layout.addView(createDivider(context, P));
+        Button resetButton = new Button(context);
+        resetButton.setText(moduleContext.getString(R.string.ResetButton));
+        resetButton.setTextColor(P.fg);
+        resetButton.setBackgroundColor(P.btnBg);
+        resetButton.setOnClickListener(v -> {
+            try {
+                File settingsDir = new File(context.getFilesDir(), "LimeBackup");
+                File settingsFile = new File(settingsDir, "backup_uri.txt");
+
+                String toastMsg;
+                if (settingsFile.exists()) {
+                    boolean deleted = settingsFile.delete();
+                    toastMsg = deleted ? " Reset URI" : "Error";
+
+                    Toast.makeText(context.getApplicationContext(),
+                            context.getString(R.string.restarting), Toast.LENGTH_SHORT).show();
+
+                    context.startActivity(new Intent().setClassName(Constants.PACKAGE_NAME,
+                            "jp.naver.line.android.activity.SplashActivity"));
+                    Process.killProcess(Process.myPid());
+                } else {
+                    toastMsg = "リセット対象の URI はありません";
+                }
+
+                Toast.makeText(moduleContext, toastMsg, Toast.LENGTH_SHORT).show();
+            } catch (Throwable t) {
+                Toast.makeText(moduleContext, "エラー: " + t.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+        layout.addView(resetButton);
+
+        // ============================================================
+        // Copy File Button
+        // ============================================================
+            layout.addView(createDivider(context, P));
+        Button CopyFileButton = new Button(context);
+        CopyFileButton.setText(moduleContext.getString(R.string.CopyFileButton));
+        CopyFileButton.setTextColor(P.fg);
+        CopyFileButton.setBackgroundColor(P.btnBg);
+
+        String[] resourceNames = {
+                "dial_tone.wav",
+                "lineapp_endthis_16k.wav",
+                "keep_switch_off.png",
+                "keep_switch_on.png",
+                "reaction.png",
+                "read_checker.png",
+                "read_switch_off.png",
+                "read_switch_on.png",
+
+                "keep_switch_off_light.png",
+                "keep_switch_off_dark.png",
+                "keep_switch_on_light.png",
+                "keep_switch_on_dark.png",
+                "reaction_light.png",
+                "reaction_dark.png",
+                "read_checker_light.png",
+                "read_checker_dark.png",
+                "read_switch_off_light.png",
+                "read_switch_off_dark.png",
+                "read_switch_on_light.png",
+                "read_switch_on_dark.png",
+                "ringtone.wav",
+                "header_setting_dark.png"
+        };
+
+        int[] resourceIds = {
+                R.raw.dial_tone,
+                R.raw.ringtone,
+                R.raw.reaction, R.raw.read_checker, R.raw.read_switch_off, R.raw.read_switch_on,R.raw.keep_switch_off, R.raw.keep_switch_on,
+                R.raw.keep_switch_off_light,
+                R.raw.keep_switch_off_dark,
+                R.raw.keep_switch_on_light,
+                R.raw.keep_switch_on_dark,
+                R.raw.reaction_light,
+                R.raw.reaction_dark,
+                R.raw.read_checker_light,
+                R.raw.read_checker_dark,
+                R.raw.read_switch_off_light,
+                R.raw.read_switch_off_dark,
+                R.raw.read_switch_on_light,
+                R.raw.read_switch_on_dark,
+                R.raw.header_setting_dark,
+                R.raw.header_setting_light,
+        };
+
+        CopyFileButton.setOnClickListener(v -> {
+            try {
+                AlertDialog.Builder builderFile = new AlertDialog.Builder(
+                        context,
+                        dark ? android.R.style.Theme_DeviceDefault_Dialog_NoActionBar
+                                : android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar
+                );
+
+                builderFile.setTitle("Choice files to copy");
+                boolean[] checkedItems = new boolean[resourceNames.length];
+
+                builderFile.setMultiChoiceItems(resourceNames, checkedItems, (dialog, which, isChecked) -> {
+                    checkedItems[which] = isChecked;
+                });
+
+                builderFile.setPositiveButton("Copy", (dialog, which) -> {
+                    String backupUri = loadBackupUri(context);
+                    if (backupUri != null) {
+                        Uri treeUri = Uri.parse(backupUri);
+
+                        DocumentFile targetDir = DocumentFile.fromTreeUri(context, treeUri);
+                        if (targetDir == null || !targetDir.exists()) {
+                            Toast.makeText(context, "指定ディレクトリが見つかりません", Toast.LENGTH_SHORT).show();
+                            return;
+                        }
+
+                        for (int i = 0; i < resourceIds.length; i++) {
+                            if (!checkedItems[i]) continue;
+
+                            try (InputStream in = moduleContext.getResources().openRawResource(resourceIds[i])) {
+
+                                DocumentFile existing = targetDir.findFile(resourceNames[i]);
+                                if (existing != null) existing.delete();
+
+                                DocumentFile outFile = targetDir.createFile(
+                                        getMimeType(resourceNames[i]),
+                                        resourceNames[i]
+                                );
+
+                                try (OutputStream out = context.getContentResolver().openOutputStream(outFile.getUri())) {
+                                    if (out != null) {
+                                        byte[] buffer = new byte[4096];
+                                        int len;
+                                        while ((len = in.read(buffer)) != -1) {
+                                            out.write(buffer, 0, len);
+                                        }
+                                    }
+                                }
+
+                            } catch (Exception ignored) {}
+                        }
+                    }
+                    Toast.makeText(context, "success", Toast.LENGTH_SHORT).show();
+                });
+
+                builderFile.setNegativeButton("Cancel", null);
+
+                AlertDialog dialog = builderFile.create();
+                dialog.show();
+                applyDialogPalette(dialog, P);
+
+            } catch (Throwable t) {
+                Toast.makeText(moduleContext, "Error: " + t.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        });
+
+        layout.addView(CopyFileButton);
+
+        // ============================================================
+        // Wallet Edit Button
+        // ============================================================
+            layout.addView(createDivider(context, P));
+        Button WalletEdit = new Button(context);
+        WalletEdit.setText(moduleContext.getString(R.string.WalletEdit_Button));
+        WalletEdit.setTextColor(P.fg);
+        WalletEdit.setBackgroundColor(P.btnBg);
+        WalletEdit.setOnClickListener(v -> WalletEdit_Button(context, moduleContext));
+        layout.addView(WalletEdit);
+
+            layout.addView(createDivider(context, P));
     }
 
-    // 修正ダイアログ表示用ヘルパーメソッド
-    private void showModifyDialog(Context context, String title, String encodedContent,
-                                  ContentSaver contentSaver, Context moduleContext) {
+    private static class WalletHideItem {
+        String contentLine;
+        int viewType;
+        String entryName;
+        CheckBox checkBox;
+    }
 
-        String decodedContent = new String(Base64.decode(encodedContent, Base64.NO_WRAP));
+    public void WalletEdit_Button(Context context, Context moduleContext) {
+
+
+        boolean dark = isDarkMode(context);
+        ThemePalette P = new ThemePalette(dark);
+
+        File dir = new File(context.getFilesDir(), "LimeBackup");
+        if (!dir.exists() && !dir.mkdirs()) {
+            Toast.makeText(context, "ディレクトリ作成に失敗しました", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        File file = new File(dir, "wallet_hide_layouts.txt");
+        if (!file.exists()) {
+            try (FileWriter fw = new FileWriter(file)) {
+                fw.write("\n");
+            } catch (IOException e) {
+                Toast.makeText(context, "wallet_hide_layouts.txt 作成失敗", Toast.LENGTH_SHORT).show();
+            }
+        }
+
+        Map<String, List<WalletHideItem>> groups = new LinkedHashMap<>();
+        List<String> otherLines = new ArrayList<>();
+
+        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                String originalLine = line;
+
+                if (line.trim().isEmpty()) {
+                    otherLines.add(originalLine);
+                    continue;
+                }
+
+                boolean isComment = line.trim().startsWith("#");
+                String content = line.replaceFirst("^\\s*#", "").trim();
+
+                if (!content.startsWith("WalletViewType=")) {
+                    otherLines.add(originalLine);
+                    continue;
+                }
+
+                String rest = content.substring("WalletViewType=".length()).trim();
+                if (rest.isEmpty()) {
+                    otherLines.add(originalLine);
+                    continue;
+                }
+
+                String viewTypeStr;
+                String entryName;
+                int spaceIdx = rest.indexOf(' ');
+
+                if (spaceIdx > 0) {
+                    viewTypeStr = rest.substring(0, spaceIdx).trim();
+                    entryName = rest.substring(spaceIdx + 1).trim();
+                } else {
+                    viewTypeStr = rest;
+                    entryName = "";
+                }
+
+                int viewType;
+                try {
+                    viewType = Integer.parseInt(viewTypeStr);
+                } catch (NumberFormatException e) {
+                    otherLines.add(originalLine);
+                    continue;
+                }
+
+                WalletHideItem item = new WalletHideItem();
+                item.contentLine = "WalletViewType=" + viewTypeStr + (entryName.isEmpty() ? "" : " " + entryName);
+                item.viewType = viewType;
+                item.entryName = entryName;
+
+                String groupKey = makeGroupKeyFromEntryName(entryName);
+                groups.computeIfAbsent(groupKey, k -> new ArrayList<>());
+                groups.get(groupKey).add(item);
+            }
+        } catch (IOException e) {
+            Toast.makeText(context, "読み込み失敗", Toast.LENGTH_SHORT).show();
+        }
+
+        Map<String, Boolean> hiddenStateMap = new HashMap<>();
+
+        try (BufferedReader br2 = new BufferedReader(new FileReader(file))) { String line;
+            while ((line = br2.readLine()) != null) { String trimmed = line.trim(); if (trimmed.isEmpty())
+                continue;
+                boolean isComment = trimmed.startsWith("#"); String content = line.replaceFirst("^\\s*#", "").trim();
+                if (!content.startsWith("WalletViewType="))
+                    continue; hiddenStateMap.put(content, !isComment);
+            }
+        }
+        catch (IOException ignored) {}
+        int pad = (int) (16 * context.getResources().getDisplayMetrics().density);
+
+        LinearLayout rootLayout = new LinearLayout(context);
+        rootLayout.setOrientation(LinearLayout.VERTICAL);
+        rootLayout.setPadding(pad, pad, pad, pad);
+        rootLayout.setBackgroundColor(P.bg);
+
+        for (Map.Entry<String, List<WalletHideItem>> entry : groups.entrySet()) {
+
+            String groupKey = entry.getKey();
+            List<WalletHideItem> items = entry.getValue();
+
+            LinearLayout headerLayout = new LinearLayout(context);
+            headerLayout.setOrientation(LinearLayout.HORIZONTAL);
+            headerLayout.setPadding(0, pad / 2, 0, pad / 2);
+            headerLayout.setBackgroundColor(P.btnBg);
+
+            TextView headerTitle = new TextView(context);
+            headerTitle.setText(groupKey);
+            headerTitle.setTextSize(16);
+            headerTitle.setTextColor(P.fg);
+            headerTitle.setPadding(0, 0, pad, 0);
+            headerTitle.setLayoutParams(new LinearLayout.LayoutParams(
+                    0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+            TextView arrow = new TextView(context);
+            arrow.setText("▼");
+            arrow.setTextSize(16);
+            arrow.setTextColor(P.fg);
+
+            headerLayout.addView(headerTitle);
+            headerLayout.addView(arrow);
+
+            LinearLayout childLayout = new LinearLayout(context);
+            childLayout.setOrientation(LinearLayout.VERTICAL);
+            childLayout.setPadding(pad, 0, 0, 0);
+            childLayout.setBackgroundColor(P.bg);
+            childLayout.setVisibility(View.VISIBLE);
+
+            headerLayout.setOnClickListener(v -> {
+                if (childLayout.getVisibility() == View.VISIBLE) {
+                    childLayout.setVisibility(View.GONE);
+                    arrow.setText("▶");
+                } else {
+                    childLayout.setVisibility(View.VISIBLE);
+                    arrow.setText("▼");
+                }
+            });
+
+            for (WalletHideItem item : items) {
+                CheckBox cb = new CheckBox(context);
+
+                String label = (!item.entryName.isEmpty())
+                        ? (item.entryName + " (" + item.viewType + ")")
+                        : ("WalletViewType=" + item.viewType);
+
+                cb.setText(label);
+                cb.setTextColor(P.fg);
+                cb.setBackgroundColor(P.bg);
+
+                Boolean hidden = hiddenStateMap.get(item.contentLine);
+                cb.setChecked(hidden != null && hidden);
+
+                item.checkBox = cb;
+                childLayout.addView(cb);
+            }
+
+            rootLayout.addView(headerLayout);
+            rootLayout.addView(childLayout);
+        }
+
+        Button saveButton = new Button(context);
+        saveButton.setText("保存");
+        saveButton.setTextColor(P.fg);
+        saveButton.setBackgroundColor(P.btnBg);
+
+        saveButton.setOnClickListener(v -> {
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(file, false))) {
+
+                for (String ol : otherLines) {
+                    bw.write(ol);
+                    bw.newLine();
+                }
+
+                for (Map.Entry<String, List<WalletHideItem>> e : groups.entrySet()) {
+                    for (WalletHideItem item : e.getValue()) {
+                        boolean hide = item.checkBox != null && item.checkBox.isChecked();
+                        bw.write((hide ? "" : "# ") + item.contentLine);
+                        bw.newLine();
+                    }
+                }
+
+                Toast.makeText(context, "保存しました", Toast.LENGTH_SHORT).show();
+            } catch (IOException e) {
+                Toast.makeText(context, "保存に失敗しました", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        rootLayout.addView(saveButton);
+
+        ScrollView scrollView = new ScrollView(context);
+        scrollView.setBackgroundColor(P.bg);
+        scrollView.addView(rootLayout);
+
+        AlertDialog dialog = new AlertDialog.Builder(
+                context,
+                dark ? android.R.style.Theme_DeviceDefault_Dialog_NoActionBar
+                        : android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar
+        )
+                .setTitle("Wallet 表示設定")
+                .setView(scrollView)
+                .setNegativeButton(
+                        moduleContext != null ? moduleContext.getString(R.string.cancel) : "閉じる",
+                        (d, w) -> d.dismiss()
+                )
+                .create();
+
+        dialog.show();
+        applyDialogPalette(dialog, P);
+    }
+
+    private String makeGroupKeyFromEntryName(String entryName) {
+        if (entryName == null || entryName.isEmpty()) return "その他";
+
+        String[] parts = entryName.split("_");
+        if (parts.length >= 3) {
+            return parts[0] + "_" + parts[1] + "_" + parts[2];
+        } else if (parts.length == 2) {
+            return parts[0] + "_" + parts[1];
+        } else {
+            return entryName;
+        }
+    }
+
+    private void showModifyDialog(
+            Context context,
+            String title,
+            String encodedContent,
+            ContentSaver contentSaver,
+            Context moduleContext
+    ) {
+
+        boolean dark = isDarkMode(context);
+        ThemePalette P = new ThemePalette(dark);
+
+        String decodedContent = "";
+        try {
+            decodedContent = new String(Base64.decode(encodedContent, Base64.NO_WRAP));
+        } catch (Throwable ignored) {}
 
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(Utils.dpToPx(20, context), Utils.dpToPx(20, context),
-                Utils.dpToPx(20, context), Utils.dpToPx(20, context));
+        layout.setPadding(
+                Utils.dpToPx(20, context),
+                Utils.dpToPx(20, context),
+                Utils.dpToPx(20, context),
+                Utils.dpToPx(20, context)
+        );
+        layout.setBackgroundColor(P.bg);
 
         EditText editText = new EditText(context);
         editText.setLayoutParams(new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                LinearLayout.LayoutParams.MATCH_PARENT));
+                LinearLayout.LayoutParams.MATCH_PARENT
+        ));
         editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         editText.setText(decodedContent);
+        editText.setTextColor(P.fg);
+        editText.setBackgroundColor(P.btnBg);
+        editText.setPadding(20, 20, 20, 20);
         layout.addView(editText);
 
-        new AlertDialog.Builder(context)
-                .setTitle(title)
-                .setView(layout)
-                .setPositiveButton(moduleContext.getString(R.string.positive_button), (dialog, which) -> {
-                    contentSaver.saveContent(editText.getText().toString());
-                })
-                .setNegativeButton(moduleContext.getString(R.string.negative_button), null)
-                .show();
+        AlertDialog.Builder builder =
+                new AlertDialog.Builder(
+                        context,
+                        dark
+                                ? android.R.style.Theme_DeviceDefault_Dialog_NoActionBar
+                                : android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar
+                );
+
+        builder.setTitle(title);
+        builder.setView(layout);
+
+        builder.setPositiveButton(
+                moduleContext.getString(R.string.positive_button),
+                (dialog, which) -> contentSaver.saveContent(editText.getText().toString())
+        );
+
+        builder.setNegativeButton(
+                moduleContext.getString(R.string.negative_button),
+                null
+        );
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+        applyDialogPalette(dialog, P);
+
+        try {
+            int titleId = context.getResources().getIdentifier("alertTitle", "id", "android");
+            TextView titleView = dialog.findViewById(titleId);
+            if (titleView != null) titleView.setTextColor(P.fg);
+        } catch (Throwable ignored) {}
+
+        try {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(P.fg);
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(P.fg);
+        } catch (Throwable ignored) {}
     }
+
 
     interface ContentSaver {
         void saveContent(String content);
@@ -1701,38 +2046,68 @@ public class EmbedOptions implements IHook {
         AlertDialog dialog = builder.create();
         dialog.show();
     }
-
     public void CansellNotification(Context context, Context moduleContext) {
-        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
+        final String TAG = "LimeModule";
 
-        if (!dir.exists()) {
 
-            dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/LimeBackup/Setting");
+        String backupUriStr = loadBackupUri(context);
+        if (backupUriStr == null) {
+            Toast.makeText(context, "バックアップフォルダURIが未設定です", Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + " ⚠ backupUriStr is null");
+            return;
+        }
 
-            if (!dir.exists()) {
+        Uri treeUri = Uri.parse(backupUriStr);
+        DocumentFile root = DocumentFile.fromTreeUri(context, treeUri);
+        if (root == null || !root.exists()) {
+            Toast.makeText(context, "バックアップフォルダにアクセスできません", Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + " ⚠ root DocumentFile is invalid: " + backupUriStr);
+            return;
+        }
 
-                dir = new File(context.getFilesDir(), "LimeBackup/Setting");
-            }
-
-            if (!dir.exists() && !dir.mkdirs()) {
-                Toast.makeText(context, "Failed to create directory", Toast.LENGTH_SHORT).show();
+        // --- Setting フォルダを取得 or 作成 ---
+        DocumentFile settingDir = root.findFile("Setting");
+        if (settingDir == null || !settingDir.isDirectory()) {
+            settingDir = root.createDirectory("Setting");
+            if (settingDir == null) {
+                Toast.makeText(context, "Settingフォルダの作成に失敗しました", Toast.LENGTH_SHORT).show();
+                XposedBridge.log(TAG + " ❌ Failed to create Setting directory");
                 return;
             }
         }
 
-        File file = new File(dir, "Notification_Setting.txt");
-
-        List<String> existingPairs = new ArrayList<>();
-        if (file.exists()) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    existingPairs.add(line.trim());
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-                Toast.makeText(context, "ファイルの読み取りに失敗しました", Toast.LENGTH_SHORT).show();
+        // --- Notification_Setting.txt を取得 or 作成 ---
+        DocumentFile settingFile = settingDir.findFile("Notification_Setting.txt");
+        if (settingFile == null || !settingFile.isFile()) {
+            settingFile = settingDir.createFile("text/plain", "Notification_Setting.txt");
+            if (settingFile == null) {
+                Toast.makeText(context, "設定ファイルの作成に失敗しました", Toast.LENGTH_SHORT).show();
+                XposedBridge.log(TAG + " ❌ Failed to create Notification_Setting.txt");
+                return;
             }
+        }
+
+        final Uri settingFileUri = settingFile.getUri();
+
+        // --- 既存ペア読み込み ---
+        final List<String> existingPairs = new ArrayList<>();
+        try (InputStream in = context.getContentResolver().openInputStream(settingFileUri)) {
+            if (in != null) {
+                try (BufferedReader reader =
+                             new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        String t = line.trim();
+                        if (!t.isEmpty()) {
+                            existingPairs.add(t);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            Toast.makeText(context, "ファイルの読み取りに失敗しました", Toast.LENGTH_SHORT).show();
+            XposedBridge.log(TAG + " ❌ Error reading Notification_Setting.txt: " + e);
         }
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -1753,111 +2128,301 @@ public class EmbedOptions implements IHook {
         addButton.setText(context.getString(R.string.Add));
         layout.addView(addButton);
 
+        // ★★★ フォーマットを統一したまま URI 経由で追記する ★★★
         addButton.setOnClickListener(v -> {
             String groupName = groupNameInput.getText().toString();
             String userName = userNameInput.getText().toString();
-            String newPair = ": " + groupName + ","+ context.getString(R.string.User_name)+": " + userName;
+
+            String groupLabel = context.getString(R.string.GroupName);
+            String userLabel  = context.getString(R.string.User_name);
+
+            // 空グループ名 → "null" で保存したい場合はここで変換してもOK
+            if (groupName.isEmpty()) {
+                groupName = "null";
+            }
+
+            String newPair = groupLabel + ": " + groupName + ", " + userLabel + ": " + userName;
 
             if (existingPairs.contains(newPair)) {
                 Toast.makeText(context, context.getString(R.string.Aleady_Pair), Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            try {
-                FileWriter writer = new FileWriter(file, true); // trueを指定して追記モードにする
-                writer.write(newPair + "\n");
-                writer.close();
+            try (OutputStream out =
+                         context.getContentResolver().openOutputStream(settingFileUri, "wa");
+                 BufferedWriter writer =
+                         new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+
+                writer.write(newPair);
+                writer.newLine();
+                writer.flush();
+
                 existingPairs.add(newPair);
                 Toast.makeText(context, context.getString(R.string.Add_Pair), Toast.LENGTH_SHORT).show();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 e.printStackTrace();
                 Toast.makeText(context, context.getString(R.string.Add_Error_Pair), Toast.LENGTH_SHORT).show();
+                XposedBridge.log(TAG + " ❌ Error appending pair: " + e);
             }
         });
 
         builder.setView(layout);
 
-        builder.setNeutralButton( context.getString(R.string.Registering_Pair), (dialog, which) -> {
+        // --- 登録済みペア表示＆削除 ---
+        builder.setNeutralButton(context.getString(R.string.Registering_Pair), (dialog, which) -> {
             AlertDialog.Builder pairsBuilder = new AlertDialog.Builder(context);
             pairsBuilder.setTitle(context.getString(R.string.Registering_Pair));
 
+            ScrollView scrollView = new ScrollView(context);
             LinearLayout pairsLayout = new LinearLayout(context);
             pairsLayout.setOrientation(LinearLayout.VERTICAL);
+            scrollView.addView(pairsLayout);
 
-            for (String pair : existingPairs) {
+            // ★ インデックス固定で作る（文字列キャプチャではなく index で扱う）
+            for (int i = 0; i < existingPairs.size(); i++) {
+                final int index = i;
+                final String pairStr = existingPairs.get(i);
 
                 LinearLayout pairLayout = new LinearLayout(context);
                 pairLayout.setOrientation(LinearLayout.HORIZONTAL);
 
-
                 TextView pairTextView = new TextView(context);
-                pairTextView.setText(pair);
+                pairTextView.setText(pairStr);
                 pairLayout.addView(pairTextView);
 
                 Button deleteButton = new Button(context);
                 deleteButton.setText(context.getString(R.string.Delete_Pair));
-                deleteButton.setOnClickListener(v -> {
-                    existingPairs.remove(pair);
 
-                    try {
-                        FileWriter writer = new FileWriter(file);
-                        for (String remainingPair : existingPairs) {
-                            writer.write(remainingPair + "\n");
-                        }
-                        writer.close();
-                        Toast.makeText(context,  context.getString(R.string.Deleted_Pair), Toast.LENGTH_SHORT).show();
-                        pairsBuilder.setMessage( context.getString(R.string.Deleted_Pair));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        Toast.makeText(context,  context.getString(R.string.Error_Deleted_Pair), Toast.LENGTH_SHORT).show();
+                deleteButton.setOnClickListener(v -> {
+
+                    if (index >= 0 && index < existingPairs.size()) {
+                        existingPairs.remove(index);
                     }
-                    pairsBuilder.setMessage(getCurrentPairsMessage(existingPairs,context));
+     try (OutputStream out =
+                                 context.getContentResolver().openOutputStream(settingFileUri, "rwt");
+                         BufferedWriter writer =
+                                 new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+
+                        for (String remainingPair : existingPairs) {
+                            writer.write(remainingPair);
+                            writer.newLine();
+                        }
+                        writer.flush();
+
+                        Toast.makeText(context, context.getString(R.string.Deleted_Pair), Toast.LENGTH_SHORT).show();
+                        XposedBridge.log(TAG + " ✅ Deleted pair: " + pairStr);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        Toast.makeText(context, context.getString(R.string.Error_Deleted_Pair), Toast.LENGTH_SHORT).show();
+                        XposedBridge.log(TAG + " ❌ Error rewriting pairs: " + e);
+                    }
+
+                    pairsLayout.removeView(pairLayout);
                 });
+
+
                 pairLayout.addView(deleteButton);
                 pairsLayout.addView(pairLayout);
             }
 
-            pairsBuilder.setView(pairsLayout);
-            pairsBuilder.setPositiveButton( context.getString(R.string.Close), null);
+            pairsBuilder.setView(scrollView);
+            pairsBuilder.setPositiveButton(context.getString(R.string.Close), null);
             pairsBuilder.show();
         });
 
-
-        builder.setNegativeButton( context.getString(R.string.Cansel), (dialog, which) -> dialog.cancel());
+        builder.setNegativeButton(context.getString(R.string.Cansel), (dialog, which) -> dialog.cancel());
 
         builder.show();
     }
+    public void SettingPhotoSave(Context context, Context moduleContext) {
 
-    private String getCurrentPairsMessage(List<String> pairs,Context context) {
-        StringBuilder message = new StringBuilder();
-        if (pairs.isEmpty()) {
-            message.append( context.getString(R.string.No_Pair));
-        } else {
-            for (String pair : pairs) {
-                message.append(pair).append("\n");
+        boolean dark = isDarkMode(context);
+        ThemePalette P = new ThemePalette(dark);
+
+        // ===== SharedPreferences =====
+        SharedPreferences prefsNormal =
+                context.getSharedPreferences("photosave", Context.MODE_PRIVATE);
+
+        SharedPreferences prefsAlbum =
+                context.getSharedPreferences("photosave_album", Context.MODE_PRIVATE);
+
+        String templateNormal =
+                prefsNormal.getString(
+                        "filename_template",
+                        "SenderName-createdTime-Talkname"
+                );
+
+        String templateAlbum =
+                prefsAlbum.getString(
+                        "filename_template",
+                        "SenderName-createdTime-Talkname"
+                );
+
+        // ===== UI Root =====
+        LinearLayout root = new LinearLayout(context);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(48, 32, 48, 16);
+        root.setBackgroundColor(P.bg);
+
+        // ===== 説明 =====
+        TextView desc = new TextView(context);
+        desc.setText(
+                "保存されるファイル名の形式を指定できます。\n\n" +
+                        "使用可能なキーワード（- 区切り）:\n" +
+                        "・SenderName\n" +
+                        "・createdTime\n" +
+                        "・Talkname\n\n" +
+                        "例:\nSenderName-createdTime-Talkname"
+        );
+        desc.setTextColor(P.fg);
+        desc.setTextSize(14f);
+        root.addView(desc);
+
+        /* =====================================================
+         * 通常 PhotoSave
+         * ===================================================== */
+        TextView labelNormal = new TextView(context);
+        labelNormal.setText("\n📷 通常保存");
+        labelNormal.setTextColor(P.fg);
+        labelNormal.setTextSize(15f);
+        root.addView(labelNormal);
+
+        EditText editNormal = new EditText(context);
+        editNormal.setText(templateNormal);
+        editNormal.setTextColor(P.fg);
+        editNormal.setHintTextColor(P.accent);
+        editNormal.setHint("SenderName-createdTime-Talkname");
+        editNormal.setSingleLine(true);
+        editNormal.setBackground(null);
+        editNormal.setPadding(16, 24, 16, 24);
+        root.addView(editNormal);
+
+        TextView previewNormal = new TextView(context);
+        previewNormal.setTextColor(P.accent);
+        previewNormal.setTextSize(13f);
+        previewNormal.setPadding(0, 16, 0, 0);
+        root.addView(previewNormal);
+
+        Runnable updatePreviewNormal = () -> {
+            String tpl = editNormal.getText().toString().trim();
+            String sample = tpl
+                    .replace("SenderName", "Taro")
+                    .replace("createdTime", "2025-12-21-01-30")
+                    .replace("Talkname", "Family");
+            previewNormal.setText("プレビュー:\n" + sample + ".jpg");
+        };
+        updatePreviewNormal.run();
+
+        editNormal.addTextChangedListener(new SimpleTextWatcher(updatePreviewNormal));
+
+        /* =====================================================
+         * Album PhotoSave
+         * ===================================================== */
+        TextView labelAlbum = new TextView(context);
+        labelAlbum.setText("\n🖼 アルバム保存");
+        labelAlbum.setTextColor(P.fg);
+        labelAlbum.setTextSize(15f);
+        root.addView(labelAlbum);
+
+        EditText editAlbum = new EditText(context);
+        editAlbum.setText(templateAlbum);
+        editAlbum.setTextColor(P.fg);
+        editAlbum.setHintTextColor(P.accent);
+        editAlbum.setHint("SenderName-createdTime-Talkname");
+        editAlbum.setSingleLine(true);
+        editAlbum.setBackground(null);
+        editAlbum.setPadding(16, 24, 16, 24);
+        root.addView(editAlbum);
+
+        TextView previewAlbum = new TextView(context);
+        previewAlbum.setTextColor(P.accent);
+        previewAlbum.setTextSize(13f);
+        previewAlbum.setPadding(0, 16, 0, 0);
+        root.addView(previewAlbum);
+
+        Runnable updatePreviewAlbum = () -> {
+            String tpl = editAlbum.getText().toString().trim();
+            String sample = tpl
+                    .replace("SenderName", "Hanako")
+                    .replace("createdTime", "2025-12-21-10-05")
+                    .replace("Talkname", "album");
+            previewAlbum.setText("プレビュー:\n" + sample + ".jpg");
+        };
+        updatePreviewAlbum.run();
+
+        editAlbum.addTextChangedListener(new SimpleTextWatcher(updatePreviewAlbum));
+
+        // ===== Dialog =====
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("PhotoSave ファイル名設定");
+        builder.setView(root);
+
+        builder.setPositiveButton("保存", (d, w) -> {
+
+            String valueNormal = editNormal.getText().toString().trim();
+            String valueAlbum = editAlbum.getText().toString().trim();
+
+            if (!valueNormal.isEmpty()) {
+                prefsNormal.edit()
+                        .putString("filename_template", valueNormal)
+                        .commit();
             }
-        }
-        return message.toString();
+
+            if (!valueAlbum.isEmpty()) {
+                prefsAlbum.edit()
+                        .putString("filename_template", valueAlbum)
+                        .commit();
+            }
+
+            XposedBridge.log("Lime: PhotoSave templates saved"
+                    + " normal=" + valueNormal
+                    + " album=" + valueAlbum);
+        });
+
+        builder.setNegativeButton("キャンセル", null);
+
+        AlertDialog dialog = builder.create();
+        dialog.show();
+
+        applyDialogPalette(dialog, P);
+
+        try {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(P.fg);
+            dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(P.fg);
+        } catch (Throwable ignored) {}
     }
 
+    private static class SimpleTextWatcher implements TextWatcher {
+        private final Runnable onChange;
+
+        SimpleTextWatcher(Runnable r) {
+            this.onChange = r;
+        }
+
+        @Override public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+        @Override public void onTextChanged(CharSequence s, int st, int b, int c) {
+            onChange.run();
+        }
+        @Override public void afterTextChanged(Editable s) {}
+    }
 
     private void Cancel_Message_Button(Context context, Context moduleContext) {
 
+
+        boolean dark = isDarkMode(context);
+        ThemePalette P = new ThemePalette(dark);
+
         File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
-
-
         if (!dir.exists() && !dir.mkdirs()) {
             Toast.makeText(context, "Failed to create directory", Toast.LENGTH_SHORT).show();
             return;
         }
 
-
         File file = new File(dir, "canceled_message.txt");
 
         if (!file.exists()) {
             try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-                String defaultMessage = moduleContext.getResources().getString(R.string.canceled_message_txt);
-                writer.write(defaultMessage);
+                writer.write(moduleContext.getString(R.string.canceled_message_txt));
             } catch (IOException e) {
                 Toast.makeText(context, "Failed to create file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
                 return;
@@ -1865,16 +2430,14 @@ public class EmbedOptions implements IHook {
         }
 
         StringBuilder fileContent = new StringBuilder();
-        if (file.exists()) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    fileContent.append(line).append("\n");
-                }
-            } catch (IOException e) {
-                Toast.makeText(context, "Failed to read file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                return;
+        try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                fileContent.append(line).append("\n");
             }
+        } catch (IOException e) {
+            Toast.makeText(context, "Failed to read file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            return;
         }
 
         final EditText editText = new EditText(context);
@@ -1882,37 +2445,83 @@ public class EmbedOptions implements IHook {
         editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         editText.setMinLines(10);
         editText.setGravity(Gravity.TOP);
+        editText.setTextColor(P.fg);
+        editText.setHintTextColor(P.accent);
+        editText.setBackgroundColor(P.btnBg);
 
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
         buttonParams.setMargins(16, 16, 16, 16);
 
+
         Button saveButton = new Button(context);
-        saveButton.setText(moduleContext.getResources().getString(R.string.options_title)); // リソースからテキストを取得
+        saveButton.setText(moduleContext.getString(R.string.options_title));
         saveButton.setLayoutParams(buttonParams);
-        saveButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-                    writer.write(editText.getText().toString());
-                    Toast.makeText(context, "Saved successfully", Toast.LENGTH_SHORT).show();
-                } catch (IOException e) {
-                    Toast.makeText(context, "Failed to save file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
+        saveButton.setBackgroundColor(P.btnBg);
+        saveButton.setTextColor(P.fg);
+
+        saveButton.setOnClickListener(v -> {
+            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+                writer.write(editText.getText().toString());
+                Toast.makeText(context, "Saved successfully", Toast.LENGTH_SHORT).show();
+            } catch (IOException e) {
+                Toast.makeText(context, "Failed to save file: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
         });
 
+
+        Button hideCanceledMessageButton = new Button(context);
+        hideCanceledMessageButton.setText(moduleContext.getString(R.string.hide_canceled_message));
+        hideCanceledMessageButton.setLayoutParams(buttonParams);
+        hideCanceledMessageButton.setBackgroundColor(P.btnBg);
+        hideCanceledMessageButton.setTextColor(P.fg);
+
+        hideCanceledMessageButton.setOnClickListener(v -> {
+            new AlertDialog.Builder(context)
+                    .setTitle(moduleContext.getString(R.string.HideSetting))
+                    .setMessage(moduleContext.getString(R.string.HideSetting_selection))
+                    .setPositiveButton(moduleContext.getString(R.string.Hide), (dialog, which) -> {
+                        updateMessagesVisibility(context, true, moduleContext);
+                    })
+                    .setNegativeButton(moduleContext.getString(R.string.Show), (dialog, which) -> {
+                        updateMessagesVisibility(context, false, moduleContext);
+                    })
+                    .setIcon(android.R.drawable.ic_dialog_info)
+                    .show();
+        });
+
+
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setBackgroundColor(P.bg);
+
         layout.addView(editText);
         layout.addView(saveButton);
+        layout.addView(hideCanceledMessageButton);
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(moduleContext.getResources().getString(R.string.canceled_message)); // リソースからタイトルを取得
-        builder.setView(layout);
-        builder.setNegativeButton(moduleContext.getResources().getString(R.string.cancel), null); // リソースからキャンセルボタンのテキストを取得
-        builder.show();
+
+        ScrollView scrollView = new ScrollView(context);
+        scrollView.setBackgroundColor(P.bg);
+        scrollView.addView(layout);
+
+        AlertDialog dialog = new AlertDialog.Builder(
+                context,
+                dark
+                        ? android.R.style.Theme_DeviceDefault_Dialog_NoActionBar
+                        : android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar
+        )
+                .setTitle(moduleContext.getString(R.string.canceled_message))
+                .setView(scrollView)
+                .setNegativeButton(moduleContext.getString(R.string.cancel), null)
+                .create();
+
+        dialog.show();
+        applyDialogPalette(dialog, P);
     }
+
+
     public int getStatusBarHeight(Context context) {
         int result = 0;
         int resourceId = context.getResources().getIdentifier("status_bar_height", "dimen", "android");
@@ -1922,19 +2531,19 @@ public class EmbedOptions implements IHook {
         return result;
     }
     private void KeepUnread_Button(Context context, Context moduleContext) {
-        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
 
+        boolean dark = isDarkMode(context);
+        ThemePalette P = new ThemePalette(dark);
+
+        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
+        if (!dir.exists()) dir.mkdirs();
         File file = new File(dir, "margin_settings.txt");
 
-        float keep_unread_horizontalMarginFactor = 0.5f;
-        int keep_unread_verticalMarginDp = 50;
-        float read_button_horizontalMarginFactor = 0.6f;
-        int read_button_verticalMarginDp = 60;
-        float read_checker_horizontalMarginFactor = 0.5f;
-        int read_checker_verticalMarginDp = 60;
-        float keep_unread_size = 80.0f;
+        float keep_unread_size = 100;
         float chat_unread_size = 30.0f;
         float chat_read_check_size = 80.0f;
+        float reaction_size = 100.0f;
+        float header_setting_size = 60.0f;
 
         if (file.exists()) {
             try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
@@ -1943,284 +2552,347 @@ public class EmbedOptions implements IHook {
                     String[] parts = line.split("=", 2);
                     if (parts.length == 2) {
                         switch (parts[0].trim()) {
-                            case "keep_unread_horizontalMarginFactor":
-                                keep_unread_horizontalMarginFactor = Float.parseFloat(parts[1].trim());
-                                break;
-                            case "keep_unread_verticalMarginDp":
-                                keep_unread_verticalMarginDp = Integer.parseInt(parts[1].trim());
-                                break;
-                            case "Read_buttom_Chat_horizontalMarginFactor":
-                                read_button_horizontalMarginFactor = Float.parseFloat(parts[1].trim());
-                                break;
-                            case "Read_buttom_Chat_verticalMarginDp":
-                                read_button_verticalMarginDp = Integer.parseInt(parts[1].trim());
-                                break;
-                            case "Read_checker_horizontalMarginFactor":
-                                read_checker_horizontalMarginFactor = Float.parseFloat(parts[1].trim());
-                                break;
-                            case "Read_checker_verticalMarginDp":
-                                read_checker_verticalMarginDp = Integer.parseInt(parts[1].trim());
-                                break;
                             case "keep_unread_size":
                                 keep_unread_size = Float.parseFloat(parts[1].trim());
                                 break;
                             case "chat_unread_size":
                                 chat_unread_size = Float.parseFloat(parts[1].trim());
-                                break; // 追加
+                                break;
                             case "chat_read_check_size":
                                 chat_read_check_size = Float.parseFloat(parts[1].trim());
-                                break; // 追加
+                                break;
+                            case "reaction_size":
+                                reaction_size = Float.parseFloat(parts[1].trim());
+                                break;
+                            case "header_setting_size":
+                                header_setting_size = Float.parseFloat(parts[1].trim());
+                                break;
                         }
                     }
                 }
-            } catch (IOException | NumberFormatException ignored) {
-
-            }
-        } else {
-
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
-                String defaultSettings = "keep_unread_horizontalMarginFactor=0.5\n" +
-                        "keep_unread_verticalMarginDp=15\n" +
-                        "Read_buttom_Chat_horizontalMarginFactor=0.6\n" +
-                        "Read_buttom_Chat_verticalMarginDp=60\n" +
-                        "Read_checker_horizontalMarginFactor=0.5\n" +
-                        "Read_checker_verticalMarginDp=60\n" +
-                        "keep_unread_size=60\n" +
-                        "chat_unread_size=30\n" +
-                        "chat_read_check_size=60\n";
-                writer.write(defaultSettings);
-                writer.flush(); // 追加
-            } catch (IOException ignored) {
-
-                return;
-            }
+            } catch (IOException | NumberFormatException ignored) {}
         }
 
         LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
         layoutParams.setMargins(16, 16, 16, 16);
 
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setBackgroundColor(P.bg);
+
+        class Style {
+            void tv(TextView tv) {
+                tv.setTextColor(P.fg);
+                tv.setBackgroundColor(Color.TRANSPARENT);
+            }
+
+            void et(EditText et) {
+                et.setTextColor(P.fg);
+                et.setHintTextColor(P.accent);
+                et.setBackgroundColor(P.btnBg);
+            }
+
+            void btn(Button b) {
+                b.setTextColor(P.fg);
+                b.setBackgroundColor(P.btnBg);
+            }
+        }
+        Style style = new Style();
+
         TextView keepUnreadSizeLabel = new TextView(context);
-        keepUnreadSizeLabel.setText(moduleContext.getResources().getString(R.string.keep_unread_size));
+        keepUnreadSizeLabel.setText(moduleContext.getString(R.string.keep_unread_size));
         keepUnreadSizeLabel.setLayoutParams(layoutParams);
+        style.tv(keepUnreadSizeLabel);
 
-        final EditText keepUnreadSizeInput = new EditText(context);
+        EditText keepUnreadSizeInput = new EditText(context);
         keepUnreadSizeInput.setText(String.valueOf(keep_unread_size));
-        keepUnreadSizeInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         keepUnreadSizeInput.setLayoutParams(layoutParams);
+        style.et(keepUnreadSizeInput);
 
-        TextView horizontalLabel = new TextView(context);
-        horizontalLabel.setText(moduleContext.getResources().getString(R.string.keep_unread_horizontalMarginFactor));
-        horizontalLabel.setLayoutParams(layoutParams);
+        TextView chatUnreadLabel = new TextView(context);
+        chatUnreadLabel.setText(moduleContext.getString(R.string.chat_unread_size));
+        chatUnreadLabel.setLayoutParams(layoutParams);
+        style.tv(chatUnreadLabel);
 
-        final EditText horizontalInput = new EditText(context);
-        horizontalInput.setText(String.valueOf(keep_unread_horizontalMarginFactor));
-        horizontalInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        horizontalInput.setLayoutParams(layoutParams);
+        EditText chatUnreadSizeInput = new EditText(context);
+        chatUnreadSizeInput.setText(String.valueOf(chat_unread_size));
+        chatUnreadSizeInput.setLayoutParams(layoutParams);
+        style.et(chatUnreadSizeInput);
 
-        TextView verticalLabel = new TextView(context);
-        verticalLabel.setText(moduleContext.getResources().getString(R.string.keep_unread_vertical));
-        verticalLabel.setLayoutParams(layoutParams);
+        TextView chatReadCheckSizeLabel = new TextView(context);
+        chatReadCheckSizeLabel.setText(moduleContext.getString(R.string.chat_read_check_size));
+        chatReadCheckSizeLabel.setLayoutParams(layoutParams);
+        style.tv(chatReadCheckSizeLabel);
 
-        final EditText verticalInput = new EditText(context);
-        verticalInput.setText(String.valueOf(keep_unread_verticalMarginDp));
-        verticalInput.setInputType(InputType.TYPE_CLASS_NUMBER);
-        verticalInput.setLayoutParams(layoutParams);
+        EditText chatReadCheckSizeInput = new EditText(context);
+        chatReadCheckSizeInput.setText(String.valueOf(chat_read_check_size));
+        chatReadCheckSizeInput.setLayoutParams(layoutParams);
+        style.et(chatReadCheckSizeInput);
 
-        TextView ChatUnreadLabel = new TextView(context);
-        ChatUnreadLabel.setText(moduleContext.getResources().getString(R.string.chat_unread_size));
-        ChatUnreadLabel.setLayoutParams(layoutParams);
+        TextView reactionSizeLabel = new TextView(context);
+        reactionSizeLabel.setText(moduleContext.getString(R.string.reaction_sizeLabel));
+        reactionSizeLabel.setLayoutParams(layoutParams);
+        style.tv(reactionSizeLabel);
 
-        final EditText ChatUnreadSizeInput = new EditText(context);
-        ChatUnreadSizeInput.setText(String.valueOf(chat_unread_size));
-        ChatUnreadSizeInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        ChatUnreadSizeInput.setLayoutParams(layoutParams);
+        EditText reactionSizeInput = new EditText(context);
+        reactionSizeInput.setText(String.valueOf(reaction_size));
+        reactionSizeInput.setLayoutParams(layoutParams);
+        style.et(reactionSizeInput);
 
-        TextView ChatReadCheckSizeLabel = new TextView(context);
-        ChatReadCheckSizeLabel.setText(moduleContext.getResources().getString(R.string.chat_read_check_size));
-        ChatReadCheckSizeLabel.setLayoutParams(layoutParams);
+        TextView header_setting_Label = new TextView(context);
+        header_setting_Label.setText(moduleContext.getString(R.string.header_setting_Label));
+        header_setting_Label.setLayoutParams(layoutParams);
+        style.tv(header_setting_Label);
 
-        final EditText ChatReadCheckSizeInput = new EditText(context);
-        ChatReadCheckSizeInput.setText(String.valueOf(chat_read_check_size));
-        ChatReadCheckSizeInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        ChatReadCheckSizeInput.setLayoutParams(layoutParams);
+        EditText header_setting_size_SizeInput = new EditText(context);
+        header_setting_size_SizeInput.setText(String.valueOf(header_setting_size));
+        header_setting_size_SizeInput.setLayoutParams(layoutParams);
+        style.et(header_setting_size_SizeInput);
 
-        TextView readButtonHorizontalLabel = new TextView(context);
-        readButtonHorizontalLabel.setText(moduleContext.getResources().getString(R.string.Read_buttom_Chat_horizontalMarginFactor));
-        readButtonHorizontalLabel.setLayoutParams(layoutParams);
+        class PrefConfig {
+            String prefName;
+            String label;
+            String keyX;
+            String keyY;
+            PrefConfig(String p, String l, String x, String y) {
+                prefName = p; label = l; keyX = x; keyY = y;
+            }
+        }
 
-        final EditText readButtonHorizontalInput = new EditText(context);
-        readButtonHorizontalInput.setText(String.valueOf(read_button_horizontalMarginFactor));
-        readButtonHorizontalInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        readButtonHorizontalInput.setLayoutParams(layoutParams);
+        PrefConfig[] configs = new PrefConfig[]{
+                new PrefConfig("reaction_button_position", "Reaction Button", "btn_x", "btn_y"),
+                new PrefConfig("schedule_btn_pref", "Schedule Button", "btn_x", "btn_y"),
+                new PrefConfig("keep_unread_image_position", "Keep Unread Image", "img_x", "img_y"),
+                new PrefConfig("keep_unread_switch_position", "Keep Unread Switch", "switch_x", "switch_y"),
+                new PrefConfig("chat_unread_button_position", "Chat Unread Button", "img_x", "img_y"),
+                new PrefConfig("ReadCheck_button_position", "ReadCheck Button", "img_x", "img_y"),
+                new PrefConfig("delete_button_position", "Delete Button", "btn_x", "btn_y"),
+                new PrefConfig("enter_send_pref_IncChat", "Enter Send Button", "btn_x", "btn_y"),
+                new PrefConfig("HeaderSetting_button_position", "Header Setting Button", "img_x", "img_y")
+        };
 
-        TextView readButtonVerticalLabel = new TextView(context);
-        readButtonVerticalLabel.setText(moduleContext.getResources().getString(R.string.Read_buttom_Chat_verticalMarginDp));
-        readButtonVerticalLabel.setLayoutParams(layoutParams);
+        Map<String, EditText> inputMap = new HashMap<>();
 
-        final EditText readButtonVerticalInput = new EditText(context);
-        readButtonVerticalInput.setText(String.valueOf(read_button_verticalMarginDp));
-        readButtonVerticalInput.setInputType(InputType.TYPE_CLASS_NUMBER);
-        readButtonVerticalInput.setLayoutParams(layoutParams);
+        for (PrefConfig cfg : configs) {
+            LinearLayout sectionLayout = new LinearLayout(context);
+            sectionLayout.setOrientation(LinearLayout.VERTICAL);
+            sectionLayout.setLayoutParams(layoutParams);
+            sectionLayout.setBackgroundColor(P.bg);
 
-        TextView readCheckerHorizontalLabel = new TextView(context);
-        readCheckerHorizontalLabel.setText(moduleContext.getResources().getString(R.string.Read_checker_horizontalMarginFactor));
-        readCheckerHorizontalLabel.setLayoutParams(layoutParams);
+            TextView titleView = new TextView(context);
+            titleView.setText("▼ " + cfg.label);
+            titleView.setTextSize(18);
+            titleView.setPadding(16, 16, 16, 16);
+            titleView.setBackgroundColor(P.btnBg);
+            titleView.setTextColor(P.fg);
+            sectionLayout.addView(titleView);
 
-        final EditText readCheckerHorizontalInput = new EditText(context);
-        readCheckerHorizontalInput.setText(String.valueOf(read_checker_horizontalMarginFactor));
-        readCheckerHorizontalInput.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
-        readCheckerHorizontalInput.setLayoutParams(layoutParams);
+            LinearLayout contentLayout = new LinearLayout(context);
+            contentLayout.setOrientation(LinearLayout.VERTICAL);
+            contentLayout.setVisibility(View.GONE);
+            contentLayout.setBackgroundColor(P.bg);
 
-        TextView readCheckerVerticalLabel = new TextView(context);
-        readCheckerVerticalLabel.setText(moduleContext.getResources().getString(R.string.Read_checker_verticalMarginDp));
-        readCheckerVerticalLabel.setLayoutParams(layoutParams);
+            SharedPreferences sp = context.getSharedPreferences(cfg.prefName, Context.MODE_PRIVATE);
+            float savedX = sp.getFloat(cfg.keyX, -1f);
+            float savedY = sp.getFloat(cfg.keyY, -1f);
 
-        final EditText readCheckerVerticalInput = new EditText(context);
-        readCheckerVerticalInput.setText(String.valueOf(read_checker_verticalMarginDp));
-        readCheckerVerticalInput.setInputType(InputType.TYPE_CLASS_NUMBER);
-        readCheckerVerticalInput.setLayoutParams(layoutParams);
+            TextView labelX = new TextView(context);
+            labelX.setText(cfg.label + " X Position");
+            labelX.setLayoutParams(layoutParams);
+            style.tv(labelX);
+
+            EditText inputX = new EditText(context);
+            inputX.setText(String.valueOf(savedX));
+            inputX.setLayoutParams(layoutParams);
+            style.et(inputX);
+
+            TextView labelY = new TextView(context);
+            labelY.setText(cfg.label + " Y Position");
+            labelY.setLayoutParams(layoutParams);
+            style.tv(labelY);
+
+            EditText inputY = new EditText(context);
+            inputY.setText(String.valueOf(savedY));
+            inputY.setLayoutParams(layoutParams);
+            style.et(inputY);
+
+            switch (cfg.label) {
+                case "Reaction Button":
+                    contentLayout.addView(reactionSizeLabel);
+                    contentLayout.addView(reactionSizeInput);
+                    break;
+                case "Keep Unread Image":
+                    contentLayout.addView(keepUnreadSizeLabel);
+                    contentLayout.addView(keepUnreadSizeInput);
+                    break;
+                case "Chat Unread Button":
+                    contentLayout.addView(chatUnreadLabel);
+                    contentLayout.addView(chatUnreadSizeInput);
+                    break;
+                case "ReadCheck Button":
+                    contentLayout.addView(chatReadCheckSizeLabel);
+                    contentLayout.addView(chatReadCheckSizeInput);
+                    break;
+                case "Header Setting Button":
+                    contentLayout.addView(header_setting_Label);
+                    contentLayout.addView(header_setting_size_SizeInput);
+                    break;
+            }
+
+            contentLayout.addView(labelX);
+            contentLayout.addView(inputX);
+            contentLayout.addView(labelY);
+            contentLayout.addView(inputY);
+
+            titleView.setOnClickListener(v -> {
+                if (contentLayout.getVisibility() == View.VISIBLE) {
+                    contentLayout.setVisibility(View.GONE);
+                    titleView.setText("▼ " + cfg.label);
+                } else {
+                    contentLayout.setVisibility(View.VISIBLE);
+                    titleView.setText("▲ " + cfg.label);
+                }
+            });
+
+            inputMap.put(cfg.prefName + "_X", inputX);
+            inputMap.put(cfg.prefName + "_Y", inputY);
+
+            sectionLayout.addView(contentLayout);
+            layout.addView(sectionLayout);
+        }
 
         Button saveButton = new Button(context);
         saveButton.setText("Save");
         saveButton.setLayoutParams(layoutParams);
+        style.btn(saveButton);
+
         saveButton.setOnClickListener(v -> {
             try {
-
-                String keepUnreadSizeStr = keepUnreadSizeInput.getText().toString().trim();
-                String horizontalMarginStr = horizontalInput.getText().toString().trim();
-                String verticalMarginStr = verticalInput.getText().toString().trim();
-                String chatUnreadSizeStr = ChatUnreadSizeInput.getText().toString().trim();
-                String chatReadCheckSizeStr = ChatReadCheckSizeInput.getText().toString().trim();
-                String readButtonHorizontalMarginStr = readButtonHorizontalInput.getText().toString().trim();
-                String readButtonVerticalMarginStr = readButtonVerticalInput.getText().toString().trim();
-                String readCheckerHorizontalMarginStr = readCheckerHorizontalInput.getText().toString().trim();
-                String readCheckerVerticalMarginStr = readCheckerVerticalInput.getText().toString().trim();
-
-                if (keepUnreadSizeStr.isEmpty() || horizontalMarginStr.isEmpty() || verticalMarginStr.isEmpty() ||
-                        chatUnreadSizeStr.isEmpty() || chatReadCheckSizeStr.isEmpty() ||
-                        readButtonHorizontalMarginStr.isEmpty() || readButtonVerticalMarginStr.isEmpty() ||
-                        readCheckerHorizontalMarginStr.isEmpty() || readCheckerVerticalMarginStr.isEmpty()) {
-                    Toast.makeText(context, "All fields must be filled!", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-
-                float newKeepUnreadSize = Float.parseFloat(keepUnreadSizeStr); // 修正
-                float newKeepUnreadHorizontalMarginFactor = Float.parseFloat(horizontalMarginStr);
-                int newKeepUnreadVerticalMarginDp = Integer.parseInt(verticalMarginStr);
-                float newChatUnreadSize = Float.parseFloat(chatUnreadSizeStr); // 修正
-                float newChatReadCheckSize = Float.parseFloat(chatReadCheckSizeStr); // 修正
-                float newReadButtonHorizontalMarginFactor = Float.parseFloat(readButtonHorizontalMarginStr);
-                int newReadButtonVerticalMarginDp = Integer.parseInt(readButtonVerticalMarginStr);
-                float newReadCheckerHorizontalMarginFactor = Float.parseFloat(readCheckerHorizontalMarginStr);
-                int newReadCheckerVerticalMarginDp = Integer.parseInt(readCheckerVerticalMarginStr);
+                float newKeepUnreadSize = Float.parseFloat(keepUnreadSizeInput.getText().toString().trim());
+                float newChatUnreadSize = Float.parseFloat(chatUnreadSizeInput.getText().toString().trim());
+                float newChatReadCheckSize = Float.parseFloat(chatReadCheckSizeInput.getText().toString().trim());
+                float newReactionSize = Float.parseFloat(reactionSizeInput.getText().toString().trim());
+                float newHeaderSettingSize = Float.parseFloat(header_setting_size_SizeInput.getText().toString().trim());
 
                 try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
                     writer.write("keep_unread_size=" + newKeepUnreadSize + "\n");
-                    writer.write("keep_unread_horizontalMarginFactor=" + newKeepUnreadHorizontalMarginFactor + "\n");
-                    writer.write("keep_unread_verticalMarginDp=" + newKeepUnreadVerticalMarginDp + "\n");
                     writer.write("chat_unread_size=" + newChatUnreadSize + "\n");
                     writer.write("chat_read_check_size=" + newChatReadCheckSize + "\n");
-                    writer.write("Read_buttom_Chat_horizontalMarginFactor=" + newReadButtonHorizontalMarginFactor + "\n");
-                    writer.write("Read_buttom_Chat_verticalMarginDp=" + newReadButtonVerticalMarginDp + "\n");
-                    writer.write("Read_checker_horizontalMarginFactor=" + newReadCheckerHorizontalMarginFactor + "\n");
-                    writer.write("Read_checker_verticalMarginDp=" + newReadCheckerVerticalMarginDp + "\n");
+                    writer.write("reaction_size=" + newReactionSize + "\n");
+                    writer.write("header_setting_size=" + newHeaderSettingSize + "\n");
                     writer.flush();
-                    Toast.makeText(context, "Settings saved!", Toast.LENGTH_SHORT).show();
                 }
-            } catch (NumberFormatException ignored) {
-                Toast.makeText(context, "Invalid input format! Please check your inputs.", Toast.LENGTH_SHORT).show();
 
-            } catch (IOException ignored) {
-                Toast.makeText(context, "Failed to save settings.", Toast.LENGTH_SHORT).show();
+                for (PrefConfig cfg : configs) {
+                    EditText inputX = inputMap.get(cfg.prefName + "_X");
+                    EditText inputY = inputMap.get(cfg.prefName + "_Y");
+                    if (inputX != null && inputY != null) {
+                        float newX = Float.parseFloat(inputX.getText().toString().trim());
+                        float newY = Float.parseFloat(inputY.getText().toString().trim());
+                        SharedPreferences sp = context.getSharedPreferences(cfg.prefName, Context.MODE_PRIVATE);
+                        sp.edit().putFloat(cfg.keyX, newX).putFloat(cfg.keyY, newY).apply();
+                    }
+                }
+
+                Toast.makeText(context, "Settings saved!", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Toast.makeText(context, "Error: " + e.getMessage(), Toast.LENGTH_SHORT).show();
             }
-
         });
 
         Button resetButton = new Button(context);
         resetButton.setText("Reset");
         resetButton.setLayoutParams(layoutParams);
-        resetButton.setOnClickListener(v -> {
+        style.btn(resetButton);
 
-            new AlertDialog.Builder(context)
-                    .setMessage(moduleContext.getResources().getString(R.string.really_delete))
-                    .setPositiveButton(moduleContext.getResources().getString(R.string.yes), (dialog, which) -> {
-                        try {
-
-                            if (file.exists()) {
-                                if (file.delete()) {
-                                    Toast.makeText(context.getApplicationContext(), moduleContext.getResources().getString(R.string.file_content_deleted), Toast.LENGTH_SHORT).show();
-                                } else {
-                                    Toast.makeText(context.getApplicationContext(),moduleContext.getResources().getString(R.string.file_delete_failed), Toast.LENGTH_SHORT).show();
-                                }
-                            } else {
-                                Toast.makeText(context.getApplicationContext(), moduleContext.getResources().getString(R.string.file_not_found), Toast.LENGTH_SHORT).show();
-                            }
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            Toast.makeText(context.getApplicationContext(), moduleContext.getResources().getString(R.string.file_not_found), Toast.LENGTH_SHORT).show();
+        resetButton.setOnClickListener(v -> new AlertDialog.Builder(context)
+                .setMessage(moduleContext.getString(R.string.really_delete))
+                .setPositiveButton(moduleContext.getString(R.string.yes), (d, w) -> {
+                    try {
+                        if (file.exists()) file.delete();
+                        for (PrefConfig cfg : configs) {
+                            SharedPreferences sp = context.getSharedPreferences(cfg.prefName, Context.MODE_PRIVATE);
+                            sp.edit().clear().apply();
                         }
-                    })
-                    .setNegativeButton(moduleContext.getResources().getString(R.string.no), null)
-                    .show();
-        });
+                        Toast.makeText(context, "All settings reset!", Toast.LENGTH_SHORT).show();
+                    } catch (Exception e) {
+                        Toast.makeText(context, "Reset failed: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton(moduleContext.getString(R.string.no), null)
+                .show());
 
-
-        LinearLayout layout = new LinearLayout(context);
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.addView(keepUnreadSizeLabel);
-        layout.addView(keepUnreadSizeInput);
-        layout.addView(horizontalLabel);
-        layout.addView(horizontalInput);
-        layout.addView(verticalLabel);
-        layout.addView(verticalInput);
-        layout.addView(ChatUnreadLabel);
-        layout.addView(ChatUnreadSizeInput);
-        layout.addView(readButtonHorizontalLabel);
-        layout.addView(readButtonHorizontalInput);
-        layout.addView(readButtonVerticalLabel);
-        layout.addView(readButtonVerticalInput);
-        layout.addView(ChatReadCheckSizeLabel);
-        layout.addView(ChatReadCheckSizeInput);
-        layout.addView(readCheckerHorizontalLabel);
-        layout.addView(readCheckerHorizontalInput);
-        layout.addView(readCheckerVerticalLabel);
-        layout.addView(readCheckerVerticalInput);
         layout.addView(saveButton);
         layout.addView(resetButton);
+
         ScrollView scrollView = new ScrollView(context);
+        scrollView.setBackgroundColor(P.bg);
         scrollView.addView(layout);
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(moduleContext.getResources().getString(R.string.edit_margin_settings));
-        builder.setView(scrollView);
-        builder.setNegativeButton(moduleContext.getResources().getString(R.string.cancel), null);
-        if (context instanceof Activity && !((Activity) context).isFinishing()) {
-            builder.show();
-        }
+        AlertDialog dialog = new AlertDialog.Builder(context)
+                .setTitle(moduleContext.getString(R.string.edit_margin_settings))
+                .setView(scrollView)
+                .setNegativeButton(moduleContext.getString(R.string.cancel), null)
+                .create();
+
+        dialog.show();
+        applyDialogPalette(dialog, P);
     }
 
-    private void MuteGroups_Button(Context context, Context moduleContext) {
-        File dir = context.getFilesDir();
-        File file = new File(dir, "Notification.txt");
-        StringBuilder fileContent = new StringBuilder();
 
-        if (!dir.exists()) {
-            if (!dir.mkdirs()) {
-                dir = new File(Environment.getExternalStorageDirectory(), "Android/data/jp.naver.line.android/");
+    private void MuteGroups_Button(Context context, Context moduleContext) {
+        final String TAG = "LimeModule";
+        String backupUriStr = loadBackupUri(context);
+        if (backupUriStr == null) {
+            Toast.makeText(context, "バックアップフォルダURIが未設定です", Toast.LENGTH_SHORT).show();
+            // XposedBridge.log(TAG + " ⚠ backupUriStr is null in MuteGroups_Button");
+            return;
+        }
+
+        Uri treeUri = Uri.parse(backupUriStr);
+        DocumentFile root = DocumentFile.fromTreeUri(context, treeUri);
+        if (root == null || !root.exists()) {
+            Toast.makeText(context, "バックアップフォルダにアクセスできません", Toast.LENGTH_SHORT).show();
+            // XposedBridge.log(TAG + " ⚠ root DocumentFile is invalid in MuteGroups_Button: " + backupUriStr);
+            return;
+        }
+
+
+
+        DocumentFile settingDir = root.findFile("Setting");
+        if (settingDir == null || !settingDir.isDirectory()) {
+            settingDir = root.createDirectory("Setting");
+            if (settingDir == null) {
+                Toast.makeText(context, "Settingフォルダの作成に失敗しました", Toast.LENGTH_SHORT).show();
+                return;
             }
         }
 
-        if (file.exists()) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    fileContent.append(line).append("\n");
-                }
-            } catch (IOException e) {
-                Log.e("MuteGroups_Button", "Error reading file", e);
+        DocumentFile notifFile = settingDir.findFile("Notification.txt");
+        if (notifFile == null || !notifFile.isFile()) {
+            notifFile = settingDir.createFile("text/plain", "Notification.txt");
+            if (notifFile == null) {
+                Toast.makeText(context, "Notification.txt の作成に失敗しました", Toast.LENGTH_SHORT).show();
+                return;
             }
+        }
+
+        Uri notifUri = notifFile.getUri();
+        StringBuilder fileContent = new StringBuilder();
+        try (InputStream in = context.getContentResolver().openInputStream(notifUri)) {
+            if (in != null) {
+                try (BufferedReader reader =
+                             new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        fileContent.append(line).append("\n");
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e("MuteGroups_Button", "Error reading Notification.txt", e);
+            // XposedBridge.log(TAG + " ❌ Error reading Notification.txt: " + e);
         }
 
         final EditText editText = new EditText(context);
@@ -2228,18 +2900,30 @@ public class EmbedOptions implements IHook {
         editText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         editText.setMinLines(10);
         editText.setGravity(Gravity.TOP);
+
         LinearLayout.LayoutParams buttonParams = new LinearLayout.LayoutParams(
-                LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT);
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+        );
         buttonParams.setMargins(16, 16, 16, 16);
+
         Button saveButton = new Button(context);
         saveButton.setText("Save");
         saveButton.setLayoutParams(buttonParams);
+
+        
         saveButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+                try (OutputStream out =
+                             context.getContentResolver().openOutputStream(notifUri, "w");
+                     BufferedWriter writer =
+                             new BufferedWriter(new OutputStreamWriter(out, StandardCharsets.UTF_8))) {
+
                     writer.write(editText.getText().toString());
-                } catch (IOException ignored) {
+                    writer.flush();
+                    Toast.makeText(context, "Saved", Toast.LENGTH_SHORT).show();
+                } catch (Exception e) {
                 }
             }
         });
@@ -2248,19 +2932,17 @@ public class EmbedOptions implements IHook {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.addView(editText);
         layout.addView(saveButton);
-        AlertDialog.Builder builder = new AlertDialog.Builder(context);
 
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(moduleContext.getResources().getString(R.string.Mute_Group));
         builder.setView(layout);
         builder.setNegativeButton(moduleContext.getResources().getString(R.string.cancel), null);
         builder.show();
     }
 
-
     private void backupChatHistory(Context appContext, Context moduleContext) {
         File originalDbFile = appContext.getDatabasePath("naver_line");
 
-        // 1. 内部ストレージへのバックアップ（従来通り）
         File backupDir = new File(appContext.getFilesDir(), "LimeBackup");
         if (!backupDir.exists()) {
             if (!backupDir.mkdirs()) {
@@ -2275,7 +2957,6 @@ public class EmbedOptions implements IHook {
         File backupFileFixed = new File(backupDir, backupFileNameFixed);
 
         try (FileChannel source = new FileInputStream(originalDbFile).getChannel()) {
-            // 内部ストレージにバックアップ（従来の処理）
             try (FileChannel destinationWithTimestamp = new FileOutputStream(backupFileWithTimestamp).getChannel()) {
                 destinationWithTimestamp.transferFrom(source, 0, source.size());
             }
@@ -2284,15 +2965,12 @@ public class EmbedOptions implements IHook {
                 destinationFixed.transferFrom(source, 0, source.size());
             }
 
-            // 2. URIが設定されていれば、そちらにもバックアップ（新規追加）
             String backupUri = loadBackupUri(appContext);
             if (backupUri != null) {
                 Uri treeUri = Uri.parse(backupUri);
                 DocumentFile dir = DocumentFile.fromTreeUri(appContext, treeUri);
                 if (dir != null) {
-                    // タイムスタンプ付きファイルをURIにコピー
                     copyFileToUri(appContext, backupFileWithTimestamp, dir, backupFileNameWithTimestamp);
-                    // 固定名ファイルをURIにコピー
                     copyFileToUri(appContext, backupFileFixed, dir, backupFileNameFixed);
                 }
             }
@@ -2325,7 +3003,34 @@ public class EmbedOptions implements IHook {
             XposedBridge.log("Lime: Error copying DB to URI: " + e.getMessage());
         }
     }
+    private static void resetFcmAppId(Context context) {
+        try {
+            boolean deleted = context.deleteSharedPreferences(
+                    "com.google.android.gms.appid"
+            );
+            boolean deleted2 = context.deleteSharedPreferences(
+                    "com.google.firebase.messaging"
+            );
+            XposedBridge.log(
+                    "LIMEs[FCM]: delete com.google.android.gms.appid -> " + deleted + deleted2
+            );
 
+            Toast.makeText(
+                    context,
+                    "FCM AppID を削除しました。\n再起動後に再取得されます。",
+                    Toast.LENGTH_LONG
+            ).show();
+
+        } catch (Throwable t) {
+            XposedBridge.log(t);
+
+            Toast.makeText(
+                    context,
+                    "FCM AppID 削除に失敗しました",
+                    Toast.LENGTH_SHORT
+            ).show();
+        }
+    }
 
     private void updateMessagesVisibility(Context context, boolean hide,Context moduleContext) {
         SQLiteDatabase db1 = null;
@@ -2371,6 +3076,7 @@ public class EmbedOptions implements IHook {
         }
     }
 
+
     private void PinListButton(Context context, Context moduleContext) {
         List<UserEntry> userEntries = new ArrayList<>();
         Map<String, String> existingSettings = loadExistingSettings(context);
@@ -2391,7 +3097,7 @@ public class EmbedOptions implements IHook {
             }
 
         } catch (SQLiteException e) {
-           // XposedBridge.log("SQL Error: " + e.getMessage());
+            // XposedBridge.log("SQL Error: " + e.getMessage());
             Toast.makeText(context, "データ取得エラー", Toast.LENGTH_SHORT).show();
             return;
         }
@@ -2456,65 +3162,102 @@ public class EmbedOptions implements IHook {
                 .show();
     }
 
+
     private Map<String, String> loadExistingSettings(Context context) {
         Map<String, String> settingsMap = new HashMap<>();
-        File settingFile = new File(
-                context.getFilesDir(),
-                "LimeBackup/Setting/ChatList.txt"
-        );
 
-        if (settingFile.exists()) {
-            try (BufferedReader reader = new BufferedReader(new FileReader(settingFile))) {
-                String line;
-                while ((line = reader.readLine()) != null) {
-                    String[] parts = line.split(",", 2);
-                    if (parts.length == 2) {
-                        settingsMap.put(parts[0].trim(), parts[1].trim());
-                    }
-                }
-            } catch (IOException e) {
-               // XposedBridge.log("設定読み込みエラー: " + e.getMessage());
-            }
+        String backupUriStr = loadBackupUri(context);
+        if (backupUriStr == null) {
+            return settingsMap;
         }
+
+        Uri treeUri = Uri.parse(backupUriStr);
+        DocumentFile baseDir = DocumentFile.fromTreeUri(context, treeUri);
+        if (baseDir == null || !baseDir.exists()) {
+            return settingsMap;
+        }
+
+        DocumentFile limeBackupDir = baseDir.findFile("LimeBackup");
+        if (limeBackupDir == null) return settingsMap;
+        DocumentFile settingDir = limeBackupDir.findFile("Setting");
+        if (settingDir == null) return settingsMap;
+
+        DocumentFile settingFile = settingDir.findFile("ChatList.txt");
+        if (settingFile == null || !settingFile.exists()) {
+            return settingsMap;
+        }
+
+        try (InputStream is = context.getContentResolver().openInputStream(settingFile.getUri());
+             BufferedReader reader = new BufferedReader(new InputStreamReader(is))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                String[] parts = line.split(",", 3);
+                if (parts.length == 3) {
+                    settingsMap.put(parts[0].trim(), parts[2].trim()); // userId → number
+                }
+            }
+        } catch (IOException e) {
+            // XposedBridge.log("設定読み込みエラー: " + e.getMessage());
+        }
+
         return settingsMap;
     }
 
-    private void saveUserData(Context context, List<UserEntry> entries,Context moduleContext) {
-        File outputDir = new File(
-                context.getFilesDir(),
-                "LimeBackup/Setting"
-        );
-
-        if (!outputDir.exists() && !outputDir.mkdirs()) {
-            Toast.makeText(context, "ディレクトリ作成失敗", Toast.LENGTH_SHORT).show();
+    private void saveUserData(Context context, List<UserEntry> entries, Context moduleContext) {
+        String backupUriStr = loadBackupUri(context);
+        if (backupUriStr == null) {
+            Toast.makeText(context, "バックアップフォルダが設定されていません", Toast.LENGTH_SHORT).show();
             return;
         }
 
-        File outputFile = new File(outputDir, "ChatList.txt");
-        Map<String, String> newSettings = new HashMap<>();
-
-        for (UserEntry entry : entries) {
-            String value = entry.inputView.getText().toString().trim();
-            if (!value.isEmpty()) {
-                newSettings.put(entry.userId, value);
-            }
+        Uri treeUri = Uri.parse(backupUriStr);
+        DocumentFile baseDir = DocumentFile.fromTreeUri(context, treeUri);
+        if (baseDir == null || !baseDir.exists()) {
+            Toast.makeText(context, "バックアップフォルダが見つかりません", Toast.LENGTH_SHORT).show();
+            return;
         }
 
-        try (FileWriter writer = new FileWriter(outputFile)) {
-            for (Map.Entry<String, String> entry : newSettings.entrySet()) {
-                writer.write(entry.getKey() + "," + entry.getValue() + "\n");
+        DocumentFile limeBackupDir = baseDir.findFile("LimeBackup");
+        if (limeBackupDir == null) {
+            limeBackupDir = baseDir.createDirectory("LimeBackup");
+        }
+
+        DocumentFile settingDir = limeBackupDir.findFile("Setting");
+        if (settingDir == null) {
+            settingDir = limeBackupDir.createDirectory("Setting");
+        }
+
+        if (settingDir == null) {
+            Toast.makeText(context, "Settingディレクトリの作成に失敗しました", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        DocumentFile outputFile = settingDir.findFile("ChatList.txt");
+        if (outputFile != null && outputFile.exists()) {
+            outputFile.delete();
+        }
+        outputFile = settingDir.createFile("text/plain", "ChatList.txt");
+
+        try (OutputStream os = context.getContentResolver().openOutputStream(outputFile.getUri());
+             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(os))) {
+            for (UserEntry entry : entries) {
+                String number = entry.inputView.getText().toString().trim();
+                if (!number.isEmpty()) {
+                    writer.write(entry.userId + "," + entry.userName + "," + number);
+                    writer.newLine();
+                }
             }
-            Toast.makeText(context, moduleContext.getString(R.string.SettingSave) + outputFile.getPath(), Toast.LENGTH_LONG).show();
+            Toast.makeText(context, "保存しました", Toast.LENGTH_SHORT).show();
         } catch (IOException e) {
-            Toast.makeText(context, moduleContext.getString(R.string.file_save_failed)+ e.getMessage(), Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "保存に失敗しました", Toast.LENGTH_SHORT).show();
         }
     }
-
     private String getProfileNameFromContacts(SQLiteDatabase db, String contactMid) {
         try (Cursor cursor = db.rawQuery("SELECT profile_name FROM contacts WHERE mid=?", new String[]{contactMid})) {
             return cursor.moveToFirst() ? cursor.getString(0) : "Unknown";
         } catch (SQLiteException e) {
-           // XposedBridge.log("プロファイル取得エラー: " + e.getMessage());
+            // XposedBridge.log("プロファイル取得エラー: " + e.getMessage());
             return "Unknown";
         }
     }
@@ -2523,14 +3266,258 @@ public class EmbedOptions implements IHook {
         try (Cursor cursor = db.rawQuery("SELECT name FROM groups WHERE id=?", new String[]{groupId})) {
             return cursor.moveToFirst() ? cursor.getString(0) : "Unknown";
         } catch (SQLiteException e) {
-           // XposedBridge.log("グループ名取得エラー: " + e.getMessage());
+            // XposedBridge.log("グループ名取得エラー: " + e.getMessage());
             return "Unknown";
         }
     }
 
-    private void Blocklist(Context context, Context moduleContext) {
-        new ProfileManager().showProfileManagement(context,moduleContext);
+    private static class UserEntry2 {
+        String userId;      // chatId
+        String userName;    // 表示名
+        transient EditText inputView;  
+        transient CheckBox checkBox; 
+
+        UserEntry2(String userId, String userName) {
+            this.userId = userId;
+            this.userName = userName;
+        }
     }
+
+    private static final String CHECKED_CHAT_FILE_NAME = "CheckedChats.txt";
+
+    private File getSettingDir(Context context) {
+        File base = context.getFilesDir();
+        File limeDir = new File(base, "LimeBackup/Setting");
+        if (!limeDir.exists()) {
+            //noinspection ResultOfMethodCallIgnored
+            limeDir.mkdirs();
+        }
+        return limeDir;
+    }
+
+    private Set<String> loadCheckedChatIds(Context context) {
+        Set<String> result = new HashSet<>();
+        try {
+            File dir = getSettingDir(context);
+            File file = new File(dir, CHECKED_CHAT_FILE_NAME);
+            if (!file.exists()) return result;
+
+            try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    line = line.trim();
+                    if (!line.isEmpty()) {
+                        result.add(line);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            XposedBridge.log("Lime: loadCheckedChatIds error: " + e.getMessage());
+        }
+        return result;
+    }
+
+    private void saveCheckedChatIds(Context context, Set<String> checkedIds) {
+        try {
+            File dir = getSettingDir(context);
+            File file = new File(dir, CHECKED_CHAT_FILE_NAME);
+
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(file, false))) {
+                for (String id : checkedIds) {
+                    bw.write(id);
+                    bw.newLine();
+                }
+            }
+        } catch (Exception e) {
+            XposedBridge.log("Lime: saveCheckedChatIds error: " + e.getMessage());
+        }
+    }
+
+    private List<UserEntry2> buildUserEntries(Context context) {
+        List<UserEntry2> userEntries = new ArrayList<>();
+
+        try (SQLiteDatabase chatListDb = context.openOrCreateDatabase("naver_line", Context.MODE_PRIVATE, null);
+             SQLiteDatabase profileDb = context.openOrCreateDatabase("contact", Context.MODE_PRIVATE, null);
+             Cursor chatCursor = chatListDb.rawQuery("SELECT chat_id FROM chat WHERE is_archived = 0", null)) {
+
+            if (chatCursor != null && chatCursor.getColumnIndex("chat_id") != -1) {
+                int col = chatCursor.getColumnIndex("chat_id");
+                while (chatCursor.moveToNext()) {
+                    String chatId = chatCursor.getString(col);
+                    String profileName = getProfileNameFromContacts(profileDb, chatId);
+                    if ("Unknown".equals(profileName)) {
+                        profileName = getGroupNameFromGroups(chatListDb, chatId);
+                    }
+                    userEntries.add(new UserEntry2(chatId, profileName));
+                }
+            }
+        } catch (Exception e) {
+            XposedBridge.log("Lime: buildUserEntries error: " + e.getMessage());
+        }
+
+        return userEntries;
+    }
+    static final class ThemePalette {
+        final int bg;       // 背景
+        final int fg;       // 文字
+        final int btnBg;    // ボタン背景
+        final int divider;  // 仕切り線
+        final int accent;   // 強調
+
+        ThemePalette(boolean dark) {
+            if (dark) {
+                bg = Color.parseColor("#000000"); // 既存のダーク背景
+                fg = Color.WHITE;
+                btnBg = Color.parseColor("#000000");
+                divider = Color.DKGRAY;
+                accent = Color.LTGRAY;
+            } else {
+                bg = Color.WHITE;
+                fg = Color.BLACK;
+                btnBg = Color.parseColor("#F2F2F7");
+                divider = Color.LTGRAY;
+                accent = Color.DKGRAY;
+            }
+        }
+    }
+
+
+
+    private static void applyDialogPalette(AlertDialog dialog, ThemePalette P) {
+        try {
+            Window window = dialog.getWindow();
+            if (window != null) {
+
+                window.setBackgroundDrawable(new ColorDrawable(P.bg));
+                View root = window.findViewById(android.R.id.content);
+                if (root != null) {
+                    root.setBackgroundColor(P.bg);
+                }
+            }
+        } catch (Throwable t) {
+            XposedBridge.log("Lime: applyDialogPalette error: " + t.getMessage());
+        }
+    }
+
+    static boolean isDarkMode(Context ctx) {
+        int m = ctx.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return m == Configuration.UI_MODE_NIGHT_YES;
+    }
+    private void showChatCheckListDialog(Activity activity2, Context context) {
+
+        boolean dark = isDarkMode(activity2);
+        ThemePalette P = new ThemePalette(dark);
+
+        List<UserEntry2> allEntries = buildUserEntries(context);
+        Set<String> checkedIdSet = loadCheckedChatIds(context);
+
+        LinearLayout root = new LinearLayout(activity2);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(24, 24, 24, 24);
+        if (P != null) root.setBackgroundColor(P.bg);
+
+        EditText searchBox = new EditText(activity2);
+        searchBox.setHint("名前 / ID で検索");
+        if (P != null) {
+            searchBox.setTextColor(P.fg);
+            searchBox.setHintTextColor(Color.GRAY);
+        }
+        root.addView(searchBox,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        ScrollView scroll = new ScrollView(activity2);
+        if (P != null) scroll.setBackgroundColor(P.bg);
+        LinearLayout listContainer = new LinearLayout(activity2);
+        listContainer.setOrientation(LinearLayout.VERTICAL);
+        if (P != null) listContainer.setBackgroundColor(P.bg);
+        scroll.addView(listContainer,
+                new ScrollView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(scroll,
+                new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT,
+                        0,
+                        1f));
+
+        for (UserEntry2 entry : allEntries) {
+            CheckBox cb = new CheckBox(activity2);
+            entry.checkBox = cb;
+            cb.setText(entry.userName + "  (" + entry.userId + ")");
+            cb.setTag(entry);  
+            
+            cb.setChecked(checkedIdSet.contains(entry.userId));
+
+            if (P != null) {
+                cb.setTextColor(P.fg);
+            }
+
+            listContainer.addView(cb);
+
+        }
+
+        searchBox.addTextChangedListener(new TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override public void afterTextChanged(Editable s) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                String q = s.toString().toLowerCase();
+                int childCount = listContainer.getChildCount();
+                for (int i = 0; i < childCount; i++) {
+                    View v = listContainer.getChildAt(i);
+                    if (!(v instanceof CheckBox)) continue;
+                    CheckBox cb = (CheckBox) v;
+                    UserEntry2 entry = (UserEntry2) cb.getTag();
+                    String name = entry.userName != null ? entry.userName.toLowerCase() : "";
+                    String id = entry.userId != null ? entry.userId.toLowerCase() : "";
+
+                    boolean visible = name.contains(q) || id.contains(q);
+                    cb.setVisibility(visible ? View.VISIBLE : View.GONE);
+                }
+            }
+        });
+
+        AlertDialog dialog = new AlertDialog.Builder(activity2,
+                dark
+                        ? android.R.style.Theme_DeviceDefault_Dialog_NoActionBar
+                        : android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar)
+                .setTitle("対象トーク選択")
+                .setView(root)
+                .setPositiveButton("OK", (d, w) -> {
+
+                    Set<String> newChecked = new HashSet<>();
+                    int childCount = listContainer.getChildCount();
+                    for (int i = 0; i < childCount; i++) {
+                        View v = listContainer.getChildAt(i);
+                        if (!(v instanceof CheckBox)) continue;
+                        CheckBox cb = (CheckBox) v;
+                        if (!cb.isChecked()) continue;
+                        UserEntry2 entry = (UserEntry2) cb.getTag();
+                        if (entry != null && entry.userId != null) {
+                            newChecked.add(entry.userId);
+                        }
+                    }
+                    saveCheckedChatIds(context, newChecked);
+                    Toast.makeText(activity2, "保存しました (" + newChecked.size() + " 件)", Toast.LENGTH_SHORT).show();
+                })
+                .setNegativeButton("キャンセル", null)
+                .create();
+
+        dialog.show();
+        applyDialogPalette(dialog, P);
+    }
+
+    private void Blocklist(Context context, Context moduleContext) {
+
+        boolean dark = isDarkMode(context);
+        ThemePalette P = new ThemePalette(dark);
+
+        new ProfileManager(P).showProfileManagement(context, moduleContext);
+    }
+
     private static class ProfileInfo {
         final String contactMid;
         final String profileName;
@@ -2545,6 +3532,11 @@ public class EmbedOptions implements IHook {
         private HiddenProfileManager hiddenManager;
         private AlertDialog currentDialog;
         private Context moduleContext;
+        private final ThemePalette P;
+
+        public ProfileManager(ThemePalette palette) {
+            this.P = palette;
+        }
 
         public void showProfileManagement(Context context, Context moduleContext) {
             this.moduleContext = moduleContext;
@@ -2561,7 +3553,6 @@ public class EmbedOptions implements IHook {
                     showManagementDialog(context, profiles, moduleContext);
                 }
             }.execute();
-
         }
 
         private List<ProfileInfo> loadProfiles(Context context) {
@@ -2583,7 +3574,7 @@ public class EmbedOptions implements IHook {
                     }
                 }
             } catch (Exception e) {
-               // XposedBridge.log( moduleContext.getResources().getString(R.string.Block_Profile_Reload) + e.getMessage());
+                // XposedBridge.log( moduleContext.getResources().getString(R.string.Block_Profile_Reload) + e.getMessage());
             }
             return profiles;
         }
@@ -2597,79 +3588,111 @@ public class EmbedOptions implements IHook {
 
 
         private void showManagementDialog(Context context, List<ProfileInfo> profiles, Context moduleContext) {
-            AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                    .setTitle(moduleContext.getResources().getString(R.string.Block_list))
-                    .setNeutralButton(moduleContext.getResources().getString(R.string.Name_Reset), (dialog, which) -> showResetConfirmation(context, profiles,moduleContext))
-                    .setPositiveButton(moduleContext.getResources().getString(R.string.Redisplay), (dialog, which) -> showRestoreDialog(context))
-                    .setNegativeButton(moduleContext.getResources().getString(R.string.Close), null);
+            AlertDialog dialog = new AlertDialog.Builder(
+                    context,
+                    isDarkMode(context)
+                            ? android.R.style.Theme_DeviceDefault_Dialog_NoActionBar
+                            : android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar
+            )
+                    .setTitle(moduleContext.getString(R.string.Block_list))
+                    .setNeutralButton(moduleContext.getString(R.string.Name_Reset),
+                            (d, w) -> showResetConfirmation(context, profiles, moduleContext))
+                    .setPositiveButton(moduleContext.getString(R.string.Redisplay),
+                            (d, w) -> showRestoreDialog(context))
+                    .setNegativeButton(moduleContext.getString(R.string.Close), null)
+                    .create();
 
-            ScrollView scrollView = new ScrollView(context);
+            // Scroll + Container
+            ScrollView scroll = new ScrollView(context);
+            scroll.setBackgroundColor(P.bg);
+
             LinearLayout container = new LinearLayout(context);
             container.setOrientation(LinearLayout.VERTICAL);
-            int padding = dpToPx(context, 16);
-            container.setPadding(padding, padding, padding, padding);
-            scrollView.addView(container);
+            container.setPadding(32, 32, 32, 32);
+            container.setBackgroundColor(P.bg);
+
+            scroll.addView(container);
 
             if (profiles.isEmpty()) {
-
-                TextView emptyView = new TextView(context);
-                emptyView.setText(moduleContext.getResources().getString(R.string.No_Profiles));
-                emptyView.setGravity(Gravity.CENTER);
-                emptyView.setTextSize(16);
-                container.addView(emptyView, new LinearLayout.LayoutParams(
-                        LinearLayout.LayoutParams.MATCH_PARENT,
-                        LinearLayout.LayoutParams.WRAP_CONTENT
-                ));
+                TextView empty = new TextView(context);
+                empty.setText(moduleContext.getString(R.string.No_Profiles));
+                empty.setTextColor(P.fg);
+                empty.setGravity(Gravity.CENTER);
+                empty.setTextSize(16);
+                container.addView(empty);
             } else {
-
                 for (ProfileInfo profile : profiles) {
                     container.addView(createProfileItem(context, profile, container));
                 }
             }
 
-            builder.setView(scrollView);
-            currentDialog = builder.show();
+            dialog.setView(scroll);
+            dialog.show();
 
-            Window window = currentDialog.getWindow();
-            if (window != null) {
-                window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, 800);
-            }
+            applyDialogPalette(dialog, P);
+
+            currentDialog = dialog;
+        }
+        private void showResetConfirmation(Context context, List<ProfileInfo> profiles, Context moduleContext) {
+            boolean dark = isDarkMode(context);
+            ThemePalette P = new ThemePalette(dark);
+            AlertDialog.Builder builder =
+                    new AlertDialog.Builder(
+                            context,
+                            dark
+                                    ? android.R.style.Theme_DeviceDefault_Dialog_NoActionBar
+                                    : android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar
+                    );
+
+            builder.setTitle(moduleContext.getString(R.string.really_delete));
+            builder.setMessage(moduleContext.getString(R.string.really_delete));
+            builder.setPositiveButton(
+                    moduleContext.getString(R.string.ok),
+                    (d, w) -> performResetOperation(context, profiles)
+            );
+
+            builder.setNegativeButton(
+                    moduleContext.getString(R.string.cancel),
+                    null
+            );
+
+            AlertDialog dialog = builder.create();
+            dialog.show();
+            applyDialogPalette(dialog, P);
+            try {
+                int titleId = context.getResources().getIdentifier("alertTitle", "id", "android");
+                TextView titleView = dialog.findViewById(titleId);
+                if (titleView != null) titleView.setTextColor(P.fg);
+            } catch (Throwable ignored) {}
         }
 
-        private int dpToPx(Context context, int dp) {
-            return (int) (dp * context.getResources().getDisplayMetrics().density);
-        }
-        private void showResetConfirmation(Context context, List<ProfileInfo> profiles,Context moduleContext) {
-            new AlertDialog.Builder(context)
-                    .setTitle(moduleContext.getResources().getString(R.string.really_delete))
-                    .setMessage(moduleContext.getResources().getString(R.string.really_delete))
-                    .setPositiveButton(moduleContext.getResources().getString(R.string.ok), (d, w) -> performResetOperation(context, profiles))
-                    .setNegativeButton(moduleContext.getResources().getString(R.string.cancel), null)
-                    .show();
-        }
         private LinearLayout createProfileItem(Context context, ProfileInfo profile, ViewGroup parent) {
             LinearLayout layout = new LinearLayout(context);
             layout.setOrientation(LinearLayout.HORIZONTAL);
             layout.setPadding(32, 16, 32, 16);
+            layout.setBackgroundColor(P.bg);
 
             TextView tv = new TextView(context);
             tv.setText(profile.profileName);
+            tv.setTextColor(P.fg);
+            tv.setTextSize(16);
             tv.setLayoutParams(new LinearLayout.LayoutParams(
                     0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
-            tv.setTextSize(16);
 
             Button hideBtn = new Button(context);
-                hideBtn.setText(moduleContext.getResources().getString(R.string.Hide));
-            hideBtn.setBackgroundColor(Color.parseColor("#FF9800"));
-            hideBtn.setTextColor(Color.WHITE);
+            hideBtn.setText(moduleContext.getString(R.string.Hide));
+            hideBtn.setTextColor(P.fg);
+            hideBtn.setBackgroundColor(P.btnBg);
+
             hideBtn.setOnClickListener(v -> {
                 hiddenManager.addHiddenProfile(profile.contactMid);
                 parent.removeView(layout);
-                    Toast.makeText(context, profile.profileName + moduleContext.getResources().getString(R.string.user_hide), Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, profile.profileName + moduleContext.getString(R.string.user_hide), Toast.LENGTH_SHORT).show();
             });
 
             layout.addView(tv);
             layout.addView(hideBtn);
+
             return layout;
         }
 
@@ -2677,17 +3700,28 @@ public class EmbedOptions implements IHook {
         private void showRestoreDialog(Context context) {
             Set<String> hidden = hiddenManager.getHiddenProfiles();
             if (hidden.isEmpty()) {
-                Toast.makeText(context, moduleContext.getResources().getString(R.string.no_hidden_profiles), Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, moduleContext.getString(R.string.no_hidden_profiles), Toast.LENGTH_SHORT).show();
                 return;
             }
 
-            AlertDialog.Builder builder = new AlertDialog.Builder(context)
-                    .setTitle(moduleContext.getResources().getString(R.string.Unhide_hidden_profiles));
+            AlertDialog dialog = new AlertDialog.Builder(
+                    context,
+                    isDarkMode(context)
+                            ? android.R.style.Theme_DeviceDefault_Dialog_NoActionBar
+                            : android.R.style.Theme_DeviceDefault_Light_Dialog_NoActionBar
+            )
+                    .setTitle(moduleContext.getString(R.string.Unhide_hidden_profiles))
+                    .setNegativeButton(moduleContext.getString(R.string.Return), null)
+                    .create();
 
-            ScrollView scrollView = new ScrollView(context);
+            ScrollView scroll = new ScrollView(context);
+            scroll.setBackgroundColor(P.bg);
+
             LinearLayout container = new LinearLayout(context);
             container.setOrientation(LinearLayout.VERTICAL);
-            scrollView.addView(container);
+            container.setBackgroundColor(P.bg);
+            container.setPadding(32, 32, 32, 32);
+            scroll.addView(container);
 
             new AsyncTask<Void, Void, List<ProfileInfo>>() {
                 @Override
@@ -2696,37 +3730,41 @@ public class EmbedOptions implements IHook {
                 }
 
                 @Override
-                protected void onPostExecute(List<ProfileInfo> hiddenProfiles) {
-                    for (ProfileInfo profile : hiddenProfiles) {
-                        LinearLayout itemLayout = new LinearLayout(context);
-                        itemLayout.setOrientation(LinearLayout.HORIZONTAL);
-                        itemLayout.setPadding(32, 16, 32, 16);
+                protected void onPostExecute(List<ProfileInfo> list) {
+                    for (ProfileInfo p : list) {
+                        LinearLayout row = new LinearLayout(context);
+                        row.setOrientation(LinearLayout.HORIZONTAL);
+                        row.setPadding(32, 16, 32, 16);
+                        row.setBackgroundColor(P.bg);
 
                         TextView tv = new TextView(context);
-                        tv.setText(profile.profileName);
+                        tv.setText(p.profileName);
+                        tv.setTextColor(P.fg);
                         tv.setLayoutParams(new LinearLayout.LayoutParams(
                                 0, LinearLayout.LayoutParams.WRAP_CONTENT, 1));
 
                         Button restoreBtn = new Button(context);
-                        restoreBtn.setText(moduleContext.getResources().getString(R.string.Redisplay));
-                        restoreBtn.setBackgroundColor(Color.parseColor("#4CAF50"));
-                        restoreBtn.setTextColor(Color.WHITE);
+                        restoreBtn.setText(moduleContext.getString(R.string.Redisplay));
+                        restoreBtn.setTextColor(P.fg);
+                        restoreBtn.setBackgroundColor(P.btnBg);
+
                         restoreBtn.setOnClickListener(v -> {
-                            hiddenManager.removeHiddenProfile(profile.contactMid);
-                            container.removeView(itemLayout);
-                            Toast.makeText(context, profile.profileName + moduleContext.getResources().getString(R.string.redisplayed_Profile), Toast.LENGTH_SHORT).show();
+                            hiddenManager.removeHiddenProfile(p.contactMid);
+                            container.removeView(row);
+                            Toast.makeText(context, p.profileName + moduleContext.getString(R.string.redisplayed_Profile), Toast.LENGTH_SHORT).show();
                         });
 
-                        itemLayout.addView(tv);
-                        itemLayout.addView(restoreBtn);
-                        container.addView(itemLayout);
+                        row.addView(tv);
+                        row.addView(restoreBtn);
+                        container.addView(row);
                     }
                 }
             }.execute();
 
-            builder.setView(scrollView);
-            builder.setNegativeButton(moduleContext.getResources().getString(R.string.Return), null);
-            builder.show();
+            dialog.setView(scroll);
+            dialog.show();
+
+            applyDialogPalette(dialog, P);
         }
         private List<ProfileInfo> loadHiddenProfiles(Context context, Set<String> hiddenMids) {
             List<ProfileInfo> profiles = new ArrayList<>();
@@ -2737,7 +3775,7 @@ public class EmbedOptions implements IHook {
                     profiles.add(new ProfileInfo(contactMid, profileName));
                 }
             } catch (Exception e) {
-               // XposedBridge.log("非表示プロファイル読込エラー: " + e.getMessage());
+                // XposedBridge.log("非表示プロファイル読込エラー: " + e.getMessage());
             }
             return profiles;
         }
@@ -2809,7 +3847,7 @@ public class EmbedOptions implements IHook {
             List<ProfileInfo> newList = loadProfiles(context);
             profiles.clear();
             profiles.addAll(newList);
-                showManagementDialog(context, profiles, moduleContext);
+            showManagementDialog(context, profiles, moduleContext);
 
         }
     }
@@ -2837,7 +3875,7 @@ public class EmbedOptions implements IHook {
                 try {
                     storageFile.createNewFile();
                 } catch (IOException e) {
-                   // XposedBridge.log("ファイル作成エラー: " + e.getMessage());
+                    // XposedBridge.log("ファイル作成エラー: " + e.getMessage());
                 }
             }
         }
@@ -2849,7 +3887,7 @@ public class EmbedOptions implements IHook {
                     bw.write(contactMid);
                     bw.newLine();
                 } catch (IOException e) {
-                   // XposedBridge.log("非設定追加エラー: " + e.getMessage());
+                    // XposedBridge.log("非設定追加エラー: " + e.getMessage());
                 }
             }).start();
         }
@@ -2863,7 +3901,7 @@ public class EmbedOptions implements IHook {
                         hidden.add(line.trim());
                     }
                 } catch (IOException e) {
-                   // XposedBridge.log("非表示リスト読込エラー: " + e.getMessage());
+                    // XposedBridge.log("非表示リスト読込エラー: " + e.getMessage());
                 }
             }
             return hidden;
@@ -2880,7 +3918,7 @@ public class EmbedOptions implements IHook {
                             bw.newLine();
                         }
                     } catch (IOException e) {
-                       // XposedBridge.log("非表示解除エラー: " + e.getMessage());
+                        // XposedBridge.log("非表示解除エラー: " + e.getMessage());
                     }
                 }
             }).start();
@@ -3427,7 +4465,7 @@ public class EmbedOptions implements IHook {
     private void backupChatsFolder(Context appCtx, Context moduleCtx) {
 
         File srcChats = new File(Environment.getExternalStorageDirectory(),
-                "Android/data/jp.naver.line.android/files/chats");
+                "Android/data/"+Constants.PACKAGE_NAME+"/files/chats");
         String backupUriS = loadBackupUri(appCtx);
 
         if (backupUriS == null) {
@@ -3465,7 +4503,7 @@ public class EmbedOptions implements IHook {
             showToast(appCtx, moduleCtx.getString(
                     R.string.Talk_Picture_Back_up_Error_No_Access));
         } catch (IOException | NullPointerException e) {
-            // NullPointerException は SAF が null を返した時を想定
+       
             XposedBridge.log("Lime-Backup Chats: error → " + e);
             showToast(appCtx, moduleCtx.getString(
                     R.string.Talk_Picture_Back_up_Error));
@@ -3557,7 +4595,6 @@ public class EmbedOptions implements IHook {
         }
     }
     private void restoreChatsFolder(Context context, Context moduleContext) {
-        // ① 設定ファイルから URI を読み込む
         String backupUriString = loadBackupUri(context);
         File backupDirFile = null;
         DocumentFile backupDirDoc = null;
@@ -3566,15 +4603,11 @@ public class EmbedOptions implements IHook {
             Uri backupUri = Uri.parse(backupUriString);
 
             if ("content".equals(backupUri.getScheme())) {
-                // SAF URI の場合は DocumentFile で扱う
                 backupDirDoc = DocumentFile.fromTreeUri(context, backupUri);
             } else if ("file".equals(backupUri.getScheme()) || backupUri.getScheme() == null) {
-                // file:// またはパス文字列の場合
                 backupDirFile = new File(backupUri.getPath());
             }
         }
-
-        // ② backup_uri.txt に何もなければ従来のパスを使う
         if (backupDirDoc == null && backupDirFile == null) {
             File defaultDir = new File(context.getFilesDir(), "LimeBackup/chats_backup");
             if (defaultDir.exists()) {
@@ -3582,7 +4615,7 @@ public class EmbedOptions implements IHook {
             } else {
                 File alt = new File(
                         Environment.getExternalStorageDirectory(),
-                        "Android/data/jp.naver.line.android/backup/chats_backup"
+                        "Android/data/"+Constants.PACKAGE_NAME+"/backup/chats_backup"
                 );
                 if (alt.exists()) {
                     backupDirFile = alt;
@@ -3590,7 +4623,6 @@ public class EmbedOptions implements IHook {
             }
         }
 
-        // ③ バックアップ元の存在チェック
         if ((backupDirFile != null && (!backupDirFile.exists() || !backupDirFile.isDirectory()))
                 || (backupDirDoc  != null && !backupDirDoc.isDirectory())) {
             Toast.makeText(
@@ -3604,7 +4636,7 @@ public class EmbedOptions implements IHook {
         // ④ 復元先フォルダの準備
         File targetDir = new File(
                 Environment.getExternalStorageDirectory(),
-                "Android/data/jp.naver.line.android/files/chats"
+                "Android/data/"+Constants.PACKAGE_NAME+"/files/chats"
         );
         if (!targetDir.exists() && !targetDir.mkdirs()) {
             Toast.makeText(
@@ -3617,10 +4649,9 @@ public class EmbedOptions implements IHook {
 
         try {
             if (backupDirFile != null) {
-                // ⑤-1. File ベースなら従来のコピー
+                
                 copyDirectory(backupDirFile, targetDir);
             } else {
-                // ⑤-2. SAF(DocumentFile) ベースのディレクトリを再帰的にコピー
                 copyFromDocumentFile(context, backupDirDoc, targetDir);
             }
             Toast.makeText(
@@ -3646,7 +4677,6 @@ public class EmbedOptions implements IHook {
                 }
                 copyFromDocumentFile(context, child, sub);
             } else if (child.isFile()) {
-                // InputStream/OutputStream でコピー
                 try (InputStream in = context.getContentResolver().openInputStream(child.getUri());
                      OutputStream out = new FileOutputStream(new File(targetDir, child.getName()))) {
                     byte[] buf = new byte[8192];
@@ -3662,18 +4692,18 @@ public class EmbedOptions implements IHook {
     private Context getTargetAppContext(XC_LoadPackage.LoadPackageParam lpparam) {
         Context contextV = null;
 
-        
+
         try {
             contextV = AndroidAppHelper.currentApplication();
             if (contextV != null) {
-               // XposedBridge.log("Lime: Got context via AndroidAppHelper: " + contextV.getPackageName());
+                // XposedBridge.log("Lime: Got context via AndroidAppHelper: " + contextV.getPackageName());
                 return contextV;
             }
         } catch (Throwable t) {
-           // XposedBridge.log("Lime: AndroidAppHelper failed: " + t.toString());
+            // XposedBridge.log("Lime: AndroidAppHelper failed: " + t.toString());
         }
 
-        
+
         try {
             Class<?> activityThreadClass = XposedHelpers.findClass("android.app.ActivityThread", lpparam.classLoader);
             Object activityThread = XposedHelpers.callStaticMethod(activityThreadClass, "currentActivityThread");
@@ -3682,14 +4712,14 @@ public class EmbedOptions implements IHook {
             contextV = (Context) XposedHelpers.callMethod(activityThread, "getSystemContext");
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-               // XposedBridge.log("Lime: Context via ActivityThread: "+ contextV.getPackageName() + " | DataDir: " + contextV.getDataDir());
+                // XposedBridge.log("Lime: Context via ActivityThread: "+ contextV.getPackageName() + " | DataDir: " + contextV.getDataDir());
             }
             return contextV;
         } catch (Throwable t) {
-           // XposedBridge.log("Lime: ActivityThread method failed: " + t.toString());
+            // XposedBridge.log("Lime: ActivityThread method failed: " + t.toString());
         }
 
-        
+
         try {
             Context systemContext = (Context) XposedHelpers.callStaticMethod(
                     XposedHelpers.findClass("android.app.ContextImpl", lpparam.classLoader),
@@ -3705,10 +4735,10 @@ public class EmbedOptions implements IHook {
                     Context.CONTEXT_INCLUDE_CODE | Context.CONTEXT_IGNORE_SECURITY
             );
 
-           // XposedBridge.log("Lime: Fallback context created: "+ (contextV != null ? contextV.getPackageName() : "null"));
+            // XposedBridge.log("Lime: Fallback context created: "+ (contextV != null ? contextV.getPackageName() : "null"));
             return contextV;
         } catch (Throwable t) {
-           // XposedBridge.log("Lime: Fallback context failed: " + t.toString());
+            // XposedBridge.log("Lime: Fallback context failed: " + t.toString());
         }
 
         return null;
@@ -3753,17 +4783,15 @@ public class EmbedOptions implements IHook {
 
             Cursor cursor = null;
             try {
-                cursor = profileDb.rawQuery("SELECT mid, profile_name FROM contact", null);
+                cursor = profileDb.rawQuery("SELECT mid, profile_name FROM contacts", null);
                 if (cursor != null && cursor.moveToFirst()) {
                     do {
                         String mid = cursor.getString(0);
                         String profileName = cursor.getString(1);
 
-                        // CSV行を構築（値にカンマや改行が含まれる場合はダブルクォートで囲む）
                         String line = "\"" + (mid != null ? mid.replace("\"", "\"\"") : "") + "\"," +
                                 "\"" + (profileName != null ? profileName.replace("\"", "\"\"") : "") + "\"\n";
 
-                        // 1行ずつ書き込み
                         writer.write(line);
                         writer.flush();
 
@@ -3799,5 +4827,93 @@ public class EmbedOptions implements IHook {
             XposedBridge.log("Lime URI Load Error: " + e.getMessage());
             return null;
         }
+
+
     }
+
+    private int dpToPx(@NonNull Context context, float dp) {
+        float density = context.getResources().getDisplayMetrics().density;
+        return Math.round(dp * density);
+    }
+
+    private Drawable scaleDrawable(Drawable drawable, int width, int height) {
+        Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
+        Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, width, height, true);
+        return new BitmapDrawable(scaledBitmap);
+    }
+
+    private Drawable loadImageFromUri(Context context, String imageName) {
+        String backupUri = loadBackupUri(context);
+        if (backupUri != null) {
+            try {
+                Uri treeUri = Uri.parse(backupUri);
+                DocumentFile dir = DocumentFile.fromTreeUri(context, treeUri);
+                if (dir != null) {
+                    DocumentFile imageFile = dir.findFile(imageName);
+                    if (imageFile != null && imageFile.exists()) {
+                        try (InputStream inputStream = context.getContentResolver().openInputStream(imageFile.getUri())) {
+                            return Drawable.createFromStream(inputStream, null);
+                        } catch (IOException e) {
+                            XposedBridge.log("Lime: Error loading image from URI: " + e.getMessage());
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                XposedBridge.log("Lime: Error accessing image URI: " + e.getMessage());
+            }
+        }
+        return null;
+    }
+    private void copyImageToUri(Context context, Context moduleContext, String imageName) {
+        String backupUri = loadBackupUri(context);
+        if (backupUri == null) return;
+
+        try {
+            Uri treeUri = Uri.parse(backupUri);
+            DocumentFile dir = DocumentFile.fromTreeUri(context, treeUri);
+            if (dir == null) return;
+            if (dir.findFile(imageName) != null) return;
+            int resId = moduleContext.getResources().getIdentifier(
+                    imageName.replace(".png", ""), "drawable", Constants.MODULE_NAME);
+            if (resId == 0) return;
+
+            try (InputStream in = moduleContext.getResources().openRawResource(resId);
+                 OutputStream out = context.getContentResolver().openOutputStream(
+                         dir.createFile("image/png", imageName).getUri())) {
+
+                byte[] buffer = new byte[1024];
+                int length;
+                while ((length = in.read(buffer)) > 0) {
+                    out.write(buffer, 0, length);
+                }
+            }
+        } catch (Exception e) {
+            XposedBridge.log("Lime: Error copying image to URI: " + e.getMessage());
+        }
+    }
+
+
+    private Map<String, String> readSettingsFromFile(Context context) {
+        String fileName = "margin_settings.txt";
+        File dir = new File(context.getFilesDir(), "LimeBackup/Setting");
+        File file = new File(dir, fileName);
+        Map<String, String> settings = new HashMap<>();
+        settings.put("header_setting_size", "60");
+
+        if (file.exists()) {
+            try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    String[] parts = line.split("=", 2);
+                    if (parts.length == 2) {
+                        settings.put(parts[0].trim(), parts[1].trim());
+                    }
+                }
+            } catch (IOException e) {
+                XposedBridge.log("Lime: Error reading settings file: " + e.getMessage());
+            }
+        }
+        return settings;
+    }
+
 }
