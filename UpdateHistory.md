@@ -1,4 +1,5 @@
-\n\n## 1.31.14_alphaaread_checker_　fix\n\n\n\n## 1.31.13_alphafix PhotoSave
+\n\n## 1.31.15_alphaaio.github.hiro.lime.hooks.PhotoSave fix cash - (Disable current time in xposed logs for LSpatch/NPatch)
+ReadChecker Maybe Fix (in for LSpatch/NPatch)\n\n\n\n## 1.31.14_alphaaread_checker_　fix\n\n\n\n## 1.31.13_alphafix PhotoSave
 DisableNotificationAlubmAdd
 dark or light add
 disable TokenGet\n\n\n\n## 1.31.12_alphaMaybe fix yml\n\n\n\n## 1.31.12_alpha main hooks add TokenGet
