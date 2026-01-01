@@ -27,6 +27,12 @@ LINE 株式会社やその他第三者のサービス提供を妨害したり、
 >   ([この方法](https://github.com/Chipppppppppp/LIME/issues/50#issuecomment-2174842592) でログインすれば可能)  
 > - コインの購入が不可  
 > - LINE Pay の一部の機能が使用不可 
+> - ログイン時のエラーが発生する可能性が高い
+
+
+> [!WARNING]
+> このModuleの利用で以下の問題が発生します
+> - BANKの利用不可
 
 ## 概要
 
