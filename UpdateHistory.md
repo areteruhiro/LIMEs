@@ -1,4 +1,4 @@
-\n\n## 1.31.15_alphaaio.github.hiro.lime.hooks.PhotoSave fix cash - (Disable current time in xposed logs for LSpatch/NPatch)
+\n\n## 1.31.16_lphaaAdd an option action button for EmbedOptions to a category\n\n\n\n## 1.31.15_alphaaio.github.hiro.lime.hooks.PhotoSave fix cash - (Disable current time in xposed logs for LSpatch/NPatch)
 ReadChecker Maybe Fix (in for LSpatch/NPatch)\n\n\n\n## 1.31.14_alphaaread_checker_　fix\n\n\n\n## 1.31.13_alphafix PhotoSave
 DisableNotificationAlubmAdd
 dark or light add
