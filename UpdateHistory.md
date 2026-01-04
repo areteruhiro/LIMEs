@@ -1,3 +1,9 @@
+
+
+## 1.31.20alpha
+
+local name fix chat only bottom
+
 ## 1.31.19 alpha
 ### LocalName機能の追加
 - removeOptionがオンの場合Headerにも追加しないように変更
