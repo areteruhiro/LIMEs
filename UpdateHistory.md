@@ -1,20 +1,54 @@
-\n\n## 1.31.19alphaLocalName機能の追加
-removeOptionがオンの場合Headerにも追加しないように変更
-LIMEs設定ボタンに説明の追加
-「未読のまま閲覧」→送信後に既読に変更
-NotificationReaction→リアクションされた際に通知
-GroupNotification→グループ通知
-MediaReNameSave →写真/動画保存時に名前を変更する
-ReactionCount→リアクションカウント
-StopCallTone→発信音/着信音停止ボタンの作成
-MessageSend→メッセージ送信スケジュール機能\n\n\n\n## 1.31.18alphaEmbedOptionsのコメントの追加\n\n\n\n## 1.31.18alphaEmbedOptionsのコメントの追加\n\n\n\n## 1.31.17_lphaaLimeOption 整理
-header_setting_lightの追加\n\n\n\n## 1.31.16_lphaaAdd an option action button for EmbedOptions to a category\n\n\n\n## 1.31.15_alphaaio.github.hiro.lime.hooks.PhotoSave fix cash - (Disable current time in xposed logs for LSpatch/NPatch)
-ReadChecker Maybe Fix (in for LSpatch/NPatch)\n\n\n\n## 1.31.14_alphaaread_checker_　fix\n\n\n\n## 1.31.13_alphafix PhotoSave
-DisableNotificationAlubmAdd
-dark or light add
-disable TokenGet\n\n\n\n## 1.31.12_alphaMaybe fix yml\n\n\n\n## 1.31.12_alpha main hooks add TokenGet
- DisableSilentMessage disable log
- Maybe fix yml\n\n\n\n## 1.31.11_alphabuild.gradle の更新\n\n\n\n## 1.31.10_alphaDowngrade (true)\n\n\n\n## 1.31.9_alphaDisable Notification add　Album
+## 1.31.19 alpha
+### LocalName機能の追加
+- removeOptionがオンの場合Headerにも追加しないように変更
+- LIMEs設定ボタンに説明の追加
+- 「未読のまま閲覧」→送信後に既読に変更
+- NotificationReaction → リアクションされた際に通知
+- GroupNotification → グループ通知
+- MediaReNameSave → 写真/動画保存時に名前を変更する
+- ReactionCount → リアクションカウント
+- StopCallTone → 発信音/着信音停止ボタンの作成
+- MessageSend → メッセージ送信スケジュール機能
+
+## 1.31.18 alpha
+- EmbedOptionsのコメントの追加
+
+## 1.31.17 alpha
+### LimeOption 整理
+- header_setting_light の追加
+
+## 1.31.16 alpha
+- EmbedOptionsにカテゴリ用オプションアクションボタンを追加
+
+## 1.31.15 alpha
+- PhotoSave fix cache
+- LSPatch / NPatch 用に Xposed ログの current time を無効化
+- ReadChecker 修正（LSPatch / NPatch）
+
+## 1.31.14 alpha
+- read_checker 修正
+
+## 1.31.13 alpha
+- PhotoSave 修正
+- DisableNotificationAlbumAdd
+- dark / light 追加
+- TokenGet 無効化
+
+## 1.31.12 alpha
+- main hooks に TokenGet 追加
+- DisableSilentMessage のログ無効化
+- yml 修正（多分）
+
+## 1.31.11 alpha
+- build.gradle の更新
+
+## 1.31.10 alpha
+- Downgrade（true）
+
+ 
+ \n
+ 
+ ## 1.31.9_alphaDisable Notification add　Album
 PhotoSave Rename Fix
 header_setting_dark.png
 header_setting_light.png add
