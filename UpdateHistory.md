@@ -1,5 +1,11 @@
 
 
+## 1.31.21alpha
+
+EmbedOptions Fix Crash
+
+
+
 ## 1.31.20alpha
 
 local name fix chat only bottom
