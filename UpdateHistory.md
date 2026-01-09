@@ -1,5 +1,13 @@
 
 
+## 1.31.22alpha
+
+moduleContext.getResources().getStringの共通呼び出し化,(English、台湾)
+NotificationReactionに画像の追加
+header →dark to light
+
+
+
 ## 1.31.21adwwsssalpha
 
 強制的にダークテーマに着せ替える機能の追加(beta)
