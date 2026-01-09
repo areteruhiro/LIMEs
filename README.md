@@ -30,8 +30,8 @@ The developer assumes no responsibility for the results of using this module.<br
 
 > [!WARNING]
 > 非 root 端末では､ 以下の問題があります  
-> - Google アカウント (ドライブ) を使用したトーク履歴の復元ができない  
->   ([この方法](https://github.com/Chipppppppppp/LIME/issues/50#issuecomment-2174842592) でログインすれば可能)  
+> - **Google アカウント (ドライブ) を使用した**トーク履歴の復元ができない  
+>   ([この方法](https://github.com/Chipppppppppp/LIME/issues/50#issuecomment-2174842592) でログインすれば可能)
 > - コインの購入が不可  
 > - LINE Pay の一部の機能が使用不可 
 > - ログイン時のエラーが発生する可能性が高い
