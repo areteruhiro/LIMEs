@@ -3,12 +3,19 @@
 GitHubは頻繁に更新しません。
 Discordで最新の情報を確認してください。
 
-以下を御理解の上ご利用ください。
+以下を御理解の上ご利用ください。<br>
 本モジュールは学習目的でのみ開発・利用するものです。
 Android のアプリケーション動作原理、フック処理、リバースエンジニアリングに関する技術理解を深めることを目的としており、
 LINE 株式会社やその他第三者のサービス提供を妨害したり、営利目的で利用することは意図していません。
 実際の利用においては、各サービスの利用規約や関連法令を遵守してください。
-本モジュールを利用した結果について、開発者は一切の責任を負いません。
+本モジュールを利用した結果について、開発者は一切の責任を負いません。<br>
+[EN]
+Please understand and use the following.<br>
+This module is developed and used for learning purposes only.
+It is intended to deepen understanding of Android application operating principles, hook processing, and reverse engineering technologies,
+and not to interfere with the services of LINE Corporation or any other third party, nor to be used for commercial purposes.
+When actually using it, please comply with the terms of service and relevant laws and regulations of each service.
+The developer assumes no responsibility for the results of using this module.<br>
 
 # サポート
  [Discord](https://discord.gg/5WWxUkMsNJ)
