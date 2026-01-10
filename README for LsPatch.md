@@ -11,12 +11,10 @@ LINEをローカル適応でインストールすることにより、LINEを毎
 1. [**JingMatrix LSPatch**](https://github.com/JingMatrix/LSPatch/) をインストール
 
 2.パッチするapkについて
-LINE  <br>
-※通知が来ない問題があることがあります。APKか署名の問題と推測しています。<br>
-いろいろお試しください。
-[アーキテクチャの確認](https://play.google.com/store/apps/details?id=com.ytheekshana.deviceinfo)→CPU→サーポートされているABI
+### LINE
+[アーキテクチャの確認](https://play.google.com/store/apps/details?id=com.ytheekshana.deviceinfo)→CPU→サーポートされているABI<br>
 ※基本最近に発売されている端末なら、arm64-v8aが多いです
-### ダウンロード先
+#### ダウンロード先
 [APKMirror](https://www.apkmirror.com/apk/line-corporation/line/)<br>
 [APKPure](https://apkpure.com/jp/line-calls-messages/jp.naver.line.android)  ※一部バージョンが欠けています<br>
 LINE公式  https://line-android-universal-download.line-scdn.net/line-15.12.2.apk <br>
@@ -42,6 +40,8 @@ apkへの変え方
 
 
 ## 通知が届かない場合
+※FCMに登録されず通知が来ない問題があることがあります。APKか署名の問題と推測しています。<br>
+いろいろお試しください。<br>
 - 14.4.2からパッチインストールを行う
 - 上記URL群のAPKを色々試す
 - AntiSplit-M を使用する（気休めかも）
