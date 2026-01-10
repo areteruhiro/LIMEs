@@ -16,17 +16,11 @@ LINE  <br>
 いろいろお試しください。
 [アーキテクチャの確認](https://play.google.com/store/apps/details?id=com.ytheekshana.deviceinfo)→CPU→サーポートされているABI
 ※基本最近に発売されている端末なら、arm64-v8aが多いです
-
-・arm64-v8a
-https://www.apkmirror.com/apk/line-corporation/line/
-
-https://apkpure.com/jp/line-calls-messages/jp.naver.line.android
-
-
-・armeabi-v7a
-LINE公式https://line-android-universal-download.line-scdn.net/line-15.12.2.apk
-
-※URLのバージョンの部分を変えると他のバージョンもダウンロードできます。
+### ダウンロード先
+[APKMirror](https://www.apkmirror.com/apk/line-corporation/line/)<br>
+[APKPure](https://apkpure.com/jp/line-calls-messages/jp.naver.line.android)  ※一部バージョンが欠けています<br>
+LINE公式  https://line-android-universal-download.line-scdn.net/line-15.12.2.apk <br>
+※URLのバージョンの部分を変えると他のバージョンもダウンロードできます。<br>
 
 M apk tool <br>
 https://maximoff.su/apktool/?lang=en
