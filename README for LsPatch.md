@@ -1,10 +1,8 @@
 ## 方法①導入済みのものを利用する
-
-
-→Discordサーバーへ
-
-
-⚠LIMEs自体のインストールも必ず必要です
+[Discordサーバー](https://discord.gg/5WWxUkMsNJ)の limes-release チャンネルからLIMEsとLINEをダウンロードしてインストールしてください。<br>
+※配布のローカル適応版を使う場合は、方法②の手順でLSPatchのインストールも必要です。<br>
+LINEをローカル適応でインストールすることにより、LINEを毎回触らずに、LIMEsのみを動的に更新できます。<br>
+⚠もちろんLIMEs自体のインストールも必ず必要です<br>
 
 ## 方法②自分で導入する
 
@@ -12,20 +10,25 @@
 
 2.パッチするapkについて
 LINE  <br>
-
-https://www.apkmirror.com/apk/line-corporation/line/
-
+※通知が来ない問題があることがあります。APKか署名の問題と推測しています。<br>
+いろいろお試しください。
 [アーキテクチャの確認](https://play.google.com/store/apps/details?id=com.ytheekshana.deviceinfo)→CPU→サーポートされているABI
 ※基本最近に発売されている端末なら、arm64-v8aが多いです
 
-・arm64-v8a https://d.apkpure.com/b/XAPK/jp.naver.line.android?
+・arm64-v8a
+https://www.apkmirror.com/apk/line-corporation/line/
+
+https://apkpure.com/jp/line-calls-messages/jp.naver.line.android
+
 
 ・armeabi-v7a
-https://line-android-universal-download.line-scdn.net
+LINE公式https://line-android-universal-download.line-scdn.net/line-15.12.2.apk
 
+※URLのバージョンの部分を変えると他のバージョンもダウンロードできます。
 
 M apk tool <br>
 https://maximoff.su/apktool/?lang=en
+
 でapkに変換してからパッチしてください 
 
 apkへの変え方
@@ -42,16 +45,8 @@ apkへの変え方
   使用していない場合は、ファイルエクスプローラー等の別のアプリからインストールする
 
 
--通知が届かない場合
-<14.4.2からパッチインストールを行う>
-
-
-## トーク履歴の自動バックアップについて
-
-[Macro SAMPLE](https://drive.usercontent.google.com/u/0/uc?id=1rhZPmoMbti_l1JaX2EbjcRKUePkWlIXU&export=download)
-
-または以下を参考にしてください
-https://github.com/areteruhiro/LIMEs/issues/10
-
-
-
+## 通知が届かない場合
+- 14.4.2からパッチインストールを行う
+- 上記URL群のAPKを色々試す
+- AntiSplit-M を使用する（気休めかも）
+- 
