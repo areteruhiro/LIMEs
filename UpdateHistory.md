@@ -1,5 +1,14 @@
 
 
+## 1.31.24_alpha
+
+Add Call CreateMute
+Fix PhotoSave Album
+DARK→LIGHT
+Add confirmation button
+
+
+
 ## 1.31.23alpha
 
 Reaction Picture icon
