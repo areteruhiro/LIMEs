@@ -1,5 +1,15 @@
 
 
+## 1.31.24_beta
+
+Add Call CreateMute
+Fix PhotoSave Album
+DARK→LIGHT　RAW
+Add confirmation button
+DisableNotificationAlbumAdd →NOTIFICATIONS　Category
+
+
+
 ## 1.31.24_alpha
 
 Add Call CreateMute
