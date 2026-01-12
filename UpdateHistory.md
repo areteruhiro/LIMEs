@@ -1,5 +1,14 @@
 
 
+## 1.32.1_beta
+
+15.21.3 対応(仮)
+fix local change name
+add option call create mute
+⚠Disable_chat_ui_ai_talk_suggestion 15.18.1のサポートを外して15.21.3に対応
+
+
+
 ## 1.31.25_beta
 
 fix strings.xml
