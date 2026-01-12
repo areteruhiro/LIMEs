@@ -1,5 +1,11 @@
 
 
+## 1.32.2_beta
+
+add option call create mute 固定
+
+
+
 ## 1.32.1_beta
 
 15.21.3 対応(仮)
