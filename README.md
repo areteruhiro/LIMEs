@@ -73,7 +73,7 @@ https://discord.com/channels/1392057820316303362/1437001953950437417
 寄付のほどお願いいたします<br>
 Please donate to ensure continued development time.
 
-* [Pay Pay](https://qr.paypay.ne.jp/p2p01_nWvlCJ1weTI1E22Q)<br>
+* [Pay Pay1/29まで１９時まで](https://qr.paypay.ne.jp/p2p01_ZiGqxCanmGwfVfP3)<br>
 
 * PayPay ID
 hiro_1114
