@@ -40,9 +40,5 @@ apkへの変え方
 
 
 ## 通知が届かない場合
-※FCMに登録されず通知が来ない問題があることがあります。APKか署名の問題と推測しています。<br>
-いろいろお試しください。<br>
-- 14.4.2からパッチインストールを行う
-- 上記URL群のAPKを色々試す
-- AntiSplit-M を使用する（気休めかも）
-- 
+(こちらの手順)[https://github.com/areteruhiro/LIMEs/blob/master/LSPatch-Notify.md]にまとめています。 <br>
+まずはこちらの手順に沿ってお試しください
