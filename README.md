@@ -35,6 +35,8 @@ The developer assumes no responsibility for the results of using this module.<br
 > - コインの購入が不可  
 > - LINE Pay の一部の機能が使用不可 
 > - ログイン時のエラーが発生する可能性が高い
+> - 環境によりLINE通知が届かないことがある
+> -  ([この方法](https://github.com/) でログインすれば解消される可能性がある)
 
 
 > [!WARNING]
