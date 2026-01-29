@@ -41,4 +41,4 @@ apkへの変え方
 
 ## 通知が届かない場合
 [こちらの手順](https://github.com/areteruhiro/LIMEs/blob/master/LSPatch-Notify.md)にまとめています。 <br>
-まずはこちらの手順に沿ってお試しください
+まずはこちらの手順に沿ってお試しください。
