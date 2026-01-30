@@ -1,7 +1,7 @@
 # <img src="app/src/main/ic_launcher-playstore.png" width="60px"> LIMEs: Adkiller for LINE
 
 GitHubは頻繁に更新しません。 <br>
- [Discord](https://discord.gg/5WWxUkMsNJ)で最新の情報を確認してください。
+ [Discord](https://github.com/areteruhiro/LIMEs/tree/master?tab=readme-ov-file#%E3%82%B5%E3%83%9D%E3%83%BC%E3%83%88)で最新の情報を確認してください。
 # 注意事項
 以下を御理解の上ご利用ください。<br>
 本モジュールは学習目的でのみ開発・利用するものです。
