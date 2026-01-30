@@ -95,7 +95,7 @@ LIME 開発者
 https://github.com/Chipppppppppp
 
 コラボレーター
-https://github.com/s1204IT
+https://github.com/s1204IT <br>
 https://github.com/YuzuMikan404
 
 
