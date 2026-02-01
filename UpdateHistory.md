@@ -1,5 +1,12 @@
 
 
+## 1.32.3.2beta
+
+fix 内部ファイルコピー
+Maybe ソニーランチャー未読数送信　機能 15.12.2 only
+
+
+
 ## 1.32.3_beta
 
 fix PreventMarkAsRead_Setting strings.xml -ja
