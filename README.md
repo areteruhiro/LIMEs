@@ -26,6 +26,10 @@ The developer assumes no responsibility for the results of using this module.<br
  
  [LsPatch](https://github.com/areteruhiro/LIMEs/blob/master/README%20for%20LsPatch.md) 
 
+> [!WARNING]
+> このModuleの利用で以下の問題が発生します
+> - BANKの利用不可
+
 ### 非 Root 端末
 
 > [!WARNING]
@@ -37,11 +41,6 @@ The developer assumes no responsibility for the results of using this module.<br
 > - ログイン時のエラーが発生する可能性が高い
 > - 環境によりLINE通知が届かないことがある
 >    ([この方法](https://github.com/areteruhiro/LIMEs/blob/master/LSPatch-Notify.md) でログインすれば解消される可能性がある)
-
-
-> [!WARNING]
-> このModuleの利用で以下の問題が発生します
-> - BANKの利用不可
 
 ## 概要
 
