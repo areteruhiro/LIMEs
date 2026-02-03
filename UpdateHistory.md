@@ -2,6 +2,12 @@
 
 ## 1.32.3.3beta
 
+fcm fix
+
+
+
+## 1.32.3.3beta
+
 Dark_Theme_Change機能の追加
 Dark_Theme_Change機能の追加に基づくLIMEsのダーク/ライトの検知方法の変更
 LYP プレミアムのおすすめを削除　機能の改善(Maybe need report)
