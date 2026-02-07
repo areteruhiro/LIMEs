@@ -1,5 +1,20 @@
 
 
+## 1.32.5.0.beta
+
+グループ名を変更の改善　
+https://discord.com/channels/1392057820316303362/1392059954260873286/1469199662761377832
+handleInitPackageResourcesの改善
+https://discord.com/channels/1392057820316303362/1392059954260873286/1469005857000788134
+FCM TokenGet　Revanced対応
+テーマファイルを復元するように
+isDark処理を改善
+https://discord.com/channels/1392057820316303362/1392059954260873286/1468939654664421461
+ReadChecker　15.12.2のみ機能の改善(開発中)
+https://discord.com/channels/1392057820316303362/1392834431617859634/1462427491997192233
+
+
+
 ## 1.32.3.3beta
 
 fcm fix
