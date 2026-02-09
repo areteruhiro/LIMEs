@@ -1,5 +1,11 @@
 
 
+## 1.32.5.2.1.beta
+
+revanced
+
+
+
 ## 1.32.5.1.beta
 
 TokenGet署名 Npatchの対応
