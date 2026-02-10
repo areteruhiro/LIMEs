@@ -1,5 +1,12 @@
 
 
+## 1.32.5.2.2.beta
+
+RemoveNotification　の修正
+Read Checker Fix Maybe
+
+
+
 ## 1.32.5.2.1.beta
 
 revanced
