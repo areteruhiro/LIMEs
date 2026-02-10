@@ -19,6 +19,7 @@ LINEをローカル適応でインストールすることにより、LINEを毎
 [APKPure](https://apkpure.com/jp/line-calls-messages/jp.naver.line.android)  ※一部バージョンが欠けています<br>
 LINE公式  https://line-android-universal-download.line-scdn.net/line-15.12.2.apk <br>
 ※URLのバージョンの部分を変えると他のバージョンもダウンロードできます。<br>
+補足:基本LINE公式のAPKは使わなくてよいです。最近の端末のアーキテクチャには対応してません（armeabi-v7aだけ） <br>
 
 M apk tool <br>
 https://maximoff.su/apktool/?lang=en
