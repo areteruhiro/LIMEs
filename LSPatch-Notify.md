@@ -6,7 +6,7 @@ LSPatch環境でLIMEs適用時に通知が届かない場合の対処法です�
 > 通知が来ないバグはFCM由来のため、LINEをReVancedでGmsCore対応をさせることで根本的に解決しました。 <br>
 > 以下のドキュメントはアーカイブとして残しておきます。
 > 更新の予定はありません。<br>
-> 最新情報はDiscordサーバーに参加して受け取ってください。 <br>
+> 最新情報は[Discordサーバー](https://github.com/areteruhiro/LIMEs/tree/master?tab=readme-ov-file#%E3%82%B5%E3%83%9D%E3%83%BC%E3%83%88)に参加して受け取ってください。 <br>
 
 
 > [!NOTE]
