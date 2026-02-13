@@ -18,7 +18,7 @@ When actually using it, please comply with the terms of service and relevant law
 The developer assumes no responsibility for the results of using this module.<br>
 
 # サポート
- [Discord](https://discord.gg/5WWxUkMsNJ)
+ [Discordサーバー](https://discord.gg/5WWxUkMsNJ)
 
 # 導入方法
  
