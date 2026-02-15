@@ -1,5 +1,11 @@
 
 
+## 1.32.6.1.beta
+
+removeAlbumの修正
+
+
+
 ## 1.32.6.alpha
 
 LsPatxh/NPatxh　トークバックアップ/リストアを可能にする機能の追加
