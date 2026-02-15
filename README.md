@@ -30,8 +30,6 @@ The developer assumes no responsibility for the results of using this module.<br
 なにかご質問等がございましたら、個人チャット又は以下へご連絡いただければ幸いです。
 limebeta.dev@gmail.com
 
-開発者 areteruhiro
-
 Please refrain from posting tutorials or usage guides in public articles, blogs, or social media. (We would appreciate it if you could avoid activities aimed at widespread distribution.)
 Such modules are not officially endorsed by LINE. I believe that making this tool known to those who may not understand the risks is inappropriate and could become a source of trouble.
 Regarding "LIME" (the original fork), please follow the policies set by the original LIME developers.
@@ -45,7 +43,7 @@ limebeta.dev@gmail.com
 如有任何疑問，請透過私訊或下方的電子郵件地址與我聯絡：
 limebeta.dev@gmail.com
 
-
+開発者 areteruhiro
 
 # サポート
  [Discordサーバー](https://discord.gg/5WWxUkMsNJ)
