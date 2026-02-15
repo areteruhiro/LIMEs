@@ -2,6 +2,7 @@
 
 GitHubは頻繁に更新しません。 <br>
 [Discordサーバー](https://github.com/areteruhiro/LIMEs/tree/master?tab=readme-ov-file#%E3%82%B5%E3%83%9D%E3%83%BC%E3%83%88)で最新の情報を確認してください。
+
 # 注意事項
 以下を御理解の上ご利用ください。<br>
 本モジュールは学習目的でのみ開発・利用するものです。
@@ -16,6 +17,35 @@ It is intended to deepen understanding of Android application operating principl
 and not to interfere with the services of LINE Corporation or any other third party, nor to be used for commercial purposes.
 When actually using it, please comply with the terms of service and relevant laws and regulations of each service.
 The developer assumes no responsibility for the results of using this module.<br>
+
+
+# お願い / Request /請求
+お願い
+
+このLIMEsについてですが、
+記事等への使い方等の記載はお控えいただけるようお願いいたします。 
+（いわゆる、拡散を主と置いたものは控えていただけると幸いです）
+→本来このようなモジュールは、LINEが推奨しているものではなく、詳しくない方にも知られるような事は、ふさわしくないと私は考えていますし、トラブルの源でもあると思います。
+フォーク元である、LIMEはLIMEの開発者に従っていただければと思います
+なにかご質問等がございましたら、個人チャット又は以下へご連絡いただければ幸いです。
+limebeta.dev@gmail.com
+
+開発者 areteruhiro
+
+Please refrain from posting tutorials or usage guides in public articles, blogs, or social media. (We would appreciate it if you could avoid activities aimed at widespread distribution.)
+Such modules are not officially endorsed by LINE. I believe that making this tool known to those who may not understand the risks is inappropriate and could become a source of trouble.
+Regarding "LIME" (the original fork), please follow the policies set by the original LIME developers.
+If you have any questions, please contact me via private chat or at the following email address:
+limebeta.dev@gmail.com
+
+請勿在公開文章、部落格或社群媒體上記載或分享使用教學。
+（希望大家能配合，避免以「擴散、推廣」為目的之行為。）
+這類模組並非 LINE 官方所允許的工具。我認為若讓不瞭解風險的使用者廣泛知曉，不僅不合適，更可能成為麻煩の根源。
+至於本專案的分叉來源「LIME」，請遵循原 LIME 開發者的相關規範。
+如有任何疑問，請透過私訊或下方的電子郵件地址與我聯絡：
+limebeta.dev@gmail.com
+
+
 
 # サポート
  [Discordサーバー](https://discord.gg/5WWxUkMsNJ)
